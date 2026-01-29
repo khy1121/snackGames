@@ -185,13 +185,31 @@ class DiceMergeBoard {
             
             // 새 주사위 생성 (업그레이드)
             if (dice.isMagic) {
-              // 매직 주사위 3개 = 사라짐 (점수만 획득)
-              totalScore += 1000;
+              // 매직 주사위 3개 = 3x3 폭발!
+              int explosionScore = 0;
+              final explodedPositions = <(int, int)>[];
+
+              // 중심점 (mergeRow, mergeCol) 기준 3x3 영역 확인
+              for (int r = mergeRow - 1; r <= mergeRow + 1; r++) {
+                for (int c = mergeCol - 1; c <= mergeCol + 1; c++) {
+                  if (r >= 0 && r < rows && c >= 0 && c < cols) {
+                    if (cells[r][c].hasDice) {
+                      cells[r][c].dice = null; // 제거
+                      explosionScore += 100;   // 개당 점수
+                      explodedPositions.add((r, c));
+                    }
+                  }
+                }
+              }
+              
+              totalScore += 1000 + explosionScore;
+              
               allMerges.add(MergeInfo(
-                positions: matches,
+                positions: matches, // 원래 매칭된 위치들
                 resultPosition: (mergeRow, mergeCol),
                 resultDice: null,
                 isMagicClear: true,
+                explodedPositions: explodedPositions, // 폭발된 위치들 전달 (UI 효과용)
               ));
             } else if (dice.value == 6) {
               // 6+6+6 = 매직 주사위
@@ -327,6 +345,7 @@ class MergeInfo {
   final Dice? resultDice;
   final bool isMagicCreated;
   final bool isMagicClear;
+  final List<(int, int)> explodedPositions; // 3x3 Explosion positions
   
   MergeInfo({
     required this.positions,
@@ -334,6 +353,7 @@ class MergeInfo {
     this.resultDice,
     this.isMagicCreated = false,
     this.isMagicClear = false,
+    this.explodedPositions = const [],
   });
 }
 

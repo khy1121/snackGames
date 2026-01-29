@@ -33,6 +33,36 @@ class GameInfo {
 /// 게임 정보 목록
 final List<GameInfo> gameList = [
   GameInfo(
+    id: 'dice',
+    title: 'Dice Merge',
+    subtitle: '주사위 3개 매칭하기',
+    icon: '🎲',
+    colors: const [Color(0xFF00B894), Color(0xFF00CEC9)],
+    rules: '''📖 게임 규칙
+• 빈 칸에 주사위 배치
+• 같은 숫자 3개 인접 시 합체
+• ⭐x3 = 💥3x3 대폭발!''',
+    difficulty: '''📈 난이도
+• 점수↑ → 랜덤 범위↑
+• 보드가 빠르게 채워짐''',
+    pageBuilder: (_) => const DiceGamePage(),
+  ),
+  GameInfo(
+    id: 'zerosum',
+    title: 'Zero Sum Path', // Updated title
+    subtitle: '선 긋기 합 0 만들기',
+    icon: '⚡', // Updated icon
+    colors: const [Color(0xFF0F172A), Color(0xFF06B6D4)], // Cyberpunk Theme Colors
+    rules: '''📖 게임 규칙
+• 드래그로 숫자 연결
+• 합이 0이 되면 ⚡폭발
+• 길게 연결하면 점수↑''',
+    difficulty: '''📈 난이도
+• 숫자 범위 -3 ~ +3
+• 5초 힌트 제공''',
+    pageBuilder: (_) => const ZeroSumPage(),
+  ),
+  GameInfo(
     id: '2048',
     title: '2048',
     subtitle: '스와이프로 숫자 합치기',
@@ -46,36 +76,6 @@ final List<GameInfo> gameList = [
 • 점수↑ → 빈 공간↓
 • 전략적 배치 필수''',
     pageBuilder: (_) => const GamePage(),
-  ),
-  GameInfo(
-    id: 'dice',
-    title: 'Dice Merge',
-    subtitle: '주사위 3개 매칭하기',
-    icon: '🎲',
-    colors: const [Color(0xFF00B894), Color(0xFF00CEC9)],
-    rules: '''📖 게임 규칙
-• 빈 칸에 주사위 배치
-• 같은 숫자 3개 인접 시 합체
-• 1→2→3→...→⭐ 업그레이드''',
-    difficulty: '''📈 난이도
-• 점수↑ → 랜덤 범위↑
-• 보드가 빠르게 채워짐''',
-    pageBuilder: (_) => const DiceGamePage(),
-  ),
-  GameInfo(
-    id: 'zerosum',
-    title: 'Zero Sum',
-    subtitle: '합을 0으로 만들기',
-    icon: '⚖️',
-    colors: const [Color(0xFF00B4DB), Color(0xFF0083B0)],
-    rules: '''📖 게임 규칙
-• 열 탭으로 블록 드롭
-• 인접 블록 합=0 → 폭발!
-• 0블록(⭐)은 조커''',
-    difficulty: '''📈 난이도
-• 점수↑ → 블록 빠르게 쌓임
-• 콤보로 고득점''',
-    pageBuilder: (_) => const ZeroSumPage(),
   ),
 ];
 
