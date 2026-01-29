@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'zerosum_board.dart';
@@ -21,6 +22,10 @@ class _ZeroSumPageState extends State<ZeroSumPage> with TickerProviderStateMixin
   final List<BlockPosition> _currentPath = [];
   Offset? _currentDragPos;
   
+  // Hints
+  List<BlockPosition> _hintPath = [];
+  Timer? _hintTimer;
+  
   // Effects
   final List<Widget> _effectsLayer = [];
   
@@ -33,10 +38,37 @@ class _ZeroSumPageState extends State<ZeroSumPage> with TickerProviderStateMixin
   void initState() {
     super.initState();
     _board = ZeroSumBoard.newGame();
+    _restartHintTimer();
+  }
+  
+  @override
+  void dispose() {
+    _hintTimer?.cancel();
+    super.dispose();
+  }
+
+  void _restartHintTimer() {
+    _hintTimer?.cancel();
+    _hintPath = [];
+    _hintTimer = Timer(const Duration(seconds: 5), _showHint);
+  }
+  
+  void _showHint() {
+    if (!mounted || _board.isGameOver) return;
+    
+    final hint = _board.findHint();
+    if (hint.isNotEmpty) {
+      setState(() {
+        _hintPath = hint;
+      });
+      // Bouncing effect or highlight? handled in Painter
+    }
   }
 
   void _onPanStart(DragStartDetails details) {
     if (_board.isGameOver) return;
+    _hintTimer?.cancel();
+    setState(() => _hintPath = []); // Clear hint on interaction
     
     _currentDragPos = details.localPosition;
     _updatePath(details.localPosition);
@@ -59,6 +91,7 @@ class _ZeroSumPageState extends State<ZeroSumPage> with TickerProviderStateMixin
       _currentPath.clear();
       _currentDragPos = null;
     });
+    _restartHintTimer();
   }
 
   void _updatePath(Offset localPos) {
@@ -127,8 +160,6 @@ class _ZeroSumPageState extends State<ZeroSumPage> with TickerProviderStateMixin
   void _spawnEffects(List<BlockPosition> positions, int score) {
     for (final pos in positions) {
       final center = _getBlockCenter(pos);
-      // Removed block value is tricky to get since it's already null in board
-      // But we can assume color based on logic or just use generic explosion
       
       final pKey = UniqueKey();
       setState(() {
@@ -206,6 +237,7 @@ class _ZeroSumPageState extends State<ZeroSumPage> with TickerProviderStateMixin
                  _board = ZeroSumBoard.newGame();
                  _currentPath.clear();
                  _effectsLayer.clear();
+                 _restartHintTimer();
               });
             },
             child: const Text('REBOOT SYSTEM'),
@@ -272,6 +304,7 @@ class _ZeroSumPageState extends State<ZeroSumPage> with TickerProviderStateMixin
                          size: Size(gridWidth, gridHeight),
                          painter: ZeroSumPathPainter(
                             path: _currentPath,
+                            hintPath: _hintPath,
                             blockSize: _blockSize,
                             isValid: isZeroSum,
                          ),
@@ -327,12 +360,14 @@ class _ZeroSumPageState extends State<ZeroSumPage> with TickerProviderStateMixin
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                   _buildCircleButton(Icons.lightbulb_outline, 'HINT', () {}),
+                   _buildCircleButton(Icons.lightbulb_outline, 'HINT', () {
+                      _showHint();
+                      HapticFeedback.lightImpact();
+                   }),
                    _buildCircleButton(Icons.shuffle, 'SHUFFLE', () {
                       setState(() {
-                         // Simple shuffle logic: essentially just new game board for now 
-                         // or we can implement real shuffle later
                          _board = ZeroSumBoard.newGame(moves: _board.movesLeft, target: _board.targetScore);
+                         _restartHintTimer();
                       });
                    }),
                    _buildCircleButton(Icons.flash_on, 'BOMB', () {}),
@@ -353,7 +388,10 @@ class _ZeroSumPageState extends State<ZeroSumPage> with TickerProviderStateMixin
         if (block != null) {
           final pos = BlockPosition(r, c);
           final isSelected = _currentPath.contains(pos);
-          final isDimmed = _currentPath.isNotEmpty && !isSelected;
+          bool isDimmed = (_currentPath.isNotEmpty && !isSelected);
+          
+          // Should not dim if hints are active and it's part of hint? 
+          // Keep it simple for now. 
           
           blocks.add(Positioned(
             left: c * _blockSize,
@@ -478,48 +516,69 @@ class _ZeroSumPageState extends State<ZeroSumPage> with TickerProviderStateMixin
 
 class ZeroSumPathPainter extends CustomPainter {
   final List<BlockPosition> path;
+  final List<BlockPosition> hintPath;
   final double blockSize;
   final bool isValid;
 
   ZeroSumPathPainter({
     required this.path,
+    this.hintPath = const [],
     required this.blockSize,
     required this.isValid,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (path.isEmpty) return;
+    // Draw Hint Path (if no active path)
+    if (path.isEmpty && hintPath.isNotEmpty) {
+      _drawPath(canvas, hintPath, Colors.white.withValues(alpha: 0.3), isHint: true);
+    }
+
+    // Draw Active Path
+    if (path.isNotEmpty) {
+        final color = isValid ? ZeroSumColors.pathValid : ZeroSumColors.pathActive;
+        _drawPath(canvas, path, color, isHint: false);
+    }
+  }
+
+  void _drawPath(Canvas canvas, List<BlockPosition> pList, Color color, {bool isHint = false}) {
+    if (pList.isEmpty) return;
 
     final paint = Paint()
-      ..color = isValid ? ZeroSumColors.pathValid : ZeroSumColors.pathActive
-      ..strokeWidth = 6.0
+      ..color = color
+      ..strokeWidth = isHint ? 4.0 : 6.0
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round
-      ..style = PaintingStyle.stroke
-      ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 4); 
-      // Neon glow effect (simplified)
+      ..style = PaintingStyle.stroke;
+      
+    if (!isHint) {
+       paint.maskFilter = const MaskFilter.blur(BlurStyle.solid, 4);
+    }
 
     final pathObj = Path();
-    final first = _getCenter(path.first);
+    final first = _getCenter(pList.first);
     pathObj.moveTo(first.dx, first.dy);
 
-    for (int i = 1; i < path.length; i++) {
-       final p = _getCenter(path[i]);
+    for (int i = 1; i < pList.length; i++) {
+       final p = _getCenter(pList[i]);
        pathObj.lineTo(p.dx, p.dy);
     }
     
-    // Draw Glow
-    canvas.drawPath(
-        pathObj, 
-        paint..color = (isValid ? ZeroSumColors.pathValid : ZeroSumColors.pathActive).withValues(alpha: 0.5)..strokeWidth = 12
-    );
-    
-    // Draw Core
-    canvas.drawPath(
-        pathObj, 
-        paint..color = Colors.white..strokeWidth = 3..maskFilter = null
-    );
+    // Draw Glow (only for active path)
+    if (!isHint) {
+        canvas.drawPath(
+            pathObj, 
+            paint..color = color.withValues(alpha: 0.5)..strokeWidth = 12
+        );
+        // Core
+        canvas.drawPath(
+            pathObj, 
+            paint..color = Colors.white..strokeWidth = 3..maskFilter = null
+        );
+    } else {
+        // Dashed? or just transparent
+        canvas.drawPath(pathObj, paint);
+    }
   }
 
   Offset _getCenter(BlockPosition pos) {
@@ -531,6 +590,8 @@ class ZeroSumPathPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant ZeroSumPathPainter oldDelegate) {
-    return oldDelegate.path != path || oldDelegate.isValid != isValid;
+    return oldDelegate.path != path || 
+           oldDelegate.isValid != isValid ||
+           oldDelegate.hintPath != hintPath;
   }
 }

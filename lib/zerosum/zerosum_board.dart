@@ -97,12 +97,85 @@ class ZeroSumBoard {
   }
 
   BlockValue _generateRandomBlock() {
-    // Generate -9 to +9, excluding 0 mainly, or keeping probability balanced
+    // Reduced difficulty: -3 to +3
+    // Weighted probabilities: 0 has higher chance
+    final r = _random.nextInt(100);
     int val = 0;
-    while (val == 0) {
-      val = _random.nextInt(19) - 9; // -9 ~ 9
+    
+    if (r < 15) {
+      val = 0; // 15% chance for 0
+    } else {
+      // Remaining 85% distributed among -3, -2, -1, 1, 2, 3
+      // Non-zero values: -3, -2, -1, 1, 2, 3 (6 values)
+      // approx 14% each
+      List<int> choices = [-3, -2, -1, 1, 2, 3];
+      val = choices[_random.nextInt(choices.length)];
     }
+    
     return BlockValue.fromInt(val);
+  }
+
+  /// Hint System: Find a valid zero-sum path
+  List<BlockPosition> findHint() {
+    // Simple DFS to find a path of length >= 2 with sum 0
+    // Limit depth to avoid performance issues
+    for (int r = 0; r < rows; r++) {
+      for (int c = 0; c < columns; c++) {
+        if (grid[r][c] == null) continue;
+        
+        final start = BlockPosition(r, c);
+        final path = _dfs(start, 0, [], 5); // Max depth 5
+        if (path.isNotEmpty) return path;
+      }
+    }
+    return [];
+  }
+
+  List<BlockPosition> _dfs(BlockPosition current, int currentSum, List<BlockPosition> visited, int depth) {
+     if (depth < 0) return [];
+     
+     final block = grid[current.row][current.col];
+     if (block == null) return [];
+     
+     final newSum = currentSum + block.value;
+     final newVisited = [...visited, current];
+     
+     // Goal check (min length 2)
+     if (newVisited.length >= 2 && newSum == 0) {
+       return newVisited;
+     }
+     
+     // Neighbors
+     List<BlockPosition> neighbors = _getNeighbors(current);
+     // Shuffle neighbors for variety in hints
+     neighbors.shuffle(_random);
+     
+     for (final n in neighbors) {
+       if (!newVisited.contains(n)) {
+         final res = _dfs(n, newSum, newVisited, depth - 1);
+         if (res.isNotEmpty) return res;
+       }
+     }
+     
+     return [];
+  }
+  
+  List<BlockPosition> _getNeighbors(BlockPosition pos) {
+    List<BlockPosition> result = [];
+    final offsets = [
+       const BlockPosition(-1, -1), const BlockPosition(-1, 0), const BlockPosition(-1, 1),
+       const BlockPosition(0, -1),                          const BlockPosition(0, 1),
+       const BlockPosition(1, -1),  const BlockPosition(1, 0),  const BlockPosition(1, 1),
+    ];
+    
+    for (final off in offsets) {
+      final nr = pos.row + off.row;
+      final nc = pos.col + off.col;
+      if (nr >= 0 && nr < rows && nc >= 0 && nc < columns) {
+        result.add(BlockPosition(nr, nc));
+      }
+    }
+    return result;
   }
 
   /// Path Validation and Execution
