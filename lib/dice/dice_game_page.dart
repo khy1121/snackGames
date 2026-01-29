@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dice_board.dart';
 import 'dice_widget.dart';
+import 'dice_theme.dart';
+import 'dice_effects.dart'; // Import VFX
 import '../services/game_data_service.dart';
 
 /// 주사위 머지 게임 페이지
@@ -18,6 +20,11 @@ class _DiceGamePageState extends State<DiceGamePage>
   Set<(int, int)> _newDice = {};
   Set<(int, int)> _mergingDice = {};
   bool _isProcessing = false;
+  late DiceThemeData _theme;
+
+  // VFX State
+  List<EffectEvent> _effectEvents = [];
+  final GlobalKey _boardKey = GlobalKey(); // To get board position
 
   DateTime? _startTime;
 
@@ -25,7 +32,15 @@ class _DiceGamePageState extends State<DiceGamePage>
   void initState() {
     super.initState();
     _board = DiceMergeBoard();
-    _startTime = DateTime.now(); // Start time tracking
+    _startTime = DateTime.now();
+    _loadTheme();
+  }
+
+  void _loadTheme() {
+    final themeId = GameDataService.getSelectedTheme();
+    setState(() {
+      _theme = DiceTheme.getTheme(themeId);
+    });
   }
 
   void _startNewGame() {
@@ -33,14 +48,15 @@ class _DiceGamePageState extends State<DiceGamePage>
       _board = DiceMergeBoard(bestScore: _board.bestScore);
       _newDice = {};
       _mergingDice = {};
+      _effectEvents = [];
       _isProcessing = false;
-      _startTime = DateTime.now(); // Reset time
+      _startTime = DateTime.now();
     });
   }
 
   void _onColumnTap(int col) {
     if (_isProcessing || _board.isGameOver) return;
-    if (_startTime == null) _startTime = DateTime.now(); // Ensure start time
+    if (_startTime == null) _startTime = DateTime.now();
 
     setState(() {
       _isProcessing = true;
@@ -53,17 +69,17 @@ class _DiceGamePageState extends State<DiceGamePage>
     if (result != null) {
       HapticFeedback.lightImpact();
 
-      // 드롭된 위치 표시
       _newDice.add(result.droppedAt);
-
-      // 머지된 위치 표시
       for (final merge in result.merges) {
         _mergingDice.add(merge.resultPosition);
       }
 
+      // --- Trigger VFX ---
+      _triggerVFX(result);
+      // -------------------
+
       setState(() {});
 
-      // 애니메이션 후 상태 리셋
       Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted) {
           setState(() {
@@ -84,6 +100,86 @@ class _DiceGamePageState extends State<DiceGamePage>
     }
   }
 
+  void _triggerVFX(DropResult result) {
+    // 1. Calculate Combo / Score Text
+    if (result.scoreGained > 0) {
+       // Find position for text popup (approximate center of action)
+       // Default to center of board if complex
+       Offset centerPos = _getBoardCenter();
+       
+       // Use dropped position as base
+       centerPos = _getCellPosition(result.droppedAt.$1, result.droppedAt.$2) ?? centerPos;
+
+       final msg = result.merges.any((m) => m.isMagicClear) 
+          ? 'MAGIC! +${result.scoreGained}'
+          : result.scoreGained > 100 
+             ? 'COMBO! +${result.scoreGained}' 
+             : '+${result.scoreGained}';
+       
+       final color = result.merges.any((m) => m.isMagicClear)
+          ? Colors.amber
+          : Colors.white;
+
+        _effectEvents.add(TextPopupEvent(
+          msg,
+          centerPos,
+          color,
+          fontSize: result.scoreGained > 500 ? 32 : 20,
+        ));
+    }
+
+    // 2. Trigger Explosions for Magic Clears
+    for (final merge in result.merges) {
+      if (merge.isMagicClear) {
+        // Trigger explosion at center
+        final centerPos = _getCellPosition(merge.resultPosition.$1, merge.resultPosition.$2);
+        if (centerPos != null) {
+           _effectEvents.add(ExplosionEvent(centerPos, Colors.purpleAccent));
+        }
+
+        // Also trigger small explosions for all cleared blocks
+        for (final pos in merge.explodedPositions) {
+           final p = _getCellPosition(pos.$1, pos.$2);
+           if (p != null) {
+              _effectEvents.add(ExplosionEvent(p, Colors.orangeAccent.withValues(alpha: 0.5)));
+           }
+        }
+        HapticFeedback.heavyImpact();
+      }
+    }
+  }
+  
+  // Helper to find screen coordinates of a cell
+  Offset? _getCellPosition(int row, int col) {
+    // This is tricky because Board is dynamic. 
+    // We will use a rough approximation based on BoardKey, 
+    // OR just pass relative coordinates and let Overlay handle it within the board stack.
+    // Better strategy: Put Overlay INSIDE the Board Widget? 
+    // No, Board Widget is stateless/rebuilt.
+    // Let's rely on RenderBox.
+    
+    final RenderBox? box = _boardKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) return null;
+    
+    final size = box.size;
+    final cellWidth = (size.width - 16) / DiceMergeBoard.cols;
+    final cellHeight = (size.height - 16) / DiceMergeBoard.rows;
+    
+    // Center of cell
+    final dx = 8 + col * cellWidth + cellWidth / 2;
+    final dy = 8 + row * cellHeight + cellHeight / 2;
+    
+    // Local to Board. We need to convert if Overlay is Global.
+    // But we will put Overlay INSIDE the Board Stack.
+    return Offset(dx, dy);
+  }
+
+  Offset _getBoardCenter() {
+     final RenderBox? box = _boardKey.currentContext?.findRenderObject() as RenderBox?;
+     if (box == null) return const Offset(150, 300);
+     return Offset(box.size.width / 2, box.size.height / 2);
+  }
+
   void _showGameOverDialog() {
     // 점수 기록
     GameDataService.recordScore('dice', _board.score);
@@ -96,6 +192,9 @@ class _DiceGamePageState extends State<DiceGamePage>
     
     // 리워드 계산 (예: 100점당 1P)
     final reward = (_board.score / 100).floor();
+    
+    // 포인트 지급
+    GameDataService.addPoints(reward);
 
     showGeneralDialog(
       context: context,
@@ -164,7 +263,7 @@ class _DiceGamePageState extends State<DiceGamePage>
                             ),
                             const SizedBox(height: 8),
                             
-                            // New Best Badge (Dummy logic for UI, real logic needs comparison)
+                            // New Best Badge 
                             if (_board.score >= _board.bestScore && _board.score > 0)
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -232,7 +331,7 @@ class _DiceGamePageState extends State<DiceGamePage>
                                   Container(
                                     padding: const EdgeInsets.all(10),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.2),
+                                      color: Colors.white.withValues( alpha: 0.2),
                                       shape: BoxShape.circle,
                                     ),
                                     child: const Icon(Icons.card_giftcard, color: Colors.white, size: 24),
@@ -401,61 +500,79 @@ class _DiceGamePageState extends State<DiceGamePage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF0F2027),
-              Color(0xFF203A43),
-              Color(0xFF2C5364),
-            ],
+    return Theme(
+      data: ThemeData.dark().copyWith(
+        scaffoldBackgroundColor: Colors.transparent,
+        textTheme: GoogleFonts.getTextTheme(_theme.fontHandle, Theme.of(context).textTheme),
+      ),
+      child: Scaffold(
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: _theme.backgroundGradient,
           ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // 헤더
-              _buildHeader(),
-              const SizedBox(height: 8),
-
-              // 점수판 + 다음 주사위 (한 줄로)
-              _buildScoreAndNextDice(),
-              const SizedBox(height: 8),
-
-              // 게임 보드
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: DiceBoardWidget(
-                    board: _board,
-                    newDice: _newDice,
-                    mergingDice: _mergingDice,
-                    onColumnTap: _onColumnTap,
+          child: SafeArea(
+            child: Column(
+              children: [
+                _buildHeader(),
+                const SizedBox(height: 8),
+                _buildScoreAndNextDice(),
+                const SizedBox(height: 8),
+                
+                // Game Board Area with VFX Overlay
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Stack(
+                      children: [
+                         // Actual Board
+                         DiceBoardWidget(
+                           key: _boardKey,
+                           board: _board,
+                           newDice: _newDice,
+                           mergingDice: _mergingDice,
+                           onColumnTap: _onColumnTap,
+                           theme: _theme,
+                         ),
+                         
+                         // VFX Overlay
+                         // Position.fill ensures it matches Board size
+                         Positioned.fill(
+                           child: DiceEffectsOverlay(
+                             events: _effectEvents,
+                             onClearEvents: () {
+                               // Clear events after processing so they don't re-trigger
+                               _effectEvents = []; 
+                               // Note: setState not needed here as Overlay handles its own state
+                               // but we clean up our list.
+                             },
+                           ),
+                         ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
 
-              // 안내 텍스트
-              Padding(
-                padding: const EdgeInsets.all(8),
-                child: Text(
-                  'Tap column to drop • Match 3 to merge • 6+6+6 = ✨Magic!',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.6),
-                    fontSize: 11,
+                Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Text(
+                    'Tap column to drop • Match 3 to merge • 6+6+6 = ✨Magic!',
+                    style: TextStyle(
+                      color: _theme.textColor.withValues(alpha: 0.6),
+                      fontSize: 11,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  textAlign: TextAlign.center,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
+
+  // ... (rest of methods: _buildScoreAndNextDice, _buildHeader, etc.) ...
+
 
   Widget _buildScoreAndNextDice() {
     return Padding(
@@ -472,13 +589,14 @@ class _DiceGamePageState extends State<DiceGamePage>
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white.withValues(alpha: 0.7),
+                    color: _theme.textColor.withValues(alpha: 0.7),
                   ),
                 ),
                 const SizedBox(height: 4),
                 DiceWidget(
                   dice: _board.nextDice!,
                   size: 40,
+                  theme: _theme, // Pass Theme
                 ),
               ],
             ),
@@ -496,16 +614,16 @@ class _DiceGamePageState extends State<DiceGamePage>
           // 뒤로가기
           IconButton(
             onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
+            icon: Icon(Icons.arrow_back_ios, color: _theme.textColor, size: 20),
           ),
 
-          const Expanded(
+          Expanded(
             child: Text(
               '🎲 Dice Merge',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: _theme.textColor,
               ),
               textAlign: TextAlign.center,
             ),
@@ -514,7 +632,7 @@ class _DiceGamePageState extends State<DiceGamePage>
           // 새 게임
           IconButton(
             onPressed: _startNewGame,
-            icon: const Icon(Icons.refresh, color: Colors.white, size: 20),
+            icon: Icon(Icons.refresh, color: _theme.textColor, size: 20),
           ),
         ],
       ),
@@ -542,14 +660,22 @@ class _DiceGamePageState extends State<DiceGamePage>
           const SizedBox(height: 2),
           Text(
             '$value',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: _theme.textColor,
             ),
           ),
         ],
       ),
     );
+  }
+}
+
+// Google Fonts Shim (Mock for now, replace real Google Fonts later if needed)
+class GoogleFonts {
+  static TextTheme getTextTheme(String fontName, TextTheme base) {
+    // Just return base for now, can implement real logic if package added
+    return base;
   }
 }

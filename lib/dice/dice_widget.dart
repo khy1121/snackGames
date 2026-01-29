@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dice_board.dart';
+import 'dice_theme.dart';
 
 /// 주사위 위젯
 class DiceWidget extends StatelessWidget {
@@ -7,6 +8,7 @@ class DiceWidget extends StatelessWidget {
   final double size;
   final bool isNew;
   final bool isMerging;
+  final DiceThemeData? theme; // 테마 추가
   
   const DiceWidget({
     super.key,
@@ -14,6 +16,7 @@ class DiceWidget extends StatelessWidget {
     required this.size,
     this.isNew = false,
     this.isMerging = false,
+    this.theme,
   });
   
   @override
@@ -81,7 +84,18 @@ class DiceWidget extends StatelessWidget {
         const Color(0xFF7C4DFF),
       ];
     }
+
+    // 테마 색상 사용
+    if (theme != null && theme!.diceColors.length >= 6) {
+      final color = theme!.diceColors[dice.value - 1]; // 1-based to 0-based
+      // 그라데이션을 위해 약간 밝은/어두운 톤 자동 생성
+      return [
+        color.withValues(alpha: 0.8),
+        color,
+      ];
+    }
     
+    // Default (Cyberpunk Fallback)
     return switch (dice.value) {
       1 => [const Color(0xFFFF6B6B), const Color(0xFFEE5A52)],
       2 => [const Color(0xFFFFA726), const Color(0xFFFB8C00)],
@@ -207,6 +221,7 @@ class DiceBoardWidget extends StatefulWidget {
   final Set<(int, int)> newDice;
   final Set<(int, int)> mergingDice;
   final Function(int)? onColumnTap;
+  final DiceThemeData? theme; // 테마 추가
   
   const DiceBoardWidget({
     super.key,
@@ -214,6 +229,7 @@ class DiceBoardWidget extends StatefulWidget {
     required this.newDice,
     required this.mergingDice,
     this.onColumnTap,
+    this.theme,
   });
 
   @override
@@ -225,6 +241,10 @@ class _DiceBoardWidgetState extends State<DiceBoardWidget> {
   
   @override
   Widget build(BuildContext context) {
+    // 테마 색상 (없으면 기본값)
+    final boardColor = widget.theme?.boardColor ?? const Color(0xFF2D3436);
+    final cellColor = widget.theme?.cellColor ?? Colors.transparent; // Not strictly used in current layout but good for future
+
     return LayoutBuilder(
       builder: (context, constraints) {
         // 가로/세로 중 더 제한적인 방향 기준으로 셀 크기 계산
@@ -243,7 +263,7 @@ class _DiceBoardWidgetState extends State<DiceBoardWidget> {
               height: boardHeight,
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFF2D3436),
+                color: boardColor, // Theme Color
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
@@ -275,11 +295,11 @@ class _DiceBoardWidgetState extends State<DiceBoardWidget> {
                             decoration: BoxDecoration(
                               color: isSelected
                                   ? Colors.white.withValues(alpha: 0.15)
-                                  : null,
+                                  : cellColor.withValues(alpha: 0.1), // Slight tint for cell
                               border: Border.all(
                                 color: isSelected 
                                     ? Colors.white.withValues(alpha: 0.3)
-                                    : Colors.white.withValues(alpha: 0.1),
+                                    : Colors.white.withValues(alpha: 0.05),
                                 width: 0.5,
                               ),
                             ),
@@ -289,6 +309,7 @@ class _DiceBoardWidgetState extends State<DiceBoardWidget> {
                                     size: cellSize - 4,
                                     isNew: isNew,
                                     isMerging: isMerging,
+                                    theme: widget.theme, // Pass Theme
                                   )
                                 : null,
                           ),
