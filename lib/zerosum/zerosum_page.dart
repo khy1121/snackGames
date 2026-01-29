@@ -1,11 +1,33 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'zerosum_board.dart';
 import 'zerosum_theme.dart';
 import 'block_widget.dart';
+import 'particle_effects.dart';
 import '../services/game_data_service.dart';
 
-/// Zero Sum 게임 메인 페이지
+/// 발사체 클래스
+class Projectile {
+  Offset position;
+  Offset velocity;
+  final BlockValue value;
+  final double radius;
+
+  Projectile({
+    required this.position,
+    required this.velocity,
+    required this.value,
+    required this.radius,
+  });
+
+  void update(double dt) {
+    position += velocity * dt;
+  }
+}
+
+/// Zero Sum 게임 메인 페이지 (Puzzle Bobble Style)
 class ZeroSumPage extends StatefulWidget {
   const ZeroSumPage({super.key});
 
@@ -16,438 +38,473 @@ class ZeroSumPage extends StatefulWidget {
 class _ZeroSumPageState extends State<ZeroSumPage>
     with TickerProviderStateMixin {
   late ZeroSumBoard _board;
-  Set<BlockPosition> _newBlocks = {};
-  Set<BlockPosition> _explodingBlocks = {};
-  bool _isProcessing = false;
-  int _lastCombo = 0;
+  late Ticker _ticker;
+
+  // 게임 상태
+  Projectile? _projectile;
+  double _aimAngle = -math.pi / 2; // -90도 (위쪽)
+  bool _isAiming = false;
+  
+  // 이펙트 레이어
+  final List<Widget> _effectsLayer = [];
+  Map<BlockPosition, BlockValue> _explodingBlocks = {};
+
+  // 보드 크기 계산용
+  double _bubbleSize = 0;
+  double _boardWidth = 0;
+  double _boardHeight = 0;
+  final double _bottomPanelHeight = 120.0;
 
   @override
   void initState() {
     super.initState();
     _board = ZeroSumBoard.newGame();
+    _ticker = createTicker(_gameLoop);
+    _ticker.start();
   }
 
-  void _startNewGame() {
-    final prevBest = _board.bestScore;
-    setState(() {
-      _board = ZeroSumBoard.newGame(bestScore: prevBest);
-      _newBlocks = {};
-      _explodingBlocks = {};
-      _isProcessing = false;
-      _lastCombo = 0;
-    });
+  @override
+  void dispose() {
+    _ticker.dispose();
+    super.dispose();
   }
 
-  void _onColumnTap(int col) {
-    if (_isProcessing || _board.isGameOver) return;
+  void _gameLoop(Duration elapsed) {
+    if (_projectile == null) return;
 
-    setState(() {
-      _isProcessing = true;
-      _newBlocks = {};
-      _explodingBlocks = {};
-    });
+    // 대략적인 델타 타임
+    const dt = 0.016; 
+    _projectile!.update(dt);
 
-    final droppedPos = _board.dropBlock(col);
-
-    if (droppedPos != null) {
-      HapticFeedback.lightImpact();
-      _newBlocks.add(droppedPos);
-
-      setState(() {});
-
-      // 드롭 애니메이션 후 제로섬 체크
-      Future.delayed(const Duration(milliseconds: 200), () {
-        if (!mounted) return;
-        _checkZeroSum();
-      });
+    if (_checkCollision()) {
+      _handleCollision();
     } else {
-      setState(() {
-        _isProcessing = false;
-      });
+      setState(() {}); // 발사체 위치 갱신
     }
   }
 
-  void _checkZeroSum() {
-    final result = _board.checkAndExplode();
+  bool _checkCollision() {
+    if (_projectile == null) return false;
 
-    if (result.hasExplosion) {
-      HapticFeedback.mediumImpact();
-      _lastCombo = result.comboLevel;
+    final pos = _projectile!.position;
+    final r = _projectile!.radius;
 
-      setState(() {
-        _explodingBlocks = result.explodedBlocks;
-        _newBlocks = {};
-      });
+    // 1. 벽 충돌 (좌우)
+    if (pos.dx - r < 0) {
+      _projectile!.position = Offset(r, pos.dy);
+      _projectile!.velocity = Offset(-_projectile!.velocity.dx, _projectile!.velocity.dy);
+    } else if (pos.dx + r > _boardWidth) {
+      _projectile!.position = Offset(_boardWidth - r, pos.dy);
+      _projectile!.velocity = Offset(-_projectile!.velocity.dx, _projectile!.velocity.dy);
+    }
 
-      // 폭발 애니메이션 후 상태 리셋
-      Future.delayed(const Duration(milliseconds: 350), () {
-        if (!mounted) return;
+    // 2. 천장 충돌
+    if (pos.dy - r < 0) {
+      return true;
+    }
 
+    // 3. 버블 충돌
+    for (int rIdx = 0; rIdx < ZeroSumBoard.rows; rIdx++) {
+      for (int cIdx = 0; cIdx < ZeroSumBoard.columns; cIdx++) {
+        if (_board.grid[rIdx][cIdx] != null) {
+          final bubbleCenter = _getBubbleCenter(rIdx, cIdx);
+          final distSq = (pos.dx - bubbleCenter.dx) * (pos.dx - bubbleCenter.dx) +
+                         (pos.dy - bubbleCenter.dy) * (pos.dy - bubbleCenter.dy);
+          // 충돌 거리: 2 * radius (약간 여유 둬서 1.8 정도)
+          if (distSq < (2 * r - 5) * (2 * r - 5)) {
+            return true;
+          }
+        }
+      }
+    }
+
+    return false;
+  }
+
+  void _handleCollision() {
+    if (_projectile == null) return;
+
+    // 가장 가까운 빈 그리드 찾기 (Snap)
+    final snapPos = _findNearestEmptyGrid(_projectile!.position);
+    
+    if (snapPos != null) {
+      final success = _board.placeBlock(snapPos.row, snapPos.col, _projectile!.value);
+      if (success) {
+        HapticFeedback.lightImpact();
         setState(() {
-          _explodingBlocks = {};
+          _projectile = null;
         });
 
-        // 연쇄 반응 체크
-        final chainResult = _board.checkAndExplode();
-        if (chainResult.hasExplosion) {
-          _lastCombo = chainResult.comboLevel;
-          setState(() {
-            _explodingBlocks = chainResult.explodedBlocks;
-          });
+        // 폭발 체크
+        _checkRules();
+      } else {
+        setState(() => _projectile = null);
+      }
+    } else {
+       setState(() => _projectile = null);
+    }
+  }
 
-          Future.delayed(const Duration(milliseconds: 350), () {
-            if (mounted) {
-              _finishProcessing();
-            }
+  BlockPosition? _findNearestEmptyGrid(Offset p) {
+    BlockPosition? bestPos;
+    double minDesc = double.infinity;
+
+    for (int r = 0; r < ZeroSumBoard.rows; r++) {
+      for (int c = 0; c < ZeroSumBoard.columns; c++) {
+        if (_board.grid[r][c] == null) {
+          final center = _getBubbleCenter(r, c);
+          final distSq = (p.dx - center.dx) * (p.dx - center.dx) +
+                         (p.dy - center.dy) * (p.dy - center.dy);
+          if (distSq < minDesc) {
+            minDesc = distSq;
+            bestPos = BlockPosition(r, c);
+          }
+        }
+      }
+    }
+    return bestPos;
+  }
+
+  Offset _getBubbleCenter(int r, int c) {
+    double x = c * _bubbleSize + _bubbleSize / 2;
+    if (r % 2 == 1) x += _bubbleSize / 2;
+    
+    double y = r * _bubbleSize * 0.85 + _bubbleSize / 2;
+    return Offset(x, y);
+  }
+
+  // 이펙트 관리
+  void _addEffect(Widget effect) {
+     _effectsLayer.add(effect);
+  }
+
+  void _removeEffect(Key key) {
+     setState(() {
+       _effectsLayer.removeWhere((w) => w.key == key);
+     });
+  }
+
+  void _checkRules() {
+    final prevScore = _board.score;
+    final result = _board.checkAndExplode();
+    
+    if (result.hasExplosion) {
+      HapticFeedback.mediumImpact();
+      final scoreDiff = _board.score - prevScore;
+      
+      setState(() {
+        _explodingBlocks = result.explodedBlocks;
+        
+        // 이펙트 추가
+        for (final entry in result.explodedBlocks.entries) {
+            final pos = entry.key;
+            final val = entry.value;
+            final center = _getBubbleCenter(pos.row, pos.col);
+            
+            final pKey = UniqueKey();
+            final gKey = UniqueKey();
+
+            _addEffect(
+              ExplosionParticles(
+                key: pKey,
+                position: center,
+                color: ZeroSumColors.getBlockColor(val),
+                onComplete: () => _removeEffect(pKey),
+              ),
+            );
+            
+            _addEffect(
+              GlowEffect(
+                key: gKey,
+                center: center,
+                size: _bubbleSize * 1.5,
+                color: ZeroSumColors.getBlockColor(val),
+                onComplete: () => _removeEffect(gKey),
+              ),
+            );
+        }
+        
+        if (scoreDiff > 0 && result.explodedBlocks.isNotEmpty) {
+            final firstPos = result.explodedBlocks.keys.first;
+            final center = _getBubbleCenter(firstPos.row, firstPos.col);
+            final tKey = UniqueKey();
+            
+             _addEffect(
+                FlyingScoreText(
+                    key: tKey,
+                    score: scoreDiff,
+                    startPosition: center,
+                    endPosition: Offset(center.dx, center.dy - 100),
+                    onComplete: () => _removeEffect(tKey),
+                )
+             );
+        }
+      });
+      
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) {
+          setState(() {
+            _explodingBlocks = {};
           });
-        } else {
-          _finishProcessing();
+          
+          if (_board.isGameOver) {
+              _showGameOverDialog();
+          }
         }
       });
     } else {
-      _finishProcessing();
-    }
-  }
-
-  void _finishProcessing() {
-    setState(() {
-      _isProcessing = false;
-      _newBlocks = {};
-      _explodingBlocks = {};
-    });
-
-    if (_board.isGameOver) {
-      _showGameOverDialog();
+        if (_board.isGameOver) _showGameOverDialog();
     }
   }
 
   void _showGameOverDialog() {
-    // 점수 기록
     GameDataService.recordScore('zerosum', _board.score);
-    
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         backgroundColor: ZeroSumColors.boardBackground,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Game Over!',
-          style: TextStyle(
-            color: ZeroSumColors.headerText,
-            fontWeight: FontWeight.bold,
-            fontSize: 28,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              '⚖️',
-              style: TextStyle(fontSize: 48),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Score: ${_board.score}',
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: ZeroSumColors.headerText,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Best: ${_board.bestScore}',
-              style: TextStyle(
-                fontSize: 18,
-                color: ZeroSumColors.headerText.withValues(alpha: 0.7),
-              ),
-            ),
-          ],
-        ),
+        title: const Text('Game Over!', style: TextStyle(color: Colors.white)),
+        content: Text('Score: ${_board.score}', style: const TextStyle(color: Colors.white)),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               _startNewGame();
             },
-            style: TextButton.styleFrom(
-              backgroundColor: ZeroSumColors.buttonBackground,
-              foregroundColor: ZeroSumColors.buttonText,
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-            ),
-            child: const Text('Try Again'),
-          ),
+            child: const Text('New Game'),
+          )
         ],
-        actionsAlignment: MainAxisAlignment.center,
       ),
     );
+  }
+
+  void _startNewGame() {
+    setState(() {
+      _board = ZeroSumBoard.newGame(bestScore: _board.bestScore);
+      _projectile = null;
+      _isAiming = false;
+      _explodingBlocks = {};
+      _effectsLayer.clear();
+    });
+  }
+
+  void _shoot() {
+    if (_projectile != null || _board.isGameOver) return;
+    
+    final startPos = Offset(_boardWidth / 2, _boardHeight + 30); 
+    final speed = 800.0; 
+    final velocity = Offset(
+      math.cos(_aimAngle) * speed,
+      math.sin(_aimAngle) * speed,
+    );
+    
+    setState(() {
+      _projectile = Projectile(
+        position: startPos,
+        velocity: velocity,
+        value: _board.nextBlock,
+        radius: _bubbleSize / 2,
+      );
+      _board.generateNextBlock();
+    });
+    
+    HapticFeedback.selectionClick();
   }
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final boardWidth = (size.width - 32).clamp(280.0, 400.0);
-    final cellSize = (boardWidth - 16) / ZeroSumBoard.columns - 4;
+    _boardWidth = size.width;
+    _boardHeight = size.height - _bottomPanelHeight - 100;
+    
+    _bubbleSize = _boardWidth / (ZeroSumBoard.columns + 0.5);
 
     return Scaffold(
-      backgroundColor: ZeroSumColors.background,
+      backgroundColor: const Color(0xFF2C3E50),
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // 헤더
-                _buildHeader(),
-                const SizedBox(height: 20),
-
-                // 점수/다음 블록
-                _buildScoreAndPreview(),
-                const SizedBox(height: 20),
-
-                // 콤보 표시
-                if (_lastCombo > 1)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: ZeroSumColors.explosion.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: ZeroSumColors.explosion),
-                    ),
-                    child: Text(
-                      '🔥 COMBO x$_lastCombo!',
-                      style: const TextStyle(
-                        color: ZeroSumColors.explosion,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                    ),
-                  ),
-                if (_lastCombo > 1) const SizedBox(height: 12),
-
-                // 게임 보드
-                _buildGameBoard(boardWidth, cellSize),
-                const SizedBox(height: 20),
-
-                // 안내 텍스트
-                Text(
-                  'Tap a column to drop the block',
-                  style: TextStyle(
-                    color: ZeroSumColors.headerText.withValues(alpha: 0.6),
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Make adjacent blocks sum to 0 💥',
-                  style: TextStyle(
-                    color: ZeroSumColors.headerText.withValues(alpha: 0.5),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Row(
-      children: [
-        // 뒤로가기 버튼
-        IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: Icon(Icons.arrow_back_ios, color: ZeroSumColors.headerText),
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(),
-        ),
-        const SizedBox(width: 8),
-        
-        // 로고
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: ZeroSumCardColors.gradient,
-            ),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '⚖️',
-                style: TextStyle(fontSize: 20),
-              ),
-              SizedBox(width: 6),
-              Text(
-                'Zero Sum',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        const Spacer(),
-
-        // 새 게임 버튼
-        ElevatedButton.icon(
-          onPressed: _startNewGame,
-          icon: const Icon(Icons.refresh, size: 18),
-          label: const Text('New'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: ZeroSumColors.buttonBackground,
-            foregroundColor: ZeroSumColors.buttonText,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildScoreAndPreview() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _buildScoreBox('SCORE', _board.score),
-        const SizedBox(width: 12),
-        NextBlockPreview(value: _board.nextBlock),
-        const SizedBox(width: 12),
-        _buildScoreBox('BEST', _board.bestScore),
-      ],
-    );
-  }
-
-  Widget _buildScoreBox(String label, int value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      decoration: BoxDecoration(
-        color: ZeroSumColors.boardBackground,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: ZeroSumColors.scoreLabel,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '$value',
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: ZeroSumColors.scoreValue,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGameBoard(double boardWidth, double cellSize) {
-    return Container(
-      width: boardWidth,
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: ZeroSumColors.boardBackground,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // 열 선택 버튼
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: List.generate(
-              ZeroSumBoard.columns,
-              (col) => GestureDetector(
-                onTap: () => _onColumnTap(col),
+        child: Column(
+          children: [
+            _buildHeader(),
+            Expanded(
+              child: GestureDetector(
+                onPanUpdate: (details) {
+                  final renderBox = context.findRenderObject() as RenderBox;
+                  final localPos = renderBox.globalToLocal(details.globalPosition);
+                  final shooterPos = Offset(_boardWidth / 2, _boardHeight + 50);
+                  
+                  final dx = localPos.dx - shooterPos.dx;
+                  final dy = localPos.dy - shooterPos.dy;
+                  
+                  setState(() {
+                    _aimAngle = math.atan2(dy, dx);
+                    if (_aimAngle > -0.3) _aimAngle = -0.3;
+                    if (_aimAngle < -2.8) _aimAngle = -2.8;
+                  });
+                },
+                onPanEnd: (details) => _shoot(),
                 child: Container(
-                  width: cellSize,
-                  height: 30,
-                  decoration: BoxDecoration(
-                    color: ZeroSumColors.cellBackground.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(
-                      color: ZeroSumColors.getBlockColor(_board.nextBlock)
-                          .withValues(alpha: 0.5),
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.arrow_drop_down,
-                    color: Colors.white54,
-                    size: 20,
+                  color: Colors.transparent,
+                  child: Stack(
+                    children: [
+                      ..._buildGridBubbles(),
+                      if (_projectile != null)
+                        Positioned(
+                          left: _projectile!.position.dx - _projectile!.radius,
+                          top: _projectile!.position.dy - _projectile!.radius,
+                          child: BlockWidget(
+                            value: _projectile!.value,
+                            size: _projectile!.radius * 2,
+                          ),
+                        ),
+                      Positioned(
+                        bottom: 20,
+                        left: _boardWidth / 2 - _bubbleSize / 2,
+                        child: Transform.rotate(
+                          angle: _aimAngle + math.pi / 2,
+                          child: const Icon(Icons.arrow_upward, color: Colors.white54, size: 40),
+                        ),
+                      ),
+                       Positioned(
+                        bottom: 20,
+                        left: _boardWidth / 2 - _bubbleSize / 2,
+                        child: BlockWidget(
+                            value: _board.nextBlock,
+                            size: _bubbleSize,
+                        ),
+                      ),
+                      CustomPaint(
+                        painter: _GuideLinePainter(
+                          start: Offset(_boardWidth / 2, _boardHeight + 20),
+                          angle: _aimAngle,
+                        ),
+                      ),
+                      
+                      // Effects Layer (Input Transparent)
+                      IgnorePointer(
+                        child: Stack(
+                          children: _effectsLayer,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 8),
-
-          // 그리드
-          ...List.generate(
-            ZeroSumBoard.rows,
-            (row) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
+            
+            // Bottom Panel
+            Container(
+              height: 60,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              color: Colors.black26,
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: List.generate(
-                  ZeroSumBoard.columns,
-                  (col) => _buildCell(row, col, cellSize),
-                ),
+                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                 children: [
+                   Text('Score: ${_board.score}', style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                   IconButton(icon: const Icon(Icons.refresh, color: Colors.white), onPressed: _startNewGame),
+                 ],
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildGridBubbles() {
+    List<Widget> bubbles = [];
+    for (int r = 0; r < ZeroSumBoard.rows; r++) {
+      for (int c = 0; c < ZeroSumBoard.columns; c++) {
+        BlockValue? blockVal = _board.grid[r][c];
+        
+        final pos = BlockPosition(r, c);
+        if (_explodingBlocks.containsKey(pos)) {
+            blockVal = _explodingBlocks[pos];
+        }
+
+        if (blockVal != null) {
+          final center = _getBubbleCenter(r, c);
+          final isExploding = _explodingBlocks.containsKey(pos);
+          
+          if (isExploding) {
+              // Shrinking & Fading Animation
+              bubbles.add(Positioned(
+                left: center.dx - _bubbleSize/2,
+                top: center.dy - _bubbleSize/2,
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 1.0, end: 0.0),
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeInBack, // 약간 커졌다가 팍 터지는 느낌
+                  builder: (context, value, child) {
+                    return Transform.scale(
+                      scale: value,
+                      child: Opacity(
+                        opacity: value,
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: BlockWidget(value: blockVal, size: _bubbleSize, isExploding: true),
+                ),
+              ));
+          } else {
+              bubbles.add(Positioned(
+                left: center.dx - _bubbleSize/2,
+                top: center.dy - _bubbleSize/2,
+                child: BlockWidget(value: blockVal, size: _bubbleSize),
+              ));
+          }
+        }
+      }
+    }
+    return bubbles;
+  }
+  
+  Widget _buildHeader() {
+      return Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+              children: [
+                  IconButton(
+                      icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+                      onPressed: () => Navigator.pop(context),
+                  ),
+                  const Text('Zero Sum Bobble', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              ],
           ),
-        ],
-      ),
-    );
+      );
   }
+}
 
-  Widget _buildCell(int row, int col, double size) {
-    final block = _board.grid[row][col];
-    final pos = BlockPosition(row, col);
-    final isNew = _newBlocks.contains(pos);
-    final isExploding = _explodingBlocks.contains(pos);
-
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: ZeroSumColors.cellBackground,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: block != null
-          ? AnimatedBlockWidget(
-              value: block,
-              size: size - 4,
-              isNew: isNew,
-              isExploding: isExploding,
-            )
-          : null,
-    );
-  }
+class _GuideLinePainter extends CustomPainter {
+    final Offset start;
+    final double angle;
+    
+    _GuideLinePainter({required this.start, required this.angle});
+    
+    @override
+    void paint(Canvas canvas, Size size) {
+        final paint = Paint()
+            ..color = Colors.white.withValues(alpha: 0.2)
+            ..strokeWidth = 2
+            ..style = PaintingStyle.stroke;
+            
+        final end = Offset(
+            start.dx + math.cos(angle) * 200,
+            start.dy + math.sin(angle) * 200,
+        );
+        
+        double dashWidth = 5, dashSpace = 5, distance = 0;
+        while (distance < 200) {
+             canvas.drawLine(
+                 Offset(start.dx + math.cos(angle) * distance, start.dy + math.sin(angle) * distance),
+                 Offset(start.dx + math.cos(angle) * (distance + dashWidth), start.dy + math.sin(angle) * (distance + dashWidth)),
+                 paint
+             );
+             distance += dashWidth + dashSpace;
+        }
+    }
+    
+    @override
+    bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

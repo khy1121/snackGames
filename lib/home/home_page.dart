@@ -149,9 +149,9 @@ class _HomePageState extends State<HomePage> {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)], // Stitch Purple Theme
           ),
         ),
         child: SafeArea(
@@ -216,7 +216,18 @@ class _HomePageState extends State<HomePage> {
                           ),
                         )),
 
-                    const SizedBox(height: 60),
+                    const SizedBox(height: 40),
+                    const Center(
+                      child: Text(
+                        '짧게, 가볍게, 계속하게/ ⚡',
+                        style: TextStyle(
+                          color: Colors.white54,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
@@ -358,13 +369,27 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          // 모토
-          Text(
-            '기다림을 게임으로 바꾸다',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.white.withValues(alpha: 0.7),
+          const SizedBox(height: 12),
+          // 모토 (Pill-shaped translucent container)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '기다림을 게임으로 바꾸다 ✨',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -377,102 +402,96 @@ class _HomePageState extends State<HomePage> {
         gameList.firstWhere((g) => g.id == gameId, orElse: () => gameList.first);
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            Colors.white.withValues(alpha: 0.2),
-            Colors.white.withValues(alpha: 0.1),
+            const Color(0xFF9F7AEA).withValues(alpha: 0.9), // Lighter Purple
+            const Color(0xFF7F9CF5).withValues(alpha: 0.9), // Blue-ish
           ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF6D28D9).withValues(alpha: 0.4),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 게임 아이콘
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(colors: game.colors),
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: game.colors.first.withValues(alpha: 0.4),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Center(
-              child: Text(game.icon, style: const TextStyle(fontSize: 28)),
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: const Text(
-                        '▶ 이어하기',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.greenAccent,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  game.title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // PLAY 버튼
-          GestureDetector(
-            onTap: () => _navigateToGame(game),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
-                ),
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF667EEA).withValues(alpha: 0.4),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: const Text(
-                'PLAY',
+          Row(
+            children: [
+              const Icon(Icons.play_circle_fill, color: Colors.white, size: 20),
+              const SizedBox(width: 6),
+              const Text(
+                '이어하기',
                 style: TextStyle(
-                  fontWeight: FontWeight.bold,
                   color: Colors.white,
+                  fontWeight: FontWeight.bold,
                   fontSize: 14,
                 ),
               ),
-            ),
+              const Spacer(),
+              Container(
+                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                 decoration: BoxDecoration(
+                     color: Colors.white,
+                     borderRadius: BorderRadius.circular(20),
+                 ),
+                 child: Text(
+                     'PLAY',
+                     style: TextStyle(
+                         color: const Color(0xFF7F9CF5),
+                         fontWeight: FontWeight.bold,
+                         fontSize: 12,
+                     ),
+                 ),
+              )
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+               // Game Icon / Grid Preview
+               Container(
+                 width: 60,
+                 height: 60,
+                 decoration: BoxDecoration(
+                   color: Colors.white.withValues(alpha: 0.2),
+                   borderRadius: BorderRadius.circular(16),
+                 ),
+                 child: Center(child: Text(game.icon, style: const TextStyle(fontSize: 32))),
+               ),
+               const SizedBox(width: 16),
+               Column(
+                 crossAxisAlignment: CrossAxisAlignment.start,
+                 children: [
+                   Text(
+                     game.title,
+                     style: const TextStyle(
+                       fontSize: 28,
+                       fontWeight: FontWeight.w800,
+                       color: Colors.white,
+                       fontStyle: FontStyle.italic, 
+                     ),
+                   ),
+                   Text(
+                     game.subtitle,
+                     style: TextStyle(
+                       fontSize: 13,
+                       color: Colors.white.withValues(alpha: 0.9),
+                     ),
+                   ),
+                 ],
+               ),
+            ],
           ),
         ],
       ),

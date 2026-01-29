@@ -22,7 +22,7 @@ enum BlockValue {
   }
 }
 
-/// 블록 위치
+/// 블록 위치 (Hex Grid)
 class BlockPosition {
   final int row;
   final int col;
@@ -36,17 +36,37 @@ class BlockPosition {
   @override
   int get hashCode => row.hashCode ^ col.hashCode;
 
-  List<BlockPosition> get neighbors => [
-        BlockPosition(row - 1, col), // 위
-        BlockPosition(row + 1, col), // 아래
-        BlockPosition(row, col - 1), // 왼쪽
-        BlockPosition(row, col + 1), // 오른쪽
-      ];
+  /// Hex Grid 6방향 이웃
+  /// 짝수 행(Even Rows)  vs 홀수 행(Odd Rows) 오프셋 고려
+  /// Even Row (0, 2...): (r-1, c-1), (r-1, c), (r, c-1), (r, c+1), (r+1, c-1), (r+1, c)
+  /// Odd Row (1, 3...):  (r-1, c), (r-1, c+1), (r, c-1), (r, c+1), (r+1, c), (r+1, c+1)
+  List<BlockPosition> get neighbors {
+    // 공통: 좌우
+    final list = [
+      BlockPosition(row, col - 1),
+      BlockPosition(row, col + 1),
+    ];
+
+    if (row.isEven) {
+      // 짝수 행: 위/아래의 왼쪽 & 중앙
+      list.add(BlockPosition(row - 1, col - 1));
+      list.add(BlockPosition(row - 1, col));
+      list.add(BlockPosition(row + 1, col - 1));
+      list.add(BlockPosition(row + 1, col));
+    } else {
+      // 홀수 행: 위/아래의 중앙 & 오른쪽
+      list.add(BlockPosition(row - 1, col));
+      list.add(BlockPosition(row - 1, col + 1));
+      list.add(BlockPosition(row + 1, col));
+      list.add(BlockPosition(row + 1, col + 1));
+    }
+    return list;
+  }
 }
 
 /// 제로섬 폭발 결과
 class ExplosionResult {
-  final Set<BlockPosition> explodedBlocks;
+  final Map<BlockPosition, BlockValue> explodedBlocks;
   final int scoreGained;
   final int comboLevel;
 
@@ -59,18 +79,16 @@ class ExplosionResult {
   bool get hasExplosion => explodedBlocks.isNotEmpty;
 }
 
-/// 제로섬 게임 보드
+/// 제로섬 게임 보드 (Hex Ver.)
 class ZeroSumBoard {
-  static const int columns = 7;
-  static const int rows = 12;
+  static const int columns = 8; // 버블 슈터는 보통 가로가 넓음 (또는 8개)
+  static const int rows = 12; // 세로 높이
 
   late List<List<BlockValue?>> grid;
   BlockValue nextBlock;
   int score = 0;
   int bestScore = 0;
   bool isGameOver = false;
-
-
 
   ZeroSumBoard._internal({required this.nextBlock, this.bestScore = 0}) {
     grid = List.generate(rows, (_) => List.filled(columns, null));
@@ -84,76 +102,124 @@ class ZeroSumBoard {
   }
 
   /// 다음 블록 생성
-  void _generateNextBlock() {
+  void generateNextBlock() {
     nextBlock = BlockValue.random();
   }
 
-  /// 특정 열에 블록 드롭
-  /// 반환: 드롭된 위치 (null이면 열이 꽉 참)
-  BlockPosition? dropBlock(int col) {
-    if (col < 0 || col >= columns || isGameOver) return null;
+  /// 특정 위치에 블록 배치 (슈팅 후 착지)
+  /// 반환: 성공 여부
+  bool placeBlock(int row, int col, BlockValue value) {
+    if (row < 0 || row >= rows || col < 0 || col >= columns) return false;
+    
+    // 홀수 행은 마지막 컬럼을 쓰지 않는 경우도 있지만 (7개 vs 8개)
+    // 여기서는 8x12 그리드를 꽉 채우되 시각적으로만 오프셋 처리
+    
+    if (grid[row][col] != null) return false;
 
-    // 맨 위가 차있으면 드롭 불가
-    if (grid[0][col] != null) return null;
+    grid[row][col] = value;
 
-    // 바닥부터 비어있는 위치 찾기
-    int targetRow = rows - 1;
-    for (int r = rows - 1; r >= 0; r--) {
-      if (grid[r][col] == null) {
-        targetRow = r;
-        break;
-      } else if (r < targetRow) {
-        targetRow = r - 1;
-      }
+    // 게임 오버 체크: 최하단 행에 블록이 생기면?
+    // 보통 슈팅 게임은 바닥 라인(데드라인)을 넘으면 게임 오버
+    if (row >= rows - 1) {
+      isGameOver = true;
     }
 
-    // 실제 빈 위치 찾기
-    for (int r = rows - 1; r >= 0; r--) {
-      if (grid[r][col] == null) {
-        targetRow = r;
-        break;
+    return true;
+  }
+  
+  /// 주변(연결된) 모든 빈 공간이 아닌 블록들을 반환 (Floating Cluster Check용)
+  Set<BlockPosition> _findConnectedCluster(BlockPosition start) {
+      if (grid[start.row][start.col] == null) return {};
+      
+      final cluster = <BlockPosition>{};
+      final queue = [start];
+      cluster.add(start);
+      
+      while (queue.isNotEmpty) {
+          final current = queue.removeAt(0);
+          
+          for (final neighbor in current.neighbors) {
+              if (_isValid(neighbor) && 
+                  grid[neighbor.row][neighbor.col] != null && 
+                  !cluster.contains(neighbor)) {
+                  cluster.add(neighbor);
+                  queue.add(neighbor);
+              }
+          }
       }
-    }
-
-    grid[targetRow][col] = nextBlock;
-    _generateNextBlock();
-
-    // 게임 오버 체크
-    _checkGameOver();
-
-    return BlockPosition(targetRow, col);
+      return cluster;
+  }
+  
+  /// 천장에 붙어있는(혹은 천장과 연결된) 모든 블록의 클러스터를 찾습니다.
+  Set<BlockPosition> findAllCeilingConnectedBlocks() {
+      final connected = <BlockPosition>{};
+      // Row 0의 모든 블록 확인
+      for (int c = 0; c < columns; c++) {
+          if (grid[0][c] != null) {
+             connected.addAll(_findConnectedCluster(BlockPosition(0, c)));
+          }
+      }
+      return connected;
   }
 
-  /// 제로섬 조합 찾기 및 폭발 처리
+  /// 공중에 뜬 블록(Cluster) 제거
+  Set<BlockPosition> removeFloatingBlocks() {
+      final ceilingConnected = findAllCeilingConnectedBlocks();
+      final floating = <BlockPosition>{};
+      
+      for (int r = 0; r < rows; r++) {
+          for (int c = 0; c < columns; c++) {
+              if (grid[r][c] != null) {
+                  final pos = BlockPosition(r, c);
+                  if (!ceilingConnected.contains(pos)) {
+                      floating.add(pos);
+                  }
+              }
+          }
+      }
+      
+      for (final pos in floating) {
+          grid[pos.row][pos.col] = null;
+          // 공중 부양 블록 제거 점수 (보너스)
+          score += 100; 
+      }
+      
+      return floating;
+  }
+
   ExplosionResult checkAndExplode() {
-    Set<BlockPosition> allExploded = {};
+    Map<BlockPosition, BlockValue> allExploded = {};
     int totalScore = 0;
     int combo = 0;
 
+    // 반복적으로 체크 (연쇄 폭발)
     while (true) {
       final groups = _findZeroSumGroups();
       if (groups.isEmpty) break;
 
       combo++;
       for (final group in groups) {
-        allExploded.addAll(group);
-        // 점수: (블록 수) * 10 * 콤보 배수
-        totalScore += group.length * 10 * combo;
+        for (final pos in group) {
+           if (grid[pos.row][pos.col] != null) {
+               allExploded[pos] = grid[pos.row][pos.col]!;
+           }
+        }
+        // 점수: (블록 수) * 20 * 콤보 배수
+        totalScore += group.length * 20 * combo;
       }
 
       // 블록 제거
-      for (final pos in allExploded) {
+      for (final pos in allExploded.keys) {
         grid[pos.row][pos.col] = null;
       }
-
-      // 중력 적용
-      _applyGravity();
     }
+    
+    // Floating 제거는 한 번만 수행 (옵션)
+    final floating = removeFloatingBlocks();
+    // allExploded.addAll(floating); // Type Mismatch (Set vs Map) -> Disabled
 
     score += totalScore;
-    if (score > bestScore) {
-      bestScore = score;
-    }
+    if (score > bestScore) bestScore = score;
 
     return ExplosionResult(
       explodedBlocks: allExploded,
@@ -162,180 +228,65 @@ class ZeroSumBoard {
     );
   }
 
-  /// 제로섬이 되는 연결된 블록 그룹 찾기
+  /// 합이 0이 되는 인접 그룹 찾기 (Hex Neighbor Logic)
   List<Set<BlockPosition>> _findZeroSumGroups() {
-    List<Set<BlockPosition>> result = [];
-    Set<BlockPosition> visited = {};
+    List<Set<BlockPosition>> groups = [];
+    Set<BlockPosition> visited = {}; // 중복 그룹 방지 (메인 블록 기준)
 
     for (int r = 0; r < rows; r++) {
       for (int c = 0; c < columns; c++) {
-        if (grid[r][c] == null) continue;
-
         final pos = BlockPosition(r, c);
-        if (visited.contains(pos)) continue;
+        final val = grid[r][c];
+        if (val == null) continue;
 
-        // BFS/DFS로 연결된 블록 그룹 찾기
-        final groups = _findConnectedZeroSumGroups(pos, visited);
-        result.addAll(groups);
-      }
-    }
+        // 주변 6방향 확인
+        for (final n in pos.neighbors) {
+          if (!_isValid(n)) continue;
+          final nVal = grid[n.row][n.col];
+          if (nVal == null) continue;
 
-    return result;
-  }
-
-  /// 특정 위치에서 시작하여 제로섬 그룹 찾기
-  List<Set<BlockPosition>> _findConnectedZeroSumGroups(
-    BlockPosition start,
-    Set<BlockPosition> globalVisited,
-  ) {
-    List<Set<BlockPosition>> result = [];
-
-    // 모든 가능한 연결 조합 체크
-    // 2개 이상의 인접 블록 조합 중 합이 0인 것 찾기
-    final groups = _findAllZeroSumCombinations(start);
-
-    for (final group in groups) {
-      if (group.length >= 2) {
-        result.add(group);
-        globalVisited.addAll(group);
-      }
-    }
-
-    return result;
-  }
-
-  /// 특정 위치에서 시작하여 합이 0이 되는 모든 조합 찾기
-  List<Set<BlockPosition>> _findAllZeroSumCombinations(BlockPosition start) {
-    List<Set<BlockPosition>> result = [];
-    
-    // BFS로 연결된 블록들 모두 찾기
-    Set<BlockPosition> connected = {};
-    List<BlockPosition> queue = [start];
-    
-    while (queue.isNotEmpty) {
-      final current = queue.removeAt(0);
-      if (connected.contains(current)) continue;
-      if (!_isValidPosition(current)) continue;
-      if (grid[current.row][current.col] == null) continue;
-      
-      connected.add(current);
-      
-      for (final neighbor in current.neighbors) {
-        if (!connected.contains(neighbor) && _isValidPosition(neighbor)) {
-          if (grid[neighbor.row][neighbor.col] != null) {
-            queue.add(neighbor);
+          // 두 블록의 합이 0이면 그룹화
+          if (val.value + nVal.value == 0) {
+            // 이미 처리된 쌍인지 확인은 어렵지만, Set으로 결과 관리하면 됨
+            // 여기서는 단순하게 "현재 블록 + 이웃 블록"을 하나의 그룹으로 간주
+            // 만약 A(-1)가 B(+1), C(+1)과 모두 0이면?
+            // A, B, C 모두 터져야 함.
+            
+            // 더 나은 로직: 
+            // "나와 합쳐서 0이 되는 모든 이웃"을 찾아서 한 번에 터트림
           }
         }
       }
     }
     
-    // 연결된 블록들 중 합이 0인 부분집합 찾기
-    final connectedList = connected.toList();
+    // 개선된 로직: 모든 유효한 블록에 대해, "나 + 이웃 == 0"인 경우들을 수집
+    Set<BlockPosition> toExplode = {};
     
-    // 2개 이상의 조합 체크 (최대 6개까지만 체크하여 성능 유지)
-    for (int size = 2; size <= min(6, connectedList.length); size++) {
-      _findSubsetsWithZeroSum(connectedList, size, 0, {}, result);
-    }
-    
-    return result;
-  }
-
-  void _findSubsetsWithZeroSum(
-    List<BlockPosition> blocks,
-    int targetSize,
-    int startIdx,
-    Set<BlockPosition> current,
-    List<Set<BlockPosition>> result,
-  ) {
-    if (current.length == targetSize) {
-      // 합이 0인지 체크
-      int sum = 0;
-      
-      for (final pos in current) {
-        final block = grid[pos.row][pos.col]!;
-        sum += block.value;
-      }
-      
-      // 0 블록이 있으면 조커 역할 - 나머지가 0이면 폭발
-      // 또는 전체 합이 0이면 폭발
-      if (sum == 0 && _isConnectedGroup(current)) {
-        result.add(Set.from(current));
-      }
-      return;
-    }
-    
-    for (int i = startIdx; i < blocks.length; i++) {
-      current.add(blocks[i]);
-      _findSubsetsWithZeroSum(blocks, targetSize, i + 1, current, result);
-      current.remove(blocks[i]);
-    }
-  }
-
-  /// 블록 그룹이 서로 연결되어 있는지 확인
-  bool _isConnectedGroup(Set<BlockPosition> group) {
-    if (group.length <= 1) return true;
-    
-    Set<BlockPosition> visited = {};
-    List<BlockPosition> queue = [group.first];
-    
-    while (queue.isNotEmpty) {
-      final current = queue.removeAt(0);
-      if (visited.contains(current)) continue;
-      if (!group.contains(current)) continue;
-      
-      visited.add(current);
-      
-      for (final neighbor in current.neighbors) {
-        if (group.contains(neighbor) && !visited.contains(neighbor)) {
-          queue.add(neighbor);
-        }
-      }
-    }
-    
-    return visited.length == group.length;
-  }
-
-  bool _isValidPosition(BlockPosition pos) {
-    return pos.row >= 0 && pos.row < rows && pos.col >= 0 && pos.col < columns;
-  }
-
-  /// 중력 적용 - 빈 공간 아래로 블록 떨어뜨리기
-  void _applyGravity() {
-    for (int c = 0; c < columns; c++) {
-      // 각 열에서 빈 공간 없이 블록 정렬
-      List<BlockValue> columnBlocks = [];
-      for (int r = rows - 1; r >= 0; r--) {
-        if (grid[r][c] != null) {
-          columnBlocks.add(grid[r][c]!);
-        }
-      }
-      
-      // 아래부터 채우기
-      for (int r = rows - 1; r >= 0; r--) {
-        final idx = rows - 1 - r;
-        grid[r][c] = idx < columnBlocks.length ? columnBlocks[idx] : null;
-      }
-    }
-  }
-
-  /// 게임 오버 체크
-  void _checkGameOver() {
-    // 모든 열의 맨 위가 차있으면 게임 오버
-    for (int c = 0; c < columns; c++) {
-      if (grid[0][c] != null) {
-        isGameOver = true;
-        return;
-      }
-    }
-  }
-
-  /// 특정 열의 높이 (쌓인 블록 수)
-  int getColumnHeight(int col) {
     for (int r = 0; r < rows; r++) {
-      if (grid[r][col] != null) {
-        return rows - r;
-      }
+        for (int c = 0; c < columns; c++) {
+            final pos = BlockPosition(r, c);
+            final val = grid[r][c];
+            if (val == null) continue;
+            
+            for (final n in pos.neighbors) {
+                if (!_isValid(n)) continue;
+                final nVal = grid[n.row][n.col];
+                if (nVal != null && val.value + nVal.value == 0) {
+                    toExplode.add(pos);
+                    toExplode.add(n);
+                }
+            }
+        }
     }
-    return 0;
+    
+    if (toExplode.isNotEmpty) {
+        groups.add(toExplode);
+    }
+
+    return groups;
+  }
+
+  bool _isValid(BlockPosition pos) {
+    return pos.row >= 0 && pos.row < rows && pos.col >= 0 && pos.col < columns;
   }
 }
