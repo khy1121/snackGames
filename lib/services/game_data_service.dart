@@ -7,9 +7,63 @@ class GameDataService {
   static const String _keyTodayDate = 'today_date';
   static const String _keyLastPlayed = 'last_played';
   static const String _keyTotalPlayTime = 'total_play_time';
+  static const String _keyPoints = 'user_points';
+  static const String _keyAdRemoved = 'ad_removed';
+  static const String _keyOwnedThemes = 'owned_themes';
+  static const String _keySelectedTheme = 'selected_theme';
   static const String _keyTotalGamesPlayed = 'total_games_played';
 
   static SharedPreferences? _prefs;
+
+  // ... (previous static logic) ...
+
+  // ========== 재화 및 상점 (Monetization) ==========
+
+  /// 현재 보유 포인트
+  static int getPoints() {
+    return prefs.getInt(_keyPoints) ?? 0;
+  }
+
+  /// 포인트 추가/차감
+  static Future<void> addPoints(int amount) async {
+    final current = getPoints();
+    await prefs.setInt(_keyPoints, current + amount);
+  }
+
+  /// 광고 제거 여부
+  static bool isAdRemoved() {
+    return prefs.getBool(_keyAdRemoved) ?? false;
+  }
+
+  /// 광고 제거 구매 처리
+  static Future<void> removeAds() async {
+    await prefs.setBool(_keyAdRemoved, true);
+  }
+
+  /// 보유 테마 목록 (ID 리스트)
+  static List<String> getOwnedThemes() {
+    return prefs.getStringList(_keyOwnedThemes) ?? ['cyberpunk']; // Default
+  }
+
+  /// 테마 구매/획득
+  static Future<void> addTheme(String themeId) async {
+    final themes = getOwnedThemes();
+    if (!themes.contains(themeId)) {
+      themes.add(themeId);
+      await prefs.setStringList(_keyOwnedThemes, themes);
+    }
+  }
+
+  /// 현재 적용된 테마
+  static String getSelectedTheme() {
+    return prefs.getString(_keySelectedTheme) ?? 'cyberpunk';
+  }
+
+  /// 테마 변경
+  static Future<void> setTheme(String themeId) async {
+    await prefs.setString(_keySelectedTheme, themeId);
+  }
+  // ... methods continuing ...
 
   static Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();

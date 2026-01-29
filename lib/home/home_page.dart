@@ -3,6 +3,7 @@ import '../game/game_page.dart';
 import '../dice/dice_game_page.dart';
 import '../zerosum/zerosum_page.dart';
 import '../profile/profile_page.dart';
+import '../shop/shop_page.dart';
 import '../services/game_data_service.dart';
 import '../services/daily_mission_service.dart';
 import '../services/achievement_service.dart';
@@ -332,6 +333,26 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
               const Spacer(),
+              // 상점 버튼 (New)
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ShopPage()),
+                  );
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFD700).withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFFFFD700).withValues(alpha: 0.5)),
+                  ),
+                  child: const Icon(Icons.store, color: Color(0xFFFFD700), size: 20),
+                ),
+              ),
+
               // 프로필 버튼
               GestureDetector(
                 onTap: () {
