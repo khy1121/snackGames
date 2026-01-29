@@ -39,12 +39,12 @@ class DiceTheme {
     cellColor: Color(0xFF2D3436),
     textColor: Colors.white,
     diceColors: [
-      Color(0xFFEF5350), // 1: Red
-      Color(0xFFEC407A), // 2: Pink
-      Color(0xFFAB47BC), // 3: Purple
-      Color(0xFF7E57C2), // 4: Deep Purple
-      Color(0xFF5C6BC0), // 5: Indigo
-      Color(0xFF42A5F5), // 6: Blue
+      Color(0xFFFF5252), // 1: Vibrant Red
+      Color(0xFFFFB74D), // 2: Orange
+      Color(0xFFFFEB3B), // 3: Yellow
+      Color(0xFF69F0AE), // 4: Mint Green
+      Color(0xFF40C4FF), // 5: Cyan Blue
+      Color(0xFFE040FB), // 6: Magenta/Pink
     ],
   );
 

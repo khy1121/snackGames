@@ -249,7 +249,7 @@ class ProfilePage extends StatelessWidget {
     final games = [
       {'icon': '🔢', 'name': '2048', 'score': GameDataService.getBestScore('2048')},
       {'icon': '🎲', 'name': 'Dice Merge', 'score': GameDataService.getBestScore('dice')},
-      {'icon': '⚖️', 'name': 'Zero Sum', 'score': GameDataService.getBestScore('zerosum')},
+
     ];
 
     return Container(
@@ -287,7 +287,7 @@ class ProfilePage extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '${(game['score'] as int) > 0 ? '${game['score']}점' : '--'}',
+                  (game['score'] as int) > 0 ? '${game['score']}점' : '--',
                   style: const TextStyle(
                     color: Color(0xFFFFD700),
                     fontWeight: FontWeight.bold,

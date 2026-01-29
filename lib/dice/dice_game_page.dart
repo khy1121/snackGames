@@ -56,7 +56,7 @@ class _DiceGamePageState extends State<DiceGamePage>
 
   void _onColumnTap(int col) {
     if (_isProcessing || _board.isGameOver) return;
-    if (_startTime == null) _startTime = DateTime.now();
+    _startTime ??= DateTime.now();
 
     setState(() {
       _isProcessing = true;

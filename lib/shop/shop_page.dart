@@ -267,7 +267,7 @@ class _ShopPageState extends State<ShopPage> {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: _themes.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 16),
+                separatorBuilder: (context, index) => const SizedBox(width: 16),
                 itemBuilder: (context, index) {
                   final theme = _themes[index];
                   final isOwned = _ownedThemes.contains(theme['id']);

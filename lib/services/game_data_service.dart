@@ -85,7 +85,7 @@ class GameDataService {
     if (savedDate != today) {
       // 새로운 날 - 일일 점수 리셋
       prefs.setString(_keyTodayDate, today);
-      for (final gameId in ['2048', 'dice', 'zerosum']) {
+      for (final gameId in ['2048', 'dice']) {
         prefs.remove('$_keyTodayScore$gameId');
       }
     }
@@ -170,8 +170,7 @@ class GameDataService {
         return '2048';
       case 'dice':
         return 'Dice Merge';
-      case 'zerosum':
-        return 'Zero Sum';
+
       default:
         return gameId;
     }
@@ -183,8 +182,7 @@ class GameDataService {
         return '🔢';
       case 'dice':
         return '🎲';
-      case 'zerosum':
-        return '⚖️';
+
       default:
         return '🎮';
     }

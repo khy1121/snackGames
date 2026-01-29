@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import '../game/game_page.dart';
 import '../dice/dice_game_page.dart';
-import '../zerosum/zerosum_page.dart';
+
 import '../profile/profile_page.dart';
 import '../shop/shop_page.dart';
 import '../services/game_data_service.dart';
 import '../services/daily_mission_service.dart';
 import '../services/achievement_service.dart';
+import '../services/challenge_service.dart';
+import '../challenge/challenge_page.dart';
 
 /// 게임 정보 데이터
 class GameInfo {
@@ -48,21 +50,7 @@ final List<GameInfo> gameList = [
 • 보드가 빠르게 채워짐''',
     pageBuilder: (_) => const DiceGamePage(),
   ),
-  GameInfo(
-    id: 'zerosum',
-    title: 'Zero Sum Path', // Updated title
-    subtitle: '선 긋기 합 0 만들기',
-    icon: '⚡', // Updated icon
-    colors: const [Color(0xFF0F172A), Color(0xFF06B6D4)], // Cyberpunk Theme Colors
-    rules: '''📖 게임 규칙
-• 드래그로 숫자 연결
-• 합이 0이 되면 ⚡폭발
-• 길게 연결하면 점수↑''',
-    difficulty: '''📈 난이도
-• 숫자 범위 -3 ~ +3
-• 5초 힌트 제공''',
-    pageBuilder: (_) => const ZeroSumPage(),
-  ),
+
   GameInfo(
     id: '2048',
     title: '2048',
@@ -102,6 +90,7 @@ class _HomePageState extends State<HomePage> {
     await GameDataService.init();
     await DailyMissionService.init(GameDataService.prefs);
     await AchievementService.init(GameDataService.prefs);
+    await ChallengeService.init(GameDataService.prefs);
     if (mounted) {
       setState(() => _isLoading = false);
     }
@@ -256,7 +245,7 @@ class _HomePageState extends State<HomePage> {
               children: [
                 _buildNavItem(0, Icons.home_rounded, '홈'),
                 _buildNavItem(1, Icons.games_rounded, '게임'),
-                _buildNavItem(2, Icons.leaderboard_rounded, '랭킹'),
+                _buildNavItem(2, Icons.emoji_events_rounded, '도전'),
                 _buildNavItem(3, Icons.settings_rounded, '설정'),
               ],
             ),
@@ -274,7 +263,7 @@ class _HomePageState extends State<HomePage> {
         if (index == 2) {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const ProfilePage()),
+            MaterialPageRoute(builder: (_) => const ChallengePage()),
           );
         }
       },

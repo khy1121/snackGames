@@ -82,7 +82,7 @@ class DailyMissionService {
     ),
     MissionTemplate(
       gameId: '2048',
-      descBuilder: (v) => '2048에서 ${v}타일 만들기',
+      descBuilder: (v) => '2048에서 $v타일 만들기',
       minTarget: 128,
       maxTarget: 512,
       reward: 100,
@@ -102,21 +102,7 @@ class DailyMissionService {
       maxTarget: 30,
       reward: 80,
     ),
-    // Zero Sum 미션
-    MissionTemplate(
-      gameId: 'zerosum',
-      descBuilder: (v) => 'Zero Sum에서 $v점 달성하기',
-      minTarget: 200,
-      maxTarget: 1000,
-      reward: 50,
-    ),
-    MissionTemplate(
-      gameId: 'zerosum',
-      descBuilder: (v) => 'Zero Sum에서 $v콤보 달성하기',
-      minTarget: 2,
-      maxTarget: 5,
-      reward: 120,
-    ),
+
   ];
 
   static Future<void> init(SharedPreferences prefs) async {
