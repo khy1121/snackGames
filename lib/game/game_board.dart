@@ -51,6 +51,17 @@ class GameBoard {
     return empty;
   }
   
+  /// 현재 보드에서 가장 큰 타일 값
+  int get highestTile {
+    int max = 0;
+    for (int r = 0; r < size; r++) {
+      for (int c = 0; c < size; c++) {
+        if (tiles[r][c] > max) max = tiles[r][c];
+      }
+    }
+    return max;
+  }
+  
   /// 랜덤 타일 추가 (90% 확률로 2, 10% 확률로 4)
   void _addRandomTile() {
     final empty = emptyCells;

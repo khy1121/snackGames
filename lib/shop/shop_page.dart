@@ -164,6 +164,10 @@ class _ShopPageState extends State<ShopPage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
           Center(
             child: Container(

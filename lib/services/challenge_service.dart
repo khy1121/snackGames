@@ -197,7 +197,28 @@ class ChallengeService {
     await addXP(xpGain);
   }
 
-  /// 도전과제 진행도 업데이트
+  /// 도전과제 진행도 업데이트 및 새로 완료된 도전과제 반환
+  static Future<List<String>> updateProgressAndGetCompleted(String type, int value) async {
+    final oldValue = prefs.getInt('$_keyChallengeProgress$type') ?? 0;
+    await prefs.setInt('$_keyChallengeProgress$type', value);
+    
+    // 현재 레벨의 도전과제 중 새로 완료된 것 찾기
+    final completedChallenges = <String>[];
+    final levelData = getCurrentLevelData();
+    
+    for (final c in levelData.challenges) {
+      if (c.id == type || c.id.startsWith(type.split('_')[0])) {
+        // 이전에는 미완료였고, 지금은 완료된 경우
+        if (oldValue < c.targetValue && value >= c.targetValue) {
+          completedChallenges.add(c.description);
+        }
+      }
+    }
+    
+    return completedChallenges;
+  }
+
+  /// 도전과제 진행도 업데이트 (기존 호환성)
   static Future<void> updateProgress(String type, int value) async {
     await prefs.setInt('$_keyChallengeProgress$type', value);
   }

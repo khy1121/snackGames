@@ -4,6 +4,8 @@ import 'game_board.dart';
 import 'game_theme.dart';
 import 'tile_widget.dart';
 import '../services/game_data_service.dart';
+import '../services/challenge_service.dart';
+import '../widgets/challenge_toast.dart';
 
 /// 2048 게임 메인 페이지
 class GamePage extends StatefulWidget {
@@ -25,7 +27,8 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _board = GameBoard.newGame();
+    final savedBest = GameDataService.getBestScore('2048');
+    _board = GameBoard.newGame(bestScore: savedBest);
   }
   
   void _startNewGame() {
@@ -92,61 +95,347 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
     }
   }
   
+  Future<void> _checkAndShowChallengeToasts() async {
+    final gamesPlayed = GameDataService.getTotalGamesPlayed();
+    final bestScore = GameDataService.getBestScore('2048');
+    
+    // 플레이 횟수 관련 도전과제 체크
+    final playIds = ['play_1', 'play_3', 'play_5', 'play_10', 'play_15', 'play_20', 'play_30', 'play_40', 'play_50', 'play_75'];
+    for (final id in playIds) {
+      final completed = await ChallengeService.updateProgressAndGetCompleted(id, gamesPlayed);
+      for (final desc in completed) {
+        if (mounted) ChallengeToast.show(context, desc);
+      }
+    }
+    
+    // 점수 관련 도전과제 체크
+    final scoreIds = ['score_300', 'score_500', 'score_1000', 'score_1500', 'score_2000', 'score_3000', 'score_4000', 'score_5000', 'score_7500'];
+    for (final id in scoreIds) {
+      final completed = await ChallengeService.updateProgressAndGetCompleted(id, bestScore);
+      for (final desc in completed) {
+        if (mounted) ChallengeToast.show(context, desc);
+      }
+    }
+  }
+  
   void _showGameOverDialog() {
     // 점수 기록
     GameDataService.recordScore('2048', _board.score);
     
-    showDialog(
+    // 리워드 계산 (2048은 점수가 더 높으므로 200점당 1P)
+    final reward = (_board.score / 200).floor();
+    
+    // XP 계산 (기본 10 + 점수/200)
+    final xpGain = 10 + (_board.score ~/ 200);
+    
+    // 포인트 지급
+    GameDataService.addPoints(reward);
+    
+    // XP 지급
+    ChallengeService.addXP(xpGain);
+    
+    // 도전과제 진행도 업데이트 및 토스트 표시
+    _checkAndShowChallengeToasts();
+    
+    // 최대 타일 표시
+    final maxTile = _board.highestTile;
+
+    showGeneralDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: GameColors.background,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Game Over!',
-          style: TextStyle(
-            color: GameColors.headerText,
-            fontWeight: FontWeight.bold,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Score: ${_board.score}',
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: GameColors.headerText,
+      barrierLabel: 'Game Over',
+      transitionDuration: const Duration(milliseconds: 400),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Stack(
+            children: [
+              Container(color: Colors.black.withValues(alpha: 0.85)),
+              
+              Center(
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  duration: const Duration(milliseconds: 500),
+                  curve: Curves.easeOutBack,
+                  builder: (context, value, child) {
+                    return Transform.scale(
+                      scale: value,
+                      child: Container(
+                        width: 340,
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E1E2E),
+                          borderRadius: BorderRadius.circular(32),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.1),
+                            width: 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFF39C12).withValues(alpha: 0.3),
+                              blurRadius: 30,
+                              spreadRadius: 5,
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Title
+                            const Text(
+                              'GAME OVER',
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                letterSpacing: 1.5,
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            
+                            // Score
+                            Text(
+                              '${_board.score}',
+                              style: const TextStyle(
+                                fontSize: 48,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFFFFD700),
+                                height: 1.0,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            
+                            // New Best Badge 
+                            if (_board.score >= _board.bestScore && _board.score > 0)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFD700).withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: const Color(0xFFFFD700)),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.emoji_events, size: 14, color: Color(0xFFFFD700)),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'NEW BEST!',
+                                      style: TextStyle(
+                                        color: Color(0xFFFFD700),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              
+                            const SizedBox(height: 30),
+                            
+                            // Reward Section
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFFF39C12), Color(0xFFE74C3C)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'REWARD EARNED',
+                                          style: TextStyle(
+                                            color: Colors.white.withValues(alpha: 0.7),
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            Text(
+                                              '+${reward}P',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 20,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Text(
+                                              '+${xpGain}XP',
+                                              style: TextStyle(
+                                                color: Colors.white.withValues(alpha: 0.8),
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.2),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.card_giftcard, color: Colors.white, size: 24),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            
+                            const SizedBox(height: 16),
+                            
+                            // Stats Row
+                            Row(
+                              children: [
+                                // Max Tile
+                                Expanded(
+                                  child: Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.05),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'MAX TILE',
+                                          style: TextStyle(
+                                            color: Colors.white.withValues(alpha: 0.5),
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '$maxTile',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 18,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                // Best Score
+                                Expanded(
+                                  child: Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.05),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'BEST SCORE',
+                                          style: TextStyle(
+                                            color: Colors.white.withValues(alpha: 0.5),
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '${_board.bestScore}',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 18,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            
+                            const SizedBox(height: 30),
+                            
+                            // Actions
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      _startNewGame();
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFFF39C12),
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(30),
+                                      ),
+                                      elevation: 5,
+                                      shadowColor: const Color(0xFFF39C12).withValues(alpha: 0.5),
+                                    ),
+                                    child: const Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.refresh, color: Colors.white),
+                                        SizedBox(width: 8),
+                                        Text(
+                                          '다시하기',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: IconButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      Navigator.pop(context);
+                                    },
+                                    icon: const Icon(Icons.home, color: Colors.white),
+                                    padding: const EdgeInsets.all(12),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Best: ${_board.bestScore}',
-              style: TextStyle(
-                fontSize: 18,
-                color: GameColors.headerText.withValues(alpha: 0.7),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _startNewGame();
-            },
-            style: TextButton.styleFrom(
-              backgroundColor: GameColors.buttonBackground,
-              foregroundColor: GameColors.buttonText,
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-            ),
-            child: const Text('Try Again'),
+            ],
           ),
-        ],
-        actionsAlignment: MainAxisAlignment.center,
-      ),
+        );
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(opacity: animation, child: child);
+      },
     );
   }
   

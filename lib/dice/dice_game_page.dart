@@ -5,6 +5,8 @@ import 'dice_widget.dart';
 import 'dice_theme.dart';
 import 'dice_effects.dart'; // Import VFX
 import '../services/game_data_service.dart';
+import '../services/challenge_service.dart';
+import '../widgets/challenge_toast.dart';
 
 /// 주사위 머지 게임 페이지
 class DiceGamePage extends StatefulWidget {
@@ -180,6 +182,29 @@ class _DiceGamePageState extends State<DiceGamePage>
      return Offset(box.size.width / 2, box.size.height / 2);
   }
 
+  Future<void> _checkAndShowChallengeToasts() async {
+    final gamesPlayed = GameDataService.getTotalGamesPlayed();
+    final bestScore = GameDataService.getBestScore('dice');
+    
+    // 플레이 횟수 관련 도전과제 체크
+    final playIds = ['play_1', 'play_3', 'play_5', 'play_10', 'play_15', 'play_20', 'play_30', 'play_40', 'play_50', 'play_75'];
+    for (final id in playIds) {
+      final completed = await ChallengeService.updateProgressAndGetCompleted(id, gamesPlayed);
+      for (final desc in completed) {
+        if (mounted) ChallengeToast.show(context, desc);
+      }
+    }
+    
+    // 점수 관련 도전과제 체크
+    final scoreIds = ['score_300', 'score_500', 'score_1000', 'score_1500', 'score_2000', 'score_3000', 'score_4000', 'score_5000', 'score_7500'];
+    for (final id in scoreIds) {
+      final completed = await ChallengeService.updateProgressAndGetCompleted(id, bestScore);
+      for (final desc in completed) {
+        if (mounted) ChallengeToast.show(context, desc);
+      }
+    }
+  }
+
   void _showGameOverDialog() {
     // 점수 기록
     GameDataService.recordScore('dice', _board.score);
@@ -193,8 +218,17 @@ class _DiceGamePageState extends State<DiceGamePage>
     // 리워드 계산 (예: 100점당 1P)
     final reward = (_board.score / 100).floor();
     
+    // XP 계산 (기본 10 + 점수/100)
+    final xpGain = 10 + (_board.score ~/ 100);
+    
     // 포인트 지급
     GameDataService.addPoints(reward);
+    
+    // XP 지급
+    ChallengeService.addXP(xpGain);
+    
+    // 도전과제 진행도 업데이트 및 토스트 표시
+    _checkAndShowChallengeToasts();
 
     showGeneralDialog(
       context: context,
@@ -317,13 +351,26 @@ class _DiceGamePageState extends State<DiceGamePage>
                                           ),
                                         ),
                                         const SizedBox(height: 4),
-                                        Text(
-                                          '+${reward}P',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 20,
-                                          ),
+                                        Row(
+                                          children: [
+                                            Text(
+                                              '+${reward}P',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 20,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Text(
+                                              '+${xpGain}XP',
+                                              style: TextStyle(
+                                                color: Colors.white.withValues(alpha: 0.8),
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ],
                                     ),
