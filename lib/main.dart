@@ -7,16 +7,18 @@ void main() {
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
   ]);
-  runApp(const GameHubApp());
+  runApp(const SnackGamesApp());
 }
 
-class GameHubApp extends StatelessWidget {
-  const GameHubApp({super.key});
+/// 스낵게임즈 - 기다림을 게임으로 바꾸다
+/// 짧게, 가볍게, 계속하게
+class SnackGamesApp extends StatelessWidget {
+  const SnackGamesApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Game Hub',
+      title: '스낵게임즈',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -30,4 +32,3 @@ class GameHubApp extends StatelessWidget {
     );
   }
 }
-

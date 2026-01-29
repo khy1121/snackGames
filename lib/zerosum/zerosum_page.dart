@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'zerosum_board.dart';
 import 'zerosum_theme.dart';
 import 'block_widget.dart';
+import '../services/game_data_service.dart';
 
 /// Zero Sum 게임 메인 페이지
 class ZeroSumPage extends StatefulWidget {
@@ -121,6 +122,9 @@ class _ZeroSumPageState extends State<ZeroSumPage>
   }
 
   void _showGameOverDialog() {
+    // 점수 기록
+    GameDataService.recordScore('zerosum', _board.score);
+    
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -255,11 +259,19 @@ class _ZeroSumPageState extends State<ZeroSumPage>
 
   Widget _buildHeader() {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
+        // 뒤로가기 버튼
+        IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: Icon(Icons.arrow_back_ios, color: ZeroSumColors.headerText),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+        ),
+        const SizedBox(width: 8),
+        
         // 로고
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               colors: ZeroSumCardColors.gradient,
@@ -271,13 +283,13 @@ class _ZeroSumPageState extends State<ZeroSumPage>
             children: [
               Text(
                 '⚖️',
-                style: TextStyle(fontSize: 24),
+                style: TextStyle(fontSize: 20),
               ),
-              SizedBox(width: 8),
+              SizedBox(width: 6),
               Text(
                 'Zero Sum',
                 style: TextStyle(
-                  fontSize: 22,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
@@ -285,6 +297,8 @@ class _ZeroSumPageState extends State<ZeroSumPage>
             ],
           ),
         ),
+
+        const Spacer(),
 
         // 새 게임 버튼
         ElevatedButton.icon(

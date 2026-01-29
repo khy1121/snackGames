@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'game_board.dart';
 import 'game_theme.dart';
 import 'tile_widget.dart';
+import '../services/game_data_service.dart';
 
 /// 2048 게임 메인 페이지
 class GamePage extends StatefulWidget {
@@ -92,6 +93,9 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
   }
   
   void _showGameOverDialog() {
+    // 점수 기록
+    GameDataService.recordScore('2048', _board.score);
+    
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -307,11 +311,19 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
   
   Widget _buildHeader() {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
+        // 뒤로가기 버튼
+        IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF776E65)),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+        ),
+        const SizedBox(width: 8),
+        
         // 2048 로고
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
             color: const Color(0xFFEDC22E),
             borderRadius: BorderRadius.circular(8),
@@ -319,18 +331,20 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
           child: const Text(
             '2048',
             style: TextStyle(
-              fontSize: 36,
+              fontSize: 28,
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
           ),
         ),
         
+        const Spacer(),
+        
         // 새 게임 버튼
         ElevatedButton.icon(
           onPressed: _startNewGame,
-          icon: const Icon(Icons.refresh, size: 20),
-          label: const Text('New Game'),
+          icon: const Icon(Icons.refresh, size: 18),
+          label: const Text('New'),
           style: ElevatedButton.styleFrom(
             backgroundColor: GameColors.buttonBackground,
             foregroundColor: GameColors.buttonText,

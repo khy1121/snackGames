@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dice_board.dart';
 import 'dice_widget.dart';
+import '../services/game_data_service.dart';
 
 /// 주사위 머지 게임 페이지
 class DiceGamePage extends StatefulWidget {
@@ -79,6 +80,9 @@ class _DiceGamePageState extends State<DiceGamePage>
   }
 
   void _showGameOverDialog() {
+    // 점수 기록
+    GameDataService.recordScore('dice', _board.score);
+    
     showDialog(
       context: context,
       barrierDismissible: false,
