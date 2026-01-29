@@ -61,6 +61,7 @@ class DiceMergeBoard {
   late List<List<BoardCell>> cells;
   int score = 0;
   int bestScore = 0;
+  int totalMerges = 0;
   bool isGameOver = false;
   Dice? nextDice;
   
@@ -82,6 +83,7 @@ class DiceMergeBoard {
   void reset() {
     _initBoard();
     score = 0;
+    totalMerges = 0;
     isGameOver = false;
     _generateNextDice();
   }
@@ -130,6 +132,7 @@ class DiceMergeBoard {
     
     // 점수 추가
     score += mergeResult.scoreGained;
+    totalMerges += mergeResult.merges.length; // 머지 횟수 누적
     if (score > bestScore) bestScore = score;
     
     // 다음 주사위 생성
