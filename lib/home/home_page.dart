@@ -9,6 +9,7 @@ import '../services/daily_mission_service.dart';
 import '../services/achievement_service.dart';
 import '../services/challenge_service.dart';
 import '../challenge/challenge_page.dart';
+import '../settings/settings_page.dart';
 
 /// 게임 정보 데이터
 class GameInfo {
@@ -131,9 +132,13 @@ class _HomePageState extends State<HomePage> {
       );
     }
 
+    // 데이터 로드
     final lastPlayed = GameDataService.getLastPlayedGame();
     final mission = DailyMissionService.currentMission;
     final rank = AchievementService.getCurrentRank();
+    final level = ChallengeService.getCurrentLevel();
+    final levelData = ChallengeService.getCurrentLevelData();
+    final xpProgress = ChallengeService.getXPProgress();
 
     return Scaffold(
       body: Container(
@@ -147,79 +152,14 @@ class _HomePageState extends State<HomePage> {
         child: SafeArea(
           child: Column(
             children: [
-              // 헤더
-              _buildHeader(rank),
+              // 헤더 (항상 표시)
+              _buildHeader(rank, level, xpProgress),
 
-              // 컨텐츠
+              // 메인 컨텐츠 (탭에 따라 변경)
               Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  children: [
-                    const SizedBox(height: 12),
-
-                    // 이어하기 버튼
-                    if (lastPlayed != null) ...[
-                      _buildContinueButton(lastPlayed),
-                      const SizedBox(height: 16),
-                    ],
-
-                    // 데일리 미션
-                    if (mission != null) ...[
-                      _buildDailyMission(mission),
-                      const SizedBox(height: 20),
-                    ],
-
-                    // 섹션 헤더
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Row(
-                        children: [
-                          const Text(
-                            '🎮 인기 게임 리스트',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            '${gameList.length}개',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.white.withValues(alpha: 0.7),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // 게임 리스트
-                    ...gameList.map((game) => Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: _GameCard(
-                            game: game,
-                            bestScore: GameDataService.getBestScore(game.id),
-                            todayScore: GameDataService.getTodayScore(game.id),
-                            onTap: () => _navigateToGame(game),
-                            onInfoTap: () => _showGameInfo(game),
-                          ),
-                        )),
-
-                    const SizedBox(height: 40),
-                    const Center(
-                      child: Text(
-                        '짧게, 가볍게, 계속하게/ ⚡',
-                        style: TextStyle(
-                          color: Colors.white54,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                  ],
-                ),
+                child: _currentNavIndex == 1
+                    ? _buildGameListView()
+                    : _buildHubView(lastPlayed, mission, levelData),
               ),
             ],
           ),
@@ -255,6 +195,173 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // --- Views ---
+
+  Widget _buildHubView(
+      String? lastPlayed, DailyMission? mission, LevelData levelData) {
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      children: [
+        const SizedBox(height: 12),
+
+        // 레벨 정보 카드 (Hub Only)
+        _buildLevelCard(levelData),
+        const SizedBox(height: 16),
+
+        // 이어하기 버튼
+        if (lastPlayed != null) ...[
+          _buildContinueButton(lastPlayed),
+          const SizedBox(height: 16),
+        ],
+
+        // 데일리 미션
+        if (mission != null) ...[
+          _buildDailyMission(mission),
+          const SizedBox(height: 20),
+        ],
+
+        // 바로가기 힌트
+        GestureDetector(
+          onTap: () => setState(() => _currentNavIndex = 1),
+          child: Container(
+             padding: const EdgeInsets.all(16),
+             decoration: BoxDecoration(
+               color: Colors.white.withValues(alpha: 0.1),
+               borderRadius: BorderRadius.circular(16),
+               border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+             ),
+             child: Row(
+               children: [
+                 const Icon(Icons.videogame_asset, color: Colors.white),
+                 const SizedBox(width: 12),
+                 const Column(
+                   crossAxisAlignment: CrossAxisAlignment.start,
+                   children: [
+                     Text('새로운 게임 찾기', 
+                       style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                     Text('아케이드 탭으로 이동하기',
+                       style: TextStyle(color: Colors.white70, fontSize: 12)),
+                   ],
+                 ),
+                 const Spacer(),
+                 const Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 16),
+               ],
+             ),
+          ),
+        ),
+        
+        const SizedBox(height: 40),
+        const Center(
+          child: Text(
+            '짧게, 가볍게, 계속하게 \u26A1',
+            style: TextStyle(
+              color: Colors.white54,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  Widget _buildGameListView() {
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      children: [
+        const SizedBox(height: 12),
+        // 섹션 헤더
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Row(
+            children: [
+              const Text(
+                '🎮 모든 게임',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${gameList.length}개',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.white.withValues(alpha: 0.7),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // 게임 리스트 (Grid로 변경 가능, 현재는 List 유지)
+        ...gameList.map((game) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _GameCard(
+                game: game,
+                bestScore: GameDataService.getBestScore(game.id),
+                todayScore: GameDataService.getTodayScore(game.id),
+                onTap: () => _navigateToGame(game),
+                onInfoTap: () => _showGameInfo(game),
+              ),
+            )),
+            
+        const SizedBox(height: 40),
+      ],
+    );
+  }
+
+  // --- Components ---
+
+  Widget _buildLevelCard(LevelData levelData) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: const Color(0xFF6C5CE7),
+            child: Text(
+              '${levelData.level}',
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Lv.${levelData.level} ${levelData.name}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                '게임을 플레이하고 XP를 획득하세요!',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+
   Widget _buildNavItem(int index, IconData icon, String label) {
     final isSelected = _currentNavIndex == index;
     return GestureDetector(
@@ -264,6 +371,11 @@ class _HomePageState extends State<HomePage> {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const ChallengePage()),
+          );
+        } else if (index == 3) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SettingsPage()),
           );
         }
       },
@@ -298,7 +410,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildHeader(RankInfo rank) {
+  Widget _buildHeader(RankInfo rank, int level, double xpProgress) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
       child: Column(
@@ -308,16 +420,41 @@ class _HomePageState extends State<HomePage> {
               // 브랜드 로고
               const Text('🍿', style: TextStyle(fontSize: 28)),
               const SizedBox(width: 8),
-              const Column(
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     '스낵게임즈',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
+                  ),
+                  Row(
+                    children: [
+                      Text(
+                        'Lv.$level',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF00B894),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      SizedBox(
+                        width: 60,
+                        height: 4,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(2),
+                          child: LinearProgressIndicator(
+                            value: xpProgress,
+                            backgroundColor: Colors.white.withValues(alpha: 0.2),
+                            valueColor: const AlwaysStoppedAnimation(Color(0xFF00B894)),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -406,6 +543,7 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
 
   Widget _buildContinueButton(String gameId) {
     final game =

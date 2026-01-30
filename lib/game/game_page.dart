@@ -5,6 +5,7 @@ import 'game_theme.dart';
 import 'tile_widget.dart';
 import '../services/game_data_service.dart';
 import '../services/challenge_service.dart';
+import '../services/settings_service.dart';
 import '../widgets/challenge_toast.dart';
 
 /// 2048 게임 메인 페이지
@@ -16,6 +17,17 @@ class GamePage extends StatefulWidget {
 }
 
 class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
+  @override
+  void dispose() {
+    if (_startTime != null) {
+      final elapsedMinutes = DateTime.now().difference(_startTime!).inMinutes;
+      if (elapsedMinutes > 0) {
+        GameDataService.addPlayTime(elapsedMinutes);
+      }
+    }
+    super.dispose();
+  }
+
   late GameBoard _board;
   Set<(int, int)> _newTiles = {};
   Set<(int, int)> _mergedTiles = {};
@@ -24,9 +36,14 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
   Offset? _dragStart;
   bool _isProcessing = false;
   
+  // 플레이 시간 측정
+  DateTime? _startTime;
+
+  
   @override
   void initState() {
     super.initState();
+    _startTime = DateTime.now();
     final savedBest = GameDataService.getBestScore('2048');
     _board = GameBoard.newGame(bestScore: savedBest);
   }
@@ -53,7 +70,9 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
     final result = _board.move(direction);
     
     if (result.moved) {
-      HapticFeedback.lightImpact();
+      if (SettingsService.vibrationEnabled.value) {
+        HapticFeedback.lightImpact();
+      }
       
       // 병합된 타일 찾기
       for (final merge in result.merges) {

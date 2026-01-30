@@ -1,11 +1,11 @@
 {
-    "name": "game2048",
-    "short_name": "game2048",
+    "name": "Snack Games",
+    "short_name": "SnackGames",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#1E1E2E",
+    "theme_color": "#1E1E2E",
+    "description": "Premium Mini Games Collection",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

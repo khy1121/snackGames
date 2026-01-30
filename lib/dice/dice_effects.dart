@@ -1,6 +1,71 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 
+/// 화면 흔들림 효과 위젯
+class ScreenShake extends StatefulWidget {
+  final Widget child;
+  final Duration duration;
+  final double intensity;
+
+  const ScreenShake({
+    super.key,
+    required this.child,
+    this.duration = const Duration(milliseconds: 300),
+    this.intensity = 5.0,
+  });
+
+  @override
+  State<ScreenShake> createState() => ScreenShakeState();
+}
+
+class ScreenShakeState extends State<ScreenShake> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+  final Random _random = Random();
+
+  double _offsetX = 0;
+  double _offsetY = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: widget.duration);
+    _animation = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    )..addListener(() {
+        if (_controller.isAnimating) {
+          setState(() {
+            _offsetX = (_random.nextDouble() * 2 - 1) * widget.intensity * _animation.value;
+            _offsetY = (_random.nextDouble() * 2 - 1) * widget.intensity * _animation.value;
+          });
+        } else {
+          setState(() {
+            _offsetX = 0;
+            _offsetY = 0;
+          });
+        }
+      });
+  }
+
+  void shake() {
+    _controller.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.translate(
+      offset: Offset(_offsetX, _offsetY),
+      child: widget.child,
+    );
+  }
+}
+
 class DiceEffectsOverlay extends StatefulWidget {
   final List<EffectEvent> events;
   final VoidCallback onClearEvents;
@@ -47,22 +112,63 @@ class _DiceEffectsOverlayState extends State<DiceEffectsOverlay>
         _addExplosion(event);
       } else if (event is TextPopupEvent) {
         _addTextPopup(event);
+      } else if (event is ShockwaveEvent) {
+        _addShockwave(event);
+      } else if (event is LightningEvent) {
+        _addLightning(event);
       }
     }
+  }
+
+  void _addLightning(LightningEvent event) {
+    final key = UniqueKey();
+    _activeEffects.add(
+      _LightningWidget(
+        key: key,
+        color: event.color,
+        onFinished: () {
+          setState(() {
+            _activeEffects.removeWhere((w) => w.key == key);
+          });
+        },
+      ),
+    );
+  }
+
+  void _addShockwave(ShockwaveEvent event) {
+    final key = UniqueKey();
+    _activeEffects.add(
+      _ShockwaveWidget(
+        key: key,
+        position: event.position,
+        color: event.color,
+        onFinished: () {
+          setState(() {
+            _activeEffects.removeWhere((w) => w.key == key);
+          });
+        },
+      ),
+    );
   }
 
   void _addExplosion(ExplosionEvent event) {
     final key = UniqueKey();
     // Simple particle system
-    final particles = List.generate(20, (i) {
+    final count = event.isMagic ? 40 : 15;
+    
+    final particles = List.generate(count, (i) {
       final random = Random();
       final angle = random.nextDouble() * 2 * pi;
-      final speed = random.nextDouble() * 100 + 50;
+      // Magic explosions are faster and reach further
+      final speed = random.nextDouble() * (event.isMagic ? 200 : 100) + 50; 
+      
       return _Particle(
         position: event.position,
         velocity: Offset(cos(angle) * speed, sin(angle) * speed),
-        color: event.color,
-        size: random.nextDouble() * 8 + 4,
+        color: event.isMagic 
+            ? HSVColor.fromAHSV(1, (random.nextDouble() * 360), 1, 1).toColor() 
+            : event.color,
+        size: random.nextDouble() * (event.isMagic ? 12 : 6) + 3,
       );
     });
 
@@ -121,7 +227,21 @@ abstract class EffectEvent {}
 class ExplosionEvent extends EffectEvent {
   final Offset position;
   final Color color;
-  ExplosionEvent(this.position, this.color);
+  final bool isMagic;
+  
+  ExplosionEvent(this.position, this.color, {this.isMagic = false});
+}
+
+class ShockwaveEvent extends EffectEvent {
+  final Offset position;
+  final Color color;
+  
+  ShockwaveEvent(this.position, this.color);
+}
+
+class LightningEvent extends EffectEvent {
+  final Color color;
+  LightningEvent({this.color = Colors.yellowAccent});
 }
 
 class TextPopupEvent extends EffectEvent {
@@ -133,6 +253,188 @@ class TextPopupEvent extends EffectEvent {
 }
 
 // --- Internal Widgets ---
+
+class _LightningWidget extends StatefulWidget {
+  final Color color;
+  final VoidCallback onFinished;
+
+  const _LightningWidget({
+    super.key,
+    required this.color,
+    required this.onFinished,
+  });
+
+  @override
+  State<_LightningWidget> createState() => _LightningWidgetState();
+}
+
+class _LightningWidgetState extends State<_LightningWidget> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
+    _controller.forward().whenComplete(widget.onFinished);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return CustomPaint(
+          size: Size.infinite,
+          painter: _LightningPainter(widget.color, _controller.value),
+        );
+      },
+    );
+  }
+}
+
+class _LightningPainter extends CustomPainter {
+  final Color color;
+  final double progress;
+  final Random _random = Random(123); // Consistent seed for jitter if needed, or variable
+
+  _LightningPainter(this.color, this.progress);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (progress > 1.0) return;
+    
+    final paint = Paint()
+      ..color = color.withValues(alpha: 1.0 - progress) // Fade out
+      ..strokeWidth = 3
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final path = Path();
+    
+    // Create detailed jagged lines
+    // Top-Left to Bottom-Right
+    _drawBolt(path, Offset.zero, Offset(size.width, size.height), 20);
+    // Top-Right to Bottom-Left
+    _drawBolt(path, Offset(size.width, 0), Offset(0, size.height), 20);
+    
+    canvas.drawPath(path, paint);
+    
+    // Flash effect
+    if (progress < 0.2) {
+      canvas.drawColor(Colors.white.withValues(alpha: (0.2 - progress) * 2), BlendMode.lighten);
+    }
+  }
+  
+  void _drawBolt(Path path, Offset start, Offset end, int segments) {
+    path.moveTo(start.dx, start.dy);
+    
+    Offset current = start;
+    final dx = (end.dx - start.dx) / segments;
+    final dy = (end.dy - start.dy) / segments;
+    
+    // Re-seed for animation frame variance if desired, or keep consistent shape
+    final random = Random(); 
+
+    for (int i = 0; i < segments; i++) {
+        final jitterX = (random.nextDouble() - 0.5) * 50;
+        final jitterY = (random.nextDouble() - 0.5) * 50;
+        
+        final next = Offset(
+           start.dx + dx * (i + 1) + jitterX,
+           start.dy + dy * (i + 1) + jitterY
+        );
+        
+        path.lineTo(next.dx, next.dy);
+        current = next;
+    }
+    path.lineTo(end.dx, end.dy);
+  }
+
+  @override
+  bool shouldRepaint(_LightningPainter oldDelegate) => true;
+}
+
+
+// --- Internal Widgets ---
+
+class _ShockwaveWidget extends StatefulWidget {
+  final Offset position;
+  final Color color;
+  final VoidCallback onFinished;
+
+  const _ShockwaveWidget({
+    super.key,
+    required this.position,
+    required this.color,
+    required this.onFinished,
+  });
+
+  @override
+  State<_ShockwaveWidget> createState() => _ShockwaveWidgetState();
+}
+
+class _ShockwaveWidgetState extends State<_ShockwaveWidget> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _radius;
+  late Animation<double> _opacity;
+  late Animation<double> _width;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
+    
+    _radius = Tween<double>(begin: 0, end: 150).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutQuart),
+    );
+    
+    _opacity = Tween<double>(begin: 0.8, end: 0.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+    
+    _width = Tween<double>(begin: 20, end: 0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+
+    _controller.forward().whenComplete(widget.onFinished);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Positioned(
+          left: widget.position.dx - _radius.value,
+          top: widget.position.dy - _radius.value,
+          width: _radius.value * 2,
+          height: _radius.value * 2,
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: widget.color.withValues(alpha: _opacity.value),
+                width: _width.value,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
 
 class _Particle {
   Offset position;

@@ -194,126 +194,128 @@ class _ShopPageState extends State<ShopPage> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 1. Subscription / Ads
-            const Text(
-              '💎 PREMIUM',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (_isAdRemoved)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [Color(0xFF6D28D9), Color(0xFF8B5CF6)]),
-                  borderRadius: BorderRadius.circular(16),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 1. Subscription / Ads
+              const Text(
+                '💎 PREMIUM',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
                 ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+              ),
+              const SizedBox(height: 12),
+              if (_isAdRemoved)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(colors: [Color(0xFF6D28D9), Color(0xFF8B5CF6)]),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.white),
+                      SizedBox(width: 8),
+                      Text(
+                        'PREMIUM ACTIVATED',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Row(
                   children: [
-                    Icon(Icons.check_circle, color: Colors.white),
-                    SizedBox(width: 8),
-                    Text(
-                      'PREMIUM ACTIVATED',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                    Expanded(
+                      child: _buildProductCard(
+                        title: '광고 제거 (영구)',
+                        price: '₩9,900',
+                        icon: Icons.block,
+                        color: const Color(0xFFE17055),
+                        onTap: () => _purchaseAdRemoval(true),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildProductCard(
+                        title: '월간 구독',
+                        price: '₩2,500/월',
+                        icon: Icons.calendar_today,
+                        color: const Color(0xFF00B894),
+                        onTap: () => _purchaseAdRemoval(false),
+                      ),
                     ),
                   ],
                 ),
-              )
-            else
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildProductCard(
-                      title: '광고 제거 (영구)',
-                      price: '₩9,900',
-                      icon: Icons.block,
-                      color: const Color(0xFFE17055),
-                      onTap: () => _purchaseAdRemoval(true),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildProductCard(
-                      title: '월간 구독',
-                      price: '₩2,500/월',
-                      icon: Icons.calendar_today,
-                      color: const Color(0xFF00B894),
-                      onTap: () => _purchaseAdRemoval(false),
-                    ),
-                  ),
-                ],
+  
+              const SizedBox(height: 32),
+  
+              // 2. Themes
+              const Text(
+                '🎨 THEMES',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-
-            const SizedBox(height: 32),
-
-            // 2. Themes
-            const Text(
-              '🎨 THEMES',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 220,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _themes.length,
+                  separatorBuilder: (context, index) => const SizedBox(width: 16),
+                  itemBuilder: (context, index) {
+                    final theme = _themes[index];
+                    final isOwned = _ownedThemes.contains(theme['id']);
+                    final isSelected = GameDataService.getSelectedTheme() == theme['id'];
+  
+                    return _buildThemeCard(theme, isOwned, isSelected);
+                  },
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 220,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: _themes.length,
-                separatorBuilder: (context, index) => const SizedBox(width: 16),
-                itemBuilder: (context, index) {
-                  final theme = _themes[index];
-                  final isOwned = _ownedThemes.contains(theme['id']);
-                  final isSelected = GameDataService.getSelectedTheme() == theme['id'];
-
-                  return _buildThemeCard(theme, isOwned, isSelected);
-                },
+  
+               const SizedBox(height: 32),
+  
+              // 3. Gold / Items (Placeholder)
+              const Text(
+                '🎒 ITEMS',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-
-             const SizedBox(height: 32),
-
-            // 3. Gold / Items (Placeholder)
-            const Text(
-              '🎒 ITEMS',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-             const SizedBox(height: 12),
-             Container(
-               padding: const EdgeInsets.all(24),
-               width: double.infinity,
-               decoration: BoxDecoration(
-                 color: Colors.white.withValues(alpha: 0.05),
-                 borderRadius: BorderRadius.circular(16),
-                 border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+               const SizedBox(height: 12),
+               Container(
+                 padding: const EdgeInsets.all(24),
+                 width: double.infinity,
+                 decoration: BoxDecoration(
+                   color: Colors.white.withValues(alpha: 0.05),
+                   borderRadius: BorderRadius.circular(16),
+                   border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                 ),
+                 child: const Column(
+                   children: [
+                     Icon(Icons.construction, color: Colors.grey, size: 40),
+                     SizedBox(height: 8),
+                      Text(
+                        'Coming Soon',
+                         style: TextStyle(color: Colors.grey),
+                     ),
+                   ],
+                 ),
                ),
-               child: const Column(
-                 children: [
-                   Icon(Icons.construction, color: Colors.grey, size: 40),
-                   SizedBox(height: 8),
-                    Text(
-                      'Coming Soon',
-                       style: TextStyle(color: Colors.grey),
-                   ),
-                 ],
-               ),
-             ),
-          ],
+            ],
+          ),
         ),
       ),
     );

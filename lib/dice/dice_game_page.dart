@@ -6,6 +6,7 @@ import 'dice_theme.dart';
 import 'dice_effects.dart'; // Import VFX
 import '../services/game_data_service.dart';
 import '../services/challenge_service.dart';
+import '../services/settings_service.dart';
 import '../widgets/challenge_toast.dart';
 
 /// 주사위 머지 게임 페이지
@@ -18,6 +19,17 @@ class DiceGamePage extends StatefulWidget {
 
 class _DiceGamePageState extends State<DiceGamePage>
     with TickerProviderStateMixin {
+  @override
+  void dispose() {
+    if (_startTime != null) {
+      final elapsedMinutes = DateTime.now().difference(_startTime!).inMinutes;
+      if (elapsedMinutes > 0) {
+        GameDataService.addPlayTime(elapsedMinutes);
+      }
+    }
+    super.dispose();
+  }
+
   late DiceMergeBoard _board;
   Set<(int, int)> _newDice = {};
   Set<(int, int)> _mergingDice = {};
@@ -27,6 +39,9 @@ class _DiceGamePageState extends State<DiceGamePage>
   // VFX State
   List<EffectEvent> _effectEvents = [];
   final GlobalKey _boardKey = GlobalKey(); // To get board position
+  final GlobalKey<ScreenShakeState> _shakeKey = GlobalKey();
+  
+  int _comboStreak = 0; // Track consecutive merges for Lightning effect
 
   DateTime? _startTime;
 
@@ -37,7 +52,7 @@ class _DiceGamePageState extends State<DiceGamePage>
     _startTime = DateTime.now();
     _loadTheme();
   }
-
+  
   void _loadTheme() {
     final themeId = GameDataService.getSelectedTheme();
     setState(() {
@@ -69,7 +84,9 @@ class _DiceGamePageState extends State<DiceGamePage>
     final result = _board.dropDice(col);
 
     if (result != null) {
-      HapticFeedback.lightImpact();
+      if (SettingsService.vibrationEnabled.value) {
+        HapticFeedback.lightImpact();
+      }
 
       _newDice.add(result.droppedAt);
       for (final merge in result.merges) {
@@ -103,22 +120,48 @@ class _DiceGamePageState extends State<DiceGamePage>
   }
 
   void _triggerVFX(DropResult result) {
+    bool hasMerge = result.merges.isNotEmpty;
+
+    if (hasMerge) {
+      _comboStreak++;
+      
+      // Every merge triggers a small shake
+      _shakeKey.currentState?.shake();
+      
+      // Every 10th combo triggers LIGHTNING
+      if (_comboStreak > 0 && _comboStreak % 10 == 0) {
+        _effectEvents.add(LightningEvent());
+        HapticFeedback.heavyImpact();
+      } else {
+         if (SettingsService.vibrationEnabled.value) {
+            HapticFeedback.lightImpact();
+         }
+      }
+    } else {
+      // No merge, reset streak? 
+      // User said "10 combo", typically means consecutive. 
+      // But in this game, it's hard to strict-combo. 
+      // Let's keep it as "Cumulative Merge Counter" for now to make it fun, 
+      // or reset if they want strict combo.
+      // Let's reset to make it a "Streak".
+      _comboStreak = 0;
+    }
+
     // 1. Calculate Combo / Score Text
     if (result.scoreGained > 0) {
-       // Find position for text popup (approximate center of action)
-       // Default to center of board if complex
        Offset centerPos = _getBoardCenter();
-       
-       // Use dropped position as base
        centerPos = _getCellPosition(result.droppedAt.$1, result.droppedAt.$2) ?? centerPos;
 
-       final msg = result.merges.any((m) => m.isMagicClear) 
+       final isMagic = result.merges.any((m) => m.isMagicClear);
+       final isBigCombo = result.scoreGained > 200;
+
+       final msg = isMagic 
           ? 'MAGIC! +${result.scoreGained}'
           : result.scoreGained > 100 
              ? 'COMBO! +${result.scoreGained}' 
              : '+${result.scoreGained}';
        
-       final color = result.merges.any((m) => m.isMagicClear)
+       final color = isMagic
           ? Colors.amber
           : Colors.white;
 
@@ -128,15 +171,19 @@ class _DiceGamePageState extends State<DiceGamePage>
           color,
           fontSize: result.scoreGained > 500 ? 32 : 20,
         ));
+        
+        // Trigger Shockwave for Big Combo
+        if (isBigCombo || isMagic) {
+          _effectEvents.add(ShockwaveEvent(centerPos, isMagic ? Colors.amber : Colors.cyanAccent));
+        }
     }
 
-    // 2. Trigger Explosions for Magic Clears
+    // 2. Trigger Explosions for ALL Merges (Pop Action)
     for (final merge in result.merges) {
-      if (merge.isMagicClear) {
         // Trigger explosion at center
         final centerPos = _getCellPosition(merge.resultPosition.$1, merge.resultPosition.$2);
         if (centerPos != null) {
-           _effectEvents.add(ExplosionEvent(centerPos, Colors.purpleAccent));
+           _effectEvents.add(ExplosionEvent(centerPos, Colors.purpleAccent, isMagic: merge.isMagicClear));
         }
 
         // Also trigger small explosions for all cleared blocks
@@ -146,10 +193,9 @@ class _DiceGamePageState extends State<DiceGamePage>
               _effectEvents.add(ExplosionEvent(p, Colors.orangeAccent.withValues(alpha: 0.5)));
            }
         }
-        HapticFeedback.heavyImpact();
-      }
     }
   }
+
   
   // Helper to find screen coordinates of a cell
   Offset? _getCellPosition(int row, int col) {
@@ -552,65 +598,68 @@ class _DiceGamePageState extends State<DiceGamePage>
         scaffoldBackgroundColor: Colors.transparent,
         textTheme: GoogleFonts.getTextTheme(_theme.fontHandle, Theme.of(context).textTheme),
       ),
-      child: Scaffold(
-        body: Container(
-          decoration: BoxDecoration(
-            gradient: _theme.backgroundGradient,
-          ),
-          child: SafeArea(
-            child: Column(
-              children: [
-                _buildHeader(),
-                const SizedBox(height: 8),
-                _buildScoreAndNextDice(),
-                const SizedBox(height: 8),
-                
-                // Game Board Area with VFX Overlay
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Stack(
-                      children: [
-                         // Actual Board
-                         DiceBoardWidget(
-                           key: _boardKey,
-                           board: _board,
-                           newDice: _newDice,
-                           mergingDice: _mergingDice,
-                           onColumnTap: _onColumnTap,
-                           theme: _theme,
-                         ),
-                         
-                         // VFX Overlay
-                         // Position.fill ensures it matches Board size
-                         Positioned.fill(
-                           child: DiceEffectsOverlay(
-                             events: _effectEvents,
-                             onClearEvents: () {
-                               // Clear events after processing so they don't re-trigger
-                               _effectEvents = []; 
-                               // Note: setState not needed here as Overlay handles its own state
-                               // but we clean up our list.
-                             },
+      child: ScreenShake(
+        key: _shakeKey,
+        child: Scaffold(
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: _theme.backgroundGradient,
+            ),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  _buildHeader(),
+                  const SizedBox(height: 8),
+                  _buildScoreAndNextDice(),
+                  const SizedBox(height: 8),
+                  
+                  // Game Board Area with VFX Overlay
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Stack(
+                        children: [
+                           // Actual Board
+                           DiceBoardWidget(
+                             key: _boardKey,
+                             board: _board,
+                             newDice: _newDice,
+                             mergingDice: _mergingDice,
+                             onColumnTap: _onColumnTap,
+                             theme: _theme,
                            ),
-                         ),
-                      ],
+                           
+                           // VFX Overlay
+                           // Position.fill ensures it matches Board size
+                           Positioned.fill(
+                             child: DiceEffectsOverlay(
+                               events: _effectEvents,
+                               onClearEvents: () {
+                                 // Clear events after processing so they don't re-trigger
+                                 _effectEvents = []; 
+                                 // Note: setState not needed here as Overlay handles its own state
+                                 // but we clean up our list.
+                               },
+                             ),
+                           ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
 
-                Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Text(
-                    'Tap column to drop • Match 3 to merge • 6+6+6 = ✨Magic!',
-                    style: TextStyle(
-                      color: _theme.textColor.withValues(alpha: 0.6),
-                      fontSize: 11,
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text(
+                      'Tap column to drop • Match 3 to merge • 6+6+6 = ✨Magic!',
+                      style: TextStyle(
+                        color: _theme.textColor.withValues(alpha: 0.6),
+                        fontSize: 11,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
