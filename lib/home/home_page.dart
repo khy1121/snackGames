@@ -1169,20 +1169,7 @@ class _GameCardState extends State<_GameCard> {
         scale: _isPressed ? 0.95 : 1.0,
         duration: const Duration(milliseconds: 150),
         curve: Curves.easeOutCubic,
-        child: TweenAnimationBuilder<double>(
-          tween: Tween(begin: 1.0, end: 1.0),
-          duration: const Duration(milliseconds: 600),
-          curve: Curves.easeOutBack,
-          builder: (context, value, child) {
-            return Transform.translate(
-              offset: Offset(0, 20 * (1 - value)),
-              child: Opacity(
-                opacity: value.clamp(0.0, 1.0),
-                child: child,
-              ),
-            );
-          },
-          child: Container(
+        child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -1272,7 +1259,6 @@ class _GameCardState extends State<_GameCard> {
               ),
             ],
           ),
-        ),
         ),
       ),
     );
