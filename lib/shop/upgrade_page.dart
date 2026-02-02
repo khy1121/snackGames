@@ -29,6 +29,11 @@ class _UpgradePageState extends State<UpgradePage> {
   }
 
   void _purchaseUpgrade(UpgradeStatus upgrade) {
+    if (upgrade.isLocked) {
+      _showMessage('레벨 ${upgrade.info.requiredLevel} 이상에서 해금됩니다!');
+      return;
+    }
+
     if (upgrade.isMaxLevel) {
       _showMessage('이미 최대 레벨입니다!');
       return;
@@ -234,8 +239,11 @@ class _UpgradeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final canAfford = currentPoints >= upgrade.nextCost;
     final isMaxLevel = upgrade.isMaxLevel;
+    final isLocked = upgrade.isLocked;
 
-    return Container(
+    return Opacity(
+      opacity: isLocked ? 0.6 : 1.0,
+      child: Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -351,25 +359,25 @@ class _UpgradeCard extends StatelessWidget {
           // Purchase Button
           Container(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: isMaxLevel
+            child: isLocked
                 ? Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     decoration: BoxDecoration(
-                      color: Colors.amber.withValues(alpha: 0.2),
+                      color: Colors.red.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.amber),
+                      border: Border.all(color: Colors.red),
                     ),
-                    child: const Center(
+                    child: Center(
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.check_circle, color: Colors.amber, size: 18),
-                          SizedBox(width: 6),
+                          const Icon(Icons.lock, color: Colors.red, size: 18),
+                          const SizedBox(width: 6),
                           Text(
-                            'MAX LEVEL',
-                            style: TextStyle(
-                              color: Colors.amber,
+                            'LV ${upgrade.info.requiredLevel} 필요',
+                            style: const TextStyle(
+                              color: Colors.red,
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
                             ),
@@ -378,7 +386,34 @@ class _UpgradeCard extends StatelessWidget {
                       ),
                     ),
                   )
-                : ElevatedButton(
+                : isMaxLevel
+                    ? Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.amber),
+                        ),
+                        child: const Center(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.check_circle, color: Colors.amber, size: 18),
+                              SizedBox(width: 6),
+                              Text(
+                                'MAX LEVEL',
+                                style: TextStyle(
+                                  color: Colors.amber,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : ElevatedButton(
                     onPressed: canAfford ? onPurchase : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: canAfford
@@ -413,7 +448,7 @@ class _UpgradeCard extends StatelessWidget {
                   ),
           ),
           // Next Effect Preview
-          if (!isMaxLevel)
+          if (!isMaxLevel && !isLocked)
             Container(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
               child: Text(
