@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/upgrade_service.dart';
 import '../services/game_data_service.dart';
+import '../services/challenge_service.dart'; // 레벨 정보를 가져오기 위해 추가
 
 /// 업그레이드 페이지
 class UpgradePage extends StatefulWidget {
@@ -13,6 +14,7 @@ class UpgradePage extends StatefulWidget {
 class _UpgradePageState extends State<UpgradePage> {
   List<UpgradeStatus> _upgrades = [];
   int _currentPoints = 0;
+  int _userLevel = 1; // 사용자 현재 레벨
 
   @override
   void initState() {
@@ -22,12 +24,18 @@ class _UpgradePageState extends State<UpgradePage> {
 
   void _loadData() {
     setState(() {
-      _upgrades = UpgradeService.getAllUpgradeStatus();
+      _userLevel = ChallengeService.getCurrentLevel();
+      _upgrades = UpgradeService.getAllUpgradeStatus(_userLevel);
       _currentPoints = GameDataService.getPoints();
     });
   }
 
   void _purchaseUpgrade(UpgradeStatus upgrade) {
+    if (upgrade.isLocked) {
+      _showMessage('레벨 ${upgrade.info.requiredLevel} 이상에서 해금됩니다!');
+      return;
+    }
+
     if (upgrade.isMaxLevel) {
       _showMessage('이미 최대 레벨입니다!');
       return;
@@ -86,6 +94,7 @@ class _UpgradePageState extends State<UpgradePage> {
                           child: _UpgradeCard(
                             upgrade: upgrade,
                             currentPoints: _currentPoints,
+                            userLevel: _userLevel,
                             onPurchase: () => _purchaseUpgrade(upgrade),
                           ),
                         )),
@@ -221,11 +230,13 @@ class _UpgradePageState extends State<UpgradePage> {
 class _UpgradeCard extends StatelessWidget {
   final UpgradeStatus upgrade;
   final int currentPoints;
+  final int userLevel;
   final VoidCallback onPurchase;
 
   const _UpgradeCard({
     required this.upgrade,
     required this.currentPoints,
+    required this.userLevel,
     required this.onPurchase,
   });
 
@@ -233,25 +244,32 @@ class _UpgradeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final canAfford = currentPoints >= upgrade.nextCost;
     final isMaxLevel = upgrade.isMaxLevel;
+    final isLocked = upgrade.isLocked;
 
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.white.withValues(alpha: 0.15),
-            Colors.white.withValues(alpha: 0.05),
-          ],
+    return Opacity(
+      opacity: isLocked ? 0.6 : 1.0, // 잠긴 경우 투명도 감소
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Colors.white.withValues(alpha: isLocked ? 0.08 : 0.15),
+              Colors.white.withValues(alpha: isLocked ? 0.03 : 0.05),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isLocked
+                ? Colors.grey.withValues(alpha: 0.3)
+                : isMaxLevel 
+                    ? Colors.amber.withValues(alpha: 0.5)
+                    : Colors.white.withValues(alpha: 0.2),
+            width: isMaxLevel ? 2 : 1,
+          ),
         ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isMaxLevel 
-              ? Colors.amber.withValues(alpha: 0.5)
-              : Colors.white.withValues(alpha: 0.2),
-          width: isMaxLevel ? 2 : 1,
-        ),
-      ),
-      child: Column(
-        children: [
+        child: Stack(
+          children: [
+            Column(
+              children: [
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -288,23 +306,46 @@ class _UpgradeCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: isMaxLevel 
-                                  ? Colors.amber.withValues(alpha: 0.3)
-                                  : Colors.blue.withValues(alpha: 0.3),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              'Lv.${upgrade.currentLevel}/${upgrade.info.maxLevel}',
-                              style: TextStyle(
-                                color: isMaxLevel ? Colors.amber : Colors.blue,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
+                          if (isLocked)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.red.withValues(alpha: 0.3),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.lock, size: 10, color: Colors.red),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Lv.${upgrade.info.requiredLevel}',
+                                    style: const TextStyle(
+                                      color: Colors.red,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: isMaxLevel 
+                                    ? Colors.amber.withValues(alpha: 0.3)
+                                    : Colors.blue.withValues(alpha: 0.3),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                'Lv.${upgrade.currentLevel}/${upgrade.info.maxLevel}',
+                                style: TextStyle(
+                                  color: isMaxLevel ? Colors.amber : Colors.blue,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                          ),
                         ],
                       ),
                       const SizedBox(height: 4),
@@ -350,8 +391,35 @@ class _UpgradeCard extends StatelessWidget {
           // Purchase Button
           Container(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: isMaxLevel
+            child: isLocked
                 ? Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.red.withValues(alpha: 0.5)),
+                    ),
+                    child: Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.lock, color: Colors.red, size: 18),
+                          const SizedBox(width: 6),
+                          Text(
+                            '레벨 ${upgrade.info.requiredLevel} 이상 필요',
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : isMaxLevel
+                    ? Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     decoration: BoxDecoration(
@@ -412,7 +480,7 @@ class _UpgradeCard extends StatelessWidget {
                   ),
           ),
           // Next Effect Preview
-          if (!isMaxLevel)
+          if (!isMaxLevel && !isLocked)
             Container(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
               child: Text(
@@ -424,6 +492,26 @@ class _UpgradeCard extends StatelessWidget {
                 ),
               ),
             ),
+          ],
+        ),
+        // 잠금 아이콘 오버레이
+        if (isLocked)
+          Positioned(
+            top: 12,
+            right: 12,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.3),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.lock,
+                color: Colors.red,
+                size: 24,
+              ),
+            ),
+          ),
         ],
       ),
     );

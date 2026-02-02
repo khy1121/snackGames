@@ -27,48 +27,48 @@ class LuckyWheelService {
 
     WheelReward reward;
 
-    // 확률 기반 보상
-    if (value < 1) { // 1% - 대박
+    // 확률 기반 보상 (재조정)
+    if (value < 0.5) { // 0.5% - 잭팟 (희귀)
       reward = WheelReward(
         type: RewardType.jackpot,
         points: 5000,
         exp: 500,
         description: '🎰 잭팟!',
       );
-    } else if (value < 5) { // 4% - 큰 보상
+    } else if (value < 3) { // 2.5% - 큰 보상
       reward = WheelReward(
         type: RewardType.large,
         points: 1000,
         exp: 100,
         description: '🌟 대박!',
       );
-    } else if (value < 15) { // 10% - 중간 보상
+    } else if (value < 13) { // 10% - 중간 보상
       reward = WheelReward(
         type: RewardType.medium,
         points: 500,
         exp: 50,
         description: '✨ 좋아요!',
       );
-    } else if (value < 40) { // 25% - 작은 보상
+    } else if (value < 38) { // 25% - 작은 보상
       reward = WheelReward(
         type: RewardType.small,
-        points: 200,
-        exp: 20,
+        points: 250,
+        exp: 25,
         description: '👍 괜찮아요!',
       );
-    } else if (value < 70) { // 30% - 최소 보상
+    } else if (value < 73) { // 35% - 최소 보상
       reward = WheelReward(
         type: RewardType.minimal,
-        points: 50,
-        exp: 10,
-        description: '😊 다음 기회에!',
+        points: 120,
+        exp: 15,
+        description: '😊 조금 아쉽지만!',
       );
-    } else { // 30% - 꽝 (투자 금액 반환)
+    } else { // 27% - 손실 방지 (투자 금액 반환)
       reward = WheelReward(
         type: RewardType.nothing,
         points: spinCost,
-        exp: 0,
-        description: '😅 아쉽네요!',
+        exp: 5,
+        description: '😅 다음 기회에!',
       );
     }
 
@@ -119,12 +119,12 @@ class LuckyWheelService {
   // 모든 가능한 보상 목록
   static List<WheelSlot> getWheelSlots() {
     return [
-      WheelSlot(label: '50P', color: 0xFFFF6B6B, probability: 30),
-      WheelSlot(label: '200P', color: 0xFFFFD93D, probability: 25),
+      WheelSlot(label: '120P', color: 0xFFFF6B6B, probability: 35),
+      WheelSlot(label: '250P', color: 0xFFFFD93D, probability: 25),
       WheelSlot(label: '500P', color: 0xFF6BCF7F, probability: 10),
-      WheelSlot(label: '1000P', color: 0xFF4ECDC4, probability: 4),
+      WheelSlot(label: '1000P', color: 0xFF4ECDC4, probability: 3),
       WheelSlot(label: '잭팟!', color: 0xFFFF00FF, probability: 1),
-      WheelSlot(label: '100P', color: 0xFFA8E6CF, probability: 30),
+      WheelSlot(label: '100P', color: 0xFFA8E6CF, probability: 27),
     ];
   }
 }

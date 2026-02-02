@@ -21,6 +21,7 @@ class UpgradeInfo {
   final int baseCost;
   final double costMultiplier;
   final List<String> effects; // 레벨별 효과 설명
+  final int requiredLevel; // 해금에 필요한 레벨
 
   const UpgradeInfo({
     required this.type,
@@ -32,6 +33,7 @@ class UpgradeInfo {
     required this.baseCost,
     this.costMultiplier = 1.5,
     required this.effects,
+    this.requiredLevel = 1, // 기본값: 레벨 1부터 사용 가능
   });
 
   /// 특정 레벨의 비용 계산
@@ -64,6 +66,7 @@ class UpgradeService {
       maxLevel: 10,
       baseCost: 100,
       costMultiplier: 1.6,
+      requiredLevel: 1, // 레벨 1부터 사용 가능
       effects: [
         '+10% 점수',
         '+20% 점수',
@@ -86,6 +89,7 @@ class UpgradeService {
       maxLevel: 5,
       baseCost: 200,
       costMultiplier: 2.0,
+      requiredLevel: 3, // 레벨 3부터 해금
       effects: [
         '높은 숫자 +10%',
         '높은 숫자 +20%',
@@ -103,6 +107,7 @@ class UpgradeService {
       maxLevel: 5,
       baseCost: 300,
       costMultiplier: 2.2,
+      requiredLevel: 5, // 레벨 5부터 해금
       effects: [
         '6 출현율 +5%',
         '6 출현율 +10%',
@@ -120,6 +125,7 @@ class UpgradeService {
       maxLevel: 8,
       baseCost: 150,
       costMultiplier: 1.7,
+      requiredLevel: 2, // 레벨 2부터 해금
       effects: [
         '+20% 포인트',
         '+40% 포인트',
@@ -140,6 +146,7 @@ class UpgradeService {
       maxLevel: 5,
       baseCost: 250,
       costMultiplier: 2.0,
+      requiredLevel: 4, // 레벨 4부터 해금
       effects: [
         '시작 점수 +50',
         '시작 점수 +150',
@@ -157,6 +164,7 @@ class UpgradeService {
       maxLevel: 3,
       baseCost: 500,
       costMultiplier: 3.0,
+      requiredLevel: 7, // 레벨 7부터 해금 (고급 기능)
       effects: [
         '1회 되돌리기',
         '2회 되돌리기',
@@ -232,13 +240,14 @@ class UpgradeService {
   }
 
   /// 모든 업그레이드 정보 (레벨 포함)
-  static List<UpgradeStatus> getAllUpgradeStatus() {
+  static List<UpgradeStatus> getAllUpgradeStatus(int userLevel) {
     return upgrades.map((upgrade) {
       final level = getUpgradeLevel(upgrade.id);
       return UpgradeStatus(
         info: upgrade,
         currentLevel: level,
         nextCost: upgrade.getCostForLevel(level),
+        userLevel: userLevel,
       );
     }).toList();
   }
@@ -261,14 +270,17 @@ class UpgradeStatus {
   final UpgradeInfo info;
   final int currentLevel;
   final int nextCost;
+  final int userLevel; // 사용자 현재 레벨
 
   UpgradeStatus({
     required this.info,
     required this.currentLevel,
     required this.nextCost,
+    required this.userLevel,
   });
 
   bool get isMaxLevel => currentLevel >= info.maxLevel;
+  bool get isLocked => userLevel < info.requiredLevel; // 레벨 잠금 여부
   String get currentEffect => info.getEffectDescription(currentLevel);
   String get nextEffect => info.getEffectDescription(currentLevel + 1);
 }
