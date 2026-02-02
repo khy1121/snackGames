@@ -1,4 +1,6 @@
 import 'dart:math';
+import 'package:flutter/foundation.dart';
+import '../services/upgrade_service.dart';
 
 /// 주사위 타입
 enum DiceType {
@@ -70,6 +72,8 @@ class DiceMergeBoard {
   DiceMergeBoard({this.bestScore = 0}) {
     _initBoard();
     _generateNextDice();
+    // Apply starting bonus from upgrades
+    score = UpgradeService.getStartingBonus();
   }
   
   void _initBoard() {
@@ -88,10 +92,37 @@ class DiceMergeBoard {
     _generateNextDice();
   }
   
-  /// 다음 주사위 생성
+  /// 다음 주사위 생성 (with upgrade effects)
   void _generateNextDice() {
-    // 1-6 랜덤, 낮은 숫자가 더 자주 나옴
-    final weights = [25, 25, 20, 15, 10, 5]; // 1이 가장 자주
+    // Get upgrade bonuses
+    final luckyBonus = UpgradeService.getLuckyDiceBonus();
+    final magicBonus = UpgradeService.getMagicChanceBonus();
+    
+    // Base weights: 1이 가장 자주
+    final baseWeights = [25, 25, 20, 15, 10, 5];
+    
+    // Apply lucky dice bonus (shift weight to higher numbers)
+    final weights = List<int>.from(baseWeights);
+    if (luckyBonus > 0) {
+      // Transfer weight from lower to higher numbers
+      final shift = (luckyBonus * 100).toInt();
+      for (int i = 0; i < 3; i++) {
+        final transfer = (weights[i] * luckyBonus * 0.5).toInt();
+        weights[i] -= transfer;
+        weights[5 - i] += transfer;
+      }
+    }
+    
+    // Apply magic chance bonus (increase weight of 6)
+    if (magicBonus > 0) {
+      final magicBoost = (magicBonus * 50).toInt();
+      weights[5] += magicBoost;
+      // Balance by reducing others slightly
+      for (int i = 0; i < 5; i++) {
+        weights[i] = (weights[i] * 0.9).toInt();
+      }
+    }
+    
     int total = weights.reduce((a, b) => a + b);
     int rand = _random.nextInt(total);
     int value = 1;
@@ -127,7 +158,7 @@ class DiceMergeBoard {
     final droppedDice = nextDice!;
     cells[targetRow][col].dice = droppedDice;
     
-    // 머지 체크 및 처리
+    // 머지 체크 및 처리 (no debug print)
     final mergeResult = _processMerges();
     
     // 점수 추가
@@ -154,7 +185,11 @@ class DiceMergeBoard {
     int totalScore = 0;
     
     bool merged;
+    int loopSafety = 0;
+    const maxLoops = 50; // 무한 루프 방지
+    
     do {
+      if (loopSafety++ >= maxLoops) break;
       merged = false;
       
       // 모든 주사위에 대해 머지 가능한지 체크
@@ -246,6 +281,10 @@ class DiceMergeBoard {
         if (merged) break;
       }
     } while (merged);
+    
+    if (loopSafety > 10) {
+      debugPrint('DiceBoard: High merge loop count: $loopSafety');
+    }
     
     return MergeProcessResult(merges: allMerges, scoreGained: totalScore);
   }

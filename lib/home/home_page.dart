@@ -4,12 +4,19 @@ import '../dice/dice_game_page.dart';
 
 import '../profile/profile_page.dart';
 import '../shop/shop_page.dart';
+import '../shop/upgrade_page.dart';
+import '../lucky_wheel/lucky_wheel_page.dart';
 import '../services/game_data_service.dart';
 import '../services/daily_mission_service.dart';
 import '../services/achievement_service.dart';
 import '../services/challenge_service.dart';
+import '../services/upgrade_service.dart';
+import '../services/daily_attendance_service.dart';
+import '../services/lucky_wheel_service.dart';
 import '../challenge/challenge_page.dart';
 import '../settings/settings_page.dart';
+import '../widgets/glassmorphism_card.dart';
+import '../widgets/animated_counter.dart';
 
 /// 게임 정보 데이터
 class GameInfo {
@@ -80,6 +87,14 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   bool _isLoading = true;
   int _currentNavIndex = 0;
+  
+  // Cached data to prevent excessive service calls
+  String? _lastPlayed;
+  DailyMission? _mission;
+  RankInfo? _rank;
+  int _level = 1;
+  LevelData? _levelData;
+  double _xpProgress = 0.0;
 
   @override
   void initState() {
@@ -92,9 +107,107 @@ class _HomePageState extends State<HomePage> {
     await DailyMissionService.init(GameDataService.prefs);
     await AchievementService.init(GameDataService.prefs);
     await ChallengeService.init(GameDataService.prefs);
+    await UpgradeService.init(GameDataService.prefs);
+    await DailyAttendanceService.init();
+    await LuckyWheelService.init();
     if (mounted) {
+      _loadCachedData();
+      _checkDailyAttendance(); // 앱 시작 시 출석 체크
       setState(() => _isLoading = false);
     }
+  }
+  
+  /// Load and cache all data to prevent excessive service calls
+  void _loadCachedData() {
+    _lastPlayed = GameDataService.getLastPlayedGame();
+    _mission = DailyMissionService.currentMission;
+    _rank = AchievementService.getCurrentRank();
+    _level = ChallengeService.getCurrentLevel();
+    _levelData = ChallengeService.getCurrentLevelData();
+    _xpProgress = ChallengeService.getXPProgress();
+  }
+
+  // 일일 출석 체크
+  Future<void> _checkDailyAttendance() async {
+    if (DailyAttendanceService.hasAttendedToday()) {
+      return; // 이미 출석함
+    }
+
+    final reward = await DailyAttendanceService.checkAttendance();
+    if (reward != null && mounted) {
+      _showAttendanceDialog(reward);
+    }
+  }
+
+  void _showAttendanceDialog(AttendanceReward reward) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Text(reward.isSpecial ? '🎉' : '🎁'),
+            const SizedBox(width: 8),
+            Text(reward.isSpecial ? '7일 연속 출석!' : '출석 완료!'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (reward.isSpecial)
+              const Text(
+                '대박! 7일 연속 출석 달성!\n특별 보상을 드립니다!',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              )
+            else
+              Text(
+                '${reward.streakDays}일 연속 출석 중!',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.purple.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    '포인트: +${reward.points}P',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '경험치: +${reward.exp}XP',
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '계속 출석하면 더 큰 보상을!',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              // 보상 지급
+              GameDataService.addPoints(reward.points);
+              ChallengeService.addXP(reward.exp);
+              Navigator.pop(context);
+              _loadCachedData(); // 데이터 새로고침
+              setState(() {});
+            },
+            child: const Text('받기!'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -132,34 +245,31 @@ class _HomePageState extends State<HomePage> {
       );
     }
 
-    // 데이터 로드
-    final lastPlayed = GameDataService.getLastPlayedGame();
-    final mission = DailyMissionService.currentMission;
-    final rank = AchievementService.getCurrentRank();
-    final level = ChallengeService.getCurrentLevel();
-    final levelData = ChallengeService.getCurrentLevelData();
-    final xpProgress = ChallengeService.getXPProgress();
-
+    // Use cached data instead of calling services every build
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)], // Stitch Purple Theme
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              const Color(0xFF8B5CF6),
+              const Color(0xFF6D28D9),
+              const Color(0xFF5B21B6),
+            ],
           ),
         ),
         child: SafeArea(
           child: Column(
             children: [
               // 헤더 (항상 표시)
-              _buildHeader(rank, level, xpProgress),
+              if (_rank != null) _buildHeader(_rank!, _level, _xpProgress),
 
               // 메인 컨텐츠 (탭에 따라 변경)
               Expanded(
                 child: _currentNavIndex == 1
                     ? _buildGameListView()
-                    : _buildHubView(lastPlayed, mission, levelData),
+                    : _buildHubView(_lastPlayed, _mission, _levelData),
               ),
             ],
           ),
@@ -198,14 +308,14 @@ class _HomePageState extends State<HomePage> {
   // --- Views ---
 
   Widget _buildHubView(
-      String? lastPlayed, DailyMission? mission, LevelData levelData) {
+      String? lastPlayed, DailyMission? mission, LevelData? levelData) {
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       children: [
         const SizedBox(height: 12),
 
         // 레벨 정보 카드 (Hub Only)
-        _buildLevelCard(levelData),
+        if (levelData != null) _buildLevelCard(levelData),
         const SizedBox(height: 16),
 
         // 이어하기 버튼
@@ -248,6 +358,38 @@ class _HomePageState extends State<HomePage> {
                ],
              ),
           ),
+        ),
+        
+        const SizedBox(height: 16),
+        
+        // 새 기능: 출석 & 럭키 휠
+        Row(
+          children: [
+            Expanded(
+              child: _buildFeatureCard(
+                icon: '🎁',
+                title: '출석 체크',
+                subtitle: '${DailyAttendanceService.getStreakDays()}일 연속',
+                colors: const [Color(0xFFFF6B6B), Color(0xFFFF8E53)],
+                onTap: () => _checkDailyAttendance(),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildFeatureCard(
+                icon: '🎰',
+                title: '럭키 휠',
+                subtitle: '행운을 시험해보세요',
+                colors: const [Color(0xFF9D50BB), Color(0xFF6E48AA)],
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const LuckyWheelPage()),
+                  );
+                },
+              ),
+            ),
+          ],
         ),
         
         const SizedBox(height: 40),
@@ -366,34 +508,72 @@ class _HomePageState extends State<HomePage> {
     final isSelected = _currentNavIndex == index;
     return GestureDetector(
       onTap: () {
-        setState(() => _currentNavIndex = index);
         if (index == 2) {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const ChallengePage()),
-          );
+            PageRouteBuilder(
+              pageBuilder: (context, animation, secondaryAnimation) => const ChallengePage(),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0, 0.1),
+                      end: Offset.zero,
+                    ).animate(CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOutCubic,
+                    )),
+                    child: child,
+                  ),
+                );
+              },
+              transitionDuration: const Duration(milliseconds: 400),
+            ),
+          ).then((_) {
+            // Reload data when returning from challenge page
+            if (mounted) {
+              _loadCachedData();
+              setState(() {});
+            }
+          });
         } else if (index == 3) {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const SettingsPage()),
+            PageRouteBuilder(
+              pageBuilder: (context, animation, secondaryAnimation) => const SettingsPage(),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+              transitionDuration: const Duration(milliseconds: 300),
+            ),
           );
+        } else {
+          setState(() => _currentNavIndex = index);
         }
       },
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
               ? const Color(0xFF667EEA).withValues(alpha: 0.2)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              color: isSelected ? const Color(0xFF667EEA) : Colors.grey,
-              size: 24,
+            AnimatedScale(
+              scale: isSelected ? 1.15 : 1.0,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutCubic,
+              child: Icon(
+                icon,
+                color: isSelected ? const Color(0xFF667EEA) : Colors.grey,
+                size: 24,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
@@ -433,13 +613,14 @@ class _HomePageState extends State<HomePage> {
                   ),
                   Row(
                     children: [
-                      Text(
-                        'Lv.$level',
+                      AnimatedCounter(
+                        value: level,
                         style: const TextStyle(
                           fontSize: 12,
                           color: Color(0xFF00B894),
                           fontWeight: FontWeight.bold,
                         ),
+                        prefix: 'Lv.',
                       ),
                       const SizedBox(width: 6),
                       SizedBox(
@@ -447,10 +628,17 @@ class _HomePageState extends State<HomePage> {
                         height: 4,
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(2),
-                          child: LinearProgressIndicator(
-                            value: xpProgress,
-                            backgroundColor: Colors.white.withValues(alpha: 0.2),
-                            valueColor: const AlwaysStoppedAnimation(Color(0xFF00B894)),
+                          child: TweenAnimationBuilder<double>(
+                            tween: Tween(begin: 0, end: xpProgress),
+                            duration: const Duration(milliseconds: 800),
+                            curve: Curves.easeOutCubic,
+                            builder: (context, value, child) {
+                              return LinearProgressIndicator(
+                                value: value,
+                                backgroundColor: Colors.white.withValues(alpha: 0.2),
+                                valueColor: const AlwaysStoppedAnimation(Color(0xFF00B894)),
+                              );
+                            },
                           ),
                         ),
                       ),
@@ -459,13 +647,44 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
               const Spacer(),
-              // 상점 버튼 (New)
+              // 업그레이드 버튼 (New)
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const UpgradePage()),
+                  ).then((_) {
+                    // Reload data when returning from upgrade
+                    if (mounted) {
+                      _loadCachedData();
+                      setState(() {});
+                    }
+                  });
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.purple.withValues(alpha: 0.3),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.purple.withValues(alpha: 0.5)),
+                  ),
+                  child: const Icon(Icons.upgrade, color: Colors.purple, size: 20),
+                ),
+              ),
+              // 상점 버튼
               GestureDetector(
                 onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const ShopPage()),
-                  );
+                  ).then((_) {
+                    // Reload data when returning from shop
+                    if (mounted) {
+                      _loadCachedData();
+                      setState(() {});
+                    }
+                  });
                 },
                 child: Container(
                   margin: const EdgeInsets.only(right: 8),
@@ -485,7 +704,13 @@ class _HomePageState extends State<HomePage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const ProfilePage()),
-                  );
+                  ).then((_) {
+                    // Reload data when returning from profile
+                    if (mounted) {
+                      _loadCachedData();
+                      setState(() {});
+                    }
+                  });
                 },
                 child: Container(
                   padding:
@@ -549,96 +774,90 @@ class _HomePageState extends State<HomePage> {
     final game =
         gameList.firstWhere((g) => g.id == gameId, orElse: () => gameList.first);
 
-    return Container(
-      width: double.infinity,
+    return GlassmorphismCard(
+      blur: 20,
+      opacity: 0.15,
+      borderRadius: BorderRadius.circular(24),
+      gradientColors: [
+        const Color(0xFF9F7AEA),
+        const Color(0xFF7F9CF5),
+      ],
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFF9F7AEA).withValues(alpha: 0.9), // Lighter Purple
-            const Color(0xFF7F9CF5).withValues(alpha: 0.9), // Blue-ish
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF6D28D9).withValues(alpha: 0.4),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.play_circle_fill, color: Colors.white, size: 20),
-              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.play_arrow, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 12),
               const Text(
                 '이어하기',
                 style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
                   fontSize: 14,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-              const Spacer(),
-              Container(
-                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                 decoration: BoxDecoration(
-                     color: Colors.white,
-                     borderRadius: BorderRadius.circular(20),
-                 ),
-                 child: Text(
-                     'PLAY',
-                     style: TextStyle(
-                         color: const Color(0xFF7F9CF5),
-                         fontWeight: FontWeight.bold,
-                         fontSize: 12,
-                     ),
-                 ),
-              )
             ],
           ),
           const SizedBox(height: 16),
           Row(
             children: [
-               // Game Icon / Grid Preview
-               Container(
-                 width: 60,
-                 height: 60,
-                 decoration: BoxDecoration(
-                   color: Colors.white.withValues(alpha: 0.2),
-                   borderRadius: BorderRadius.circular(16),
-                 ),
-                 child: Center(child: Text(game.icon, style: const TextStyle(fontSize: 32))),
-               ),
-               const SizedBox(width: 16),
-               Column(
-                 crossAxisAlignment: CrossAxisAlignment.start,
-                 children: [
-                   Text(
-                     game.title,
-                     style: const TextStyle(
-                       fontSize: 28,
-                       fontWeight: FontWeight.w800,
-                       color: Colors.white,
-                       fontStyle: FontStyle.italic, 
-                     ),
-                   ),
-                   Text(
-                     game.subtitle,
-                     style: TextStyle(
-                       fontSize: 13,
-                       color: Colors.white.withValues(alpha: 0.9),
-                     ),
-                   ),
-                 ],
-               ),
+              Text(
+                game.icon,
+                style: const TextStyle(fontSize: 32),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      game.title,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      game.subtitle,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.white.withValues(alpha: 0.8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: game.pageBuilder),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFF9F7AEA),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  elevation: 0,
+                ),
+                child: const Text(
+                  '플레이',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
             ],
           ),
         ],
@@ -649,18 +868,15 @@ class _HomePageState extends State<HomePage> {
   Widget _buildDailyMission(DailyMission mission) {
     final percent = (mission.progress * 100).toInt();
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFFFF9F43).withValues(alpha: 0.25),
-            const Color(0xFFFFBE76).withValues(alpha: 0.15),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFFF9F43).withValues(alpha: 0.4)),
-      ),
+    return GlassmorphismCard(
+      blur: 15,
+      opacity: 0.12,
+      borderRadius: BorderRadius.circular(20),
+      gradientColors: const [
+        Color(0xFFFF9F43),
+        Color(0xFFFFBE76),
+      ],
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -687,8 +903,7 @@ class _HomePageState extends State<HomePage> {
               ),
               if (mission.isCompleted)
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.green,
                     borderRadius: BorderRadius.circular(8),
@@ -704,8 +919,7 @@ class _HomePageState extends State<HomePage> {
                 )
               else
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFF9F43).withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(8),
@@ -739,9 +953,7 @@ class _HomePageState extends State<HomePage> {
                     value: mission.progress,
                     backgroundColor: Colors.white.withValues(alpha: 0.2),
                     valueColor: AlwaysStoppedAnimation(
-                      mission.isCompleted
-                          ? Colors.green
-                          : const Color(0xFFFF9F43),
+                      mission.isCompleted ? Colors.green : const Color(0xFFFF9F43),
                     ),
                     minHeight: 10,
                   ),
@@ -751,9 +963,7 @@ class _HomePageState extends State<HomePage> {
               Text(
                 '$percent%',
                 style: TextStyle(
-                  color: mission.isCompleted
-                      ? Colors.green
-                      : const Color(0xFFFF9F43),
+                  color: mission.isCompleted ? Colors.green : const Color(0xFFFF9F43),
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
                 ),
@@ -765,14 +975,18 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _navigateToGame(GameInfo game) async {
-    await GameDataService.setLastPlayedGame(game.id);
+  void _navigateToGame(GameInfo game) {
+    GameDataService.setLastPlayedGame(game.id);
     if (mounted) {
       Navigator.push(
         context,
         MaterialPageRoute(builder: game.pageBuilder),
       ).then((_) {
-        setState(() {});
+        // Reload and sync all data when returning from game
+        if (mounted) {
+          _loadCachedData();
+          setState(() {});
+        }
       });
     }
   }
@@ -863,6 +1077,62 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
+  Widget _buildFeatureCard({
+    required String icon,
+    required String title,
+    required String subtitle,
+    required List<Color> colors,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: colors,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: colors.first.withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              icon,
+              style: const TextStyle(fontSize: 32),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.8),
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// 게임 카드 위젯
@@ -896,9 +1166,23 @@ class _GameCardState extends State<_GameCard> {
       onTapCancel: () => setState(() => _isPressed = false),
       onTap: widget.onTap,
       child: AnimatedScale(
-        scale: _isPressed ? 0.97 : 1.0,
-        duration: const Duration(milliseconds: 100),
-        child: Container(
+        scale: _isPressed ? 0.95 : 1.0,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOutCubic,
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 1.0, end: 1.0),
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeOutBack,
+          builder: (context, value, child) {
+            return Transform.translate(
+              offset: Offset(0, 20 * (1 - value)),
+              child: Opacity(
+                opacity: value.clamp(0.0, 1.0),
+                child: child,
+              ),
+            );
+          },
+          child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -988,6 +1272,7 @@ class _GameCardState extends State<_GameCard> {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

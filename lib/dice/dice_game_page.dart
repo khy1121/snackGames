@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dice_board.dart';
@@ -7,7 +8,11 @@ import 'dice_effects.dart'; // Import VFX
 import '../services/game_data_service.dart';
 import '../services/challenge_service.dart';
 import '../services/settings_service.dart';
+import '../services/upgrade_service.dart';
 import '../widgets/challenge_toast.dart';
+import '../widgets/theme_shop_dialog.dart';
+import '../widgets/animated_counter.dart';
+import '../widgets/particle_effect.dart';
 
 /// 주사위 머지 게임 페이지
 class DiceGamePage extends StatefulWidget {
@@ -21,6 +26,7 @@ class _DiceGamePageState extends State<DiceGamePage>
     with TickerProviderStateMixin {
   @override
   void dispose() {
+    _eventController.close();
     if (_startTime != null) {
       final elapsedMinutes = DateTime.now().difference(_startTime!).inMinutes;
       if (elapsedMinutes > 0) {
@@ -37,13 +43,17 @@ class _DiceGamePageState extends State<DiceGamePage>
   late DiceThemeData _theme;
 
   // VFX State
-  List<EffectEvent> _effectEvents = [];
+  final StreamController<EffectEvent> _eventController = StreamController<EffectEvent>.broadcast();
   final GlobalKey _boardKey = GlobalKey(); // To get board position
   final GlobalKey<ScreenShakeState> _shakeKey = GlobalKey();
   
   int _comboStreak = 0; // Track consecutive merges for Lightning effect
 
   DateTime? _startTime;
+
+  // 연속 플레이 보너스
+  int _consecutiveGamesPlayed = 0;
+  double _consecutiveBonusMultiplier = 1.0;
 
   @override
   void initState() {
@@ -56,7 +66,8 @@ class _DiceGamePageState extends State<DiceGamePage>
   void _loadTheme() {
     final themeId = GameDataService.getSelectedTheme();
     setState(() {
-      _theme = DiceTheme.getTheme(themeId);
+      _theme = DiceTheme.getTheme(themeId)
+          .copyWith(enableShadows: false, blurRadius: 0);
     });
   }
 
@@ -65,58 +76,71 @@ class _DiceGamePageState extends State<DiceGamePage>
       _board = DiceMergeBoard(bestScore: _board.bestScore);
       _newDice = {};
       _mergingDice = {};
-      _effectEvents = [];
+      // _effectEvents = []; // Controller persists, no clear needed, stream handles it
+      _isProcessing = false;
       _isProcessing = false;
       _startTime = DateTime.now();
+      
+      // 연속 플레이 보너스 증가
+      _consecutiveGamesPlayed++;
+      _updateConsecutiveBonus();
     });
+  }
+
+  void _updateConsecutiveBonus() {
+    // 연속 플레이 횟수에 따라 점수 배율 증가
+    if (_consecutiveGamesPlayed >= 10) {
+      _consecutiveBonusMultiplier = 3.0; // 10회 이상: 3배
+    } else if (_consecutiveGamesPlayed >= 7) {
+      _consecutiveBonusMultiplier = 2.5; // 7-9회: 2.5배
+    } else if (_consecutiveGamesPlayed >= 5) {
+      _consecutiveBonusMultiplier = 2.0; // 5-6회: 2배
+    } else if (_consecutiveGamesPlayed >= 3) {
+      _consecutiveBonusMultiplier = 1.5; // 3-4회: 1.5배
+    } else {
+      _consecutiveBonusMultiplier = 1.0; // 1-2회: 보너스 없음
+    }
   }
 
   void _onColumnTap(int col) {
     if (_isProcessing || _board.isGameOver) return;
     _startTime ??= DateTime.now();
 
-    setState(() {
-      _isProcessing = true;
-      _newDice = {};
-      _mergingDice = {};
-    });
-
+    // Pre-compute result before any setState
     final result = _board.dropDice(col);
 
-    if (result != null) {
-      if (SettingsService.vibrationEnabled.value) {
-        HapticFeedback.lightImpact();
-      }
+    if (result == null) {
+      // No valid move, ignore
+      return;
+    }
 
-      _newDice.add(result.droppedAt);
+    // Single setState with all state changes
+    setState(() {
+      _isProcessing = true;
+      _newDice = {result.droppedAt};
+      _mergingDice = {};
       for (final merge in result.merges) {
         _mergingDice.add(merge.resultPosition);
       }
+    });
 
-      // --- Trigger VFX ---
-      _triggerVFX(result);
-      // -------------------
+    // Trigger VFX after UI update
+    _triggerVFX(result);
 
-      setState(() {});
-
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted) {
-          setState(() {
-            _isProcessing = false;
-            _newDice = {};
-            _mergingDice = {};
-          });
-
-          if (_board.isGameOver) {
-            _showGameOverDialog();
-          }
-        }
-      });
-    } else {
+    // Single delayed cleanup
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      
       setState(() {
         _isProcessing = false;
+        _newDice = {};
+        _mergingDice = {};
       });
-    }
+
+      if (_board.isGameOver) {
+        _showGameOverDialog();
+      }
+    });
   }
 
   void _triggerVFX(DropResult result) {
@@ -126,15 +150,15 @@ class _DiceGamePageState extends State<DiceGamePage>
       _comboStreak++;
       
       // Every merge triggers a small shake
-      _shakeKey.currentState?.shake();
+      // _shakeKey.currentState?.shake(); (Disabled for emulator performance)
       
       // Every 10th combo triggers LIGHTNING
       if (_comboStreak > 0 && _comboStreak % 10 == 0) {
-        _effectEvents.add(LightningEvent());
-        HapticFeedback.heavyImpact();
+        _eventController.add(LightningEvent());
+        // HapticFeedback.heavyImpact(); (Disabled for Emulator Performance)
       } else {
          if (SettingsService.vibrationEnabled.value) {
-            HapticFeedback.lightImpact();
+            // HapticFeedback.lightImpact(); (Disabled for Emulator Performance)
          }
       }
     } else {
@@ -146,6 +170,8 @@ class _DiceGamePageState extends State<DiceGamePage>
       // Let's reset to make it a "Streak".
       _comboStreak = 0;
     }
+
+
 
     // 1. Calculate Combo / Score Text
     if (result.scoreGained > 0) {
@@ -165,7 +191,7 @@ class _DiceGamePageState extends State<DiceGamePage>
           ? Colors.amber
           : Colors.white;
 
-        _effectEvents.add(TextPopupEvent(
+        _eventController.add(TextPopupEvent(
           msg,
           centerPos,
           color,
@@ -174,23 +200,24 @@ class _DiceGamePageState extends State<DiceGamePage>
         
         // Trigger Shockwave for Big Combo
         if (isBigCombo || isMagic) {
-          _effectEvents.add(ShockwaveEvent(centerPos, isMagic ? Colors.amber : Colors.cyanAccent));
+          _eventController.add(ShockwaveEvent(centerPos, isMagic ? Colors.amber : Colors.cyanAccent));
         }
     }
 
-    // 2. Trigger Explosions for ALL Merges (Pop Action)
+    // 2. Trigger Explosions for Merges (Optimized)
     for (final merge in result.merges) {
-        // Trigger explosion at center
+        // Trigger main explosion at center
         final centerPos = _getCellPosition(merge.resultPosition.$1, merge.resultPosition.$2);
         if (centerPos != null) {
-           _effectEvents.add(ExplosionEvent(centerPos, Colors.purpleAccent, isMagic: merge.isMagicClear));
+           _eventController.add(ExplosionEvent(centerPos, Colors.purpleAccent, isMagic: merge.isMagicClear));
         }
 
-        // Also trigger small explosions for all cleared blocks
-        for (final pos in merge.explodedPositions) {
+        // Limit small explosions to max 4 per merge to reduce overhead
+        final positions = merge.explodedPositions.take(4);
+        for (final pos in positions) {
            final p = _getCellPosition(pos.$1, pos.$2);
            if (p != null) {
-              _effectEvents.add(ExplosionEvent(p, Colors.orangeAccent.withValues(alpha: 0.5)));
+              _eventController.add(ExplosionEvent(p, Colors.orangeAccent.withValues(alpha: 0.5)));
            }
         }
     }
@@ -252,8 +279,19 @@ class _DiceGamePageState extends State<DiceGamePage>
   }
 
   void _showGameOverDialog() {
+    // 업그레이드 배율 가져오기
+    final scoreMultiplier = UpgradeService.getScoreMultiplier();
+    final pointsMultiplier = UpgradeService.getPointsMultiplier();
+    
+    // 연속 플레이 보너스 적용
+    final totalScoreMultiplier = scoreMultiplier * _consecutiveBonusMultiplier;
+    final totalPointsMultiplier = pointsMultiplier * _consecutiveBonusMultiplier;
+    
+    // 적용된 최종 점수 (배율 적용)
+    final finalScore = (_board.score * totalScoreMultiplier).round();
+    
     // 점수 기록
-    GameDataService.recordScore('dice', _board.score);
+    GameDataService.recordScore('dice', finalScore);
 
     // 플레이 타임 계산
     final duration = DateTime.now().difference(_startTime ?? DateTime.now());
@@ -261,14 +299,15 @@ class _DiceGamePageState extends State<DiceGamePage>
     final seconds = (duration.inSeconds % 60).toString().padLeft(2, '0');
     final playTimeStr = '$minutes:$seconds';
     
-    // 리워드 계산 (예: 100점당 1P)
-    final reward = (_board.score / 100).floor();
+    // 리워드 계산 (예: 100점당 1P) + 포인트 배율
+    final baseReward = (finalScore / 100).floor();
+    final finalReward = (baseReward * totalPointsMultiplier).round();
     
     // XP 계산 (기본 10 + 점수/100)
-    final xpGain = 10 + (_board.score ~/ 100);
+    final xpGain = 10 + (finalScore ~/ 100);
     
     // 포인트 지급
-    GameDataService.addPoints(reward);
+    GameDataService.addPoints(finalReward);
     
     // XP 지급
     ChallengeService.addXP(xpGain);
@@ -331,15 +370,30 @@ class _DiceGamePageState extends State<DiceGamePage>
                             ),
                             const SizedBox(height: 20),
                             
-                            // Score
-                            Text(
-                              '${_board.score}',
-                              style: const TextStyle(
-                                fontSize: 48,
-                                fontWeight: FontWeight.w900,
-                                color: Color(0xFFFFD700), // Gold
-                                height: 1.0,
-                              ),
+                            // Score Display with multiplier
+                            Column(
+                              children: [
+                                Text(
+                                  '$finalScore',
+                                  style: const TextStyle(
+                                    fontSize: 48,
+                                    fontWeight: FontWeight.w900,
+                                    color: Color(0xFFFFD700), // Gold
+                                    height: 1.0,
+                                  ),
+                                ),
+                                if (scoreMultiplier > 1.0) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '×${scoreMultiplier.toStringAsFixed(1)} boost!',
+                                    style: TextStyle(
+                                      color: Colors.amber.shade300,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                             const SizedBox(height: 8),
                             
@@ -400,13 +454,24 @@ class _DiceGamePageState extends State<DiceGamePage>
                                         Row(
                                           children: [
                                             Text(
-                                              '+${reward}P',
+                                              '+${finalReward}P',
                                               style: const TextStyle(
                                                 color: Colors.white,
                                                 fontWeight: FontWeight.bold,
                                                 fontSize: 20,
                                               ),
                                             ),
+                                            if (totalPointsMultiplier > 1.0) ...[
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                '(×${totalPointsMultiplier.toStringAsFixed(1)})',
+                                                style: TextStyle(
+                                                  color: Colors.amber.shade300,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
                                             const SizedBox(width: 12),
                                             Text(
                                               '+${xpGain}XP',
@@ -432,6 +497,38 @@ class _DiceGamePageState extends State<DiceGamePage>
                                 ],
                               ),
                             ),
+                            
+                            const SizedBox(height: 16),
+                            
+                            // 연속 플레이 보너스 표시
+                            if (_consecutiveBonusMultiplier > 1.0)
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFFFF6B6B), Color(0xFFFF8E53)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.local_fire_department, color: Colors.white, size: 20),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      '연속 플레이 보너스: ${_consecutiveGamesPlayed}회 (×${_consecutiveBonusMultiplier.toStringAsFixed(1)})',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             
                             const SizedBox(height: 16),
                             
@@ -617,32 +714,28 @@ class _DiceGamePageState extends State<DiceGamePage>
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Stack(
-                        children: [
-                           // Actual Board
-                           DiceBoardWidget(
-                             key: _boardKey,
-                             board: _board,
-                             newDice: _newDice,
-                             mergingDice: _mergingDice,
-                             onColumnTap: _onColumnTap,
-                             theme: _theme,
-                           ),
-                           
-                           // VFX Overlay
-                           // Position.fill ensures it matches Board size
-                           Positioned.fill(
-                             child: DiceEffectsOverlay(
-                               events: _effectEvents,
-                               onClearEvents: () {
-                                 // Clear events after processing so they don't re-trigger
-                                 _effectEvents = []; 
-                                 // Note: setState not needed here as Overlay handles its own state
-                                 // but we clean up our list.
-                               },
+                      child: RepaintBoundary(
+                        child: Stack(
+                          children: [
+                             // Actual Board
+                             DiceBoardWidget(
+                               key: _boardKey,
+                               board: _board,
+                               newDice: _newDice,
+                               mergingDice: _mergingDice,
+                               onColumnTap: _onColumnTap,
+                               theme: _theme,
                              ),
-                           ),
-                        ],
+                             
+                              // VFX Overlay
+                             // Position.fill ensures it matches Board size
+                             Positioned.fill(
+                               child: DiceEffectsOverlay(
+                                 eventStream: _eventController.stream,
+                               ),
+                             ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -697,9 +790,61 @@ class _DiceGamePageState extends State<DiceGamePage>
               ],
             ),
           _buildScoreBox('BEST', _board.bestScore, const Color(0xFFE17055)),
+          // 연속 플레이 보너스 표시
+          if (_consecutiveBonusMultiplier > 1.0)
+            Column(
+              children: [
+                Text(
+                  'STREAK',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: _theme.textColor.withValues(alpha: 0.7),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFF6B6B), Color(0xFFFF8E53)],
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.local_fire_department, color: Colors.white, size: 16),
+                      const SizedBox(width: 4),
+                      Text(
+                        'x${_consecutiveBonusMultiplier.toStringAsFixed(1)}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
         ],
       ),
     );
+  }
+
+
+
+// ... (inside class)
+
+  void _showThemeShop() {
+    showDialog(
+      context: context,
+      builder: (context) => const ThemeShopDialog(),
+    ).then((_) {
+      _loadTheme(); // Refresh theme after shop closes
+    });
   }
 
   Widget _buildHeader() {
@@ -724,6 +869,12 @@ class _DiceGamePageState extends State<DiceGamePage>
               textAlign: TextAlign.center,
             ),
           ),
+          
+          // 테마 상점
+          IconButton(
+            onPressed: _showThemeShop,
+            icon: Icon(Icons.palette, color: _theme.textColor, size: 20),
+          ),
 
           // 새 게임
           IconButton(
@@ -739,9 +890,23 @@ class _DiceGamePageState extends State<DiceGamePage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withValues(alpha: 0.5)),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            color.withValues(alpha: 0.3),
+            color.withValues(alpha: 0.15),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.6), width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -751,11 +916,12 @@ class _DiceGamePageState extends State<DiceGamePage>
               fontSize: 10,
               fontWeight: FontWeight.bold,
               color: color,
+              letterSpacing: 1.2,
             ),
           ),
           const SizedBox(height: 2),
-          Text(
-            '$value',
+          AnimatedCounter(
+            value: value,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,

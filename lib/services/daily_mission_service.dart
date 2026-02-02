@@ -155,18 +155,18 @@ class DailyMissionService {
       reward: template.reward,
     );
 
-    await _saveMission();
+    _saveMission();
   }
 
-  /// 미션 저장
-  static Future<void> _saveMission() async {
+  /// 미션 저장 (non-blocking)
+  static void _saveMission() {
     if (_currentMission != null) {
-      await prefs.setString(_keyMissionData, _toJsonString(_currentMission!.toJson()));
+      prefs.setString(_keyMissionData, _toJsonString(_currentMission!.toJson()));
     }
   }
 
-  /// 미션 진행도 업데이트
-  static Future<void> updateProgress(String gameId, int value) async {
+  /// 미션 진행도 업데이트 (non-blocking)
+  static void updateProgress(String gameId, int value) {
     if (_currentMission == null) return;
     if (_currentMission!.gameId != gameId) return;
     if (_currentMission!.isCompleted) return;
@@ -175,16 +175,16 @@ class DailyMissionService {
 
     if (_currentMission!.currentValue >= _currentMission!.targetValue) {
       _currentMission!.isCompleted = true;
-      await _addReward(_currentMission!.reward);
+      _addReward(_currentMission!.reward);
     }
 
-    await _saveMission();
+    _saveMission();
   }
 
-  /// 보상 추가
-  static Future<void> _addReward(int amount) async {
+  /// 보상 추가 (non-blocking)
+  static void _addReward(int amount) {
     final current = prefs.getInt(_keyTotalRewards) ?? 0;
-    await prefs.setInt(_keyTotalRewards, current + amount);
+    prefs.setInt(_keyTotalRewards, current + amount);
   }
 
   /// 총 획득 보상

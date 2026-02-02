@@ -97,7 +97,7 @@ class _ShopPageState extends State<ShopPage> {
     );
 
     if (success) {
-      await GameDataService.removeAds();
+      GameDataService.removeAds();
       _loadData();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -134,8 +134,8 @@ class _ShopPageState extends State<ShopPage> {
     );
 
     if (success) {
-      await GameDataService.addPoints(-price);
-      await GameDataService.addTheme(themeId);
+      GameDataService.addPoints(-price);
+      GameDataService.addTheme(themeId);
       _loadData();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -145,8 +145,8 @@ class _ShopPageState extends State<ShopPage> {
     }
   }
 
-  void _selectTheme(String themeId) async {
-    await GameDataService.setTheme(themeId);
+  void _selectTheme(String themeId) {
+    GameDataService.setTheme(themeId);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('🎨 테마가 적용되었습니다.')),

@@ -21,62 +21,155 @@ class DiceWidget extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
+    // 테마 설정 가져오기 (없으면 기본값)
+    final style = theme?.style ?? DiceStyle.standard;
+    final enableShadows = theme?.enableShadows ?? true;
+    final blurRadius = theme?.blurRadius ?? 4.0;
+    
+    // 스타일별 장식 생성
+    BoxDecoration decoration;
+    
+    switch (style) {
+      case DiceStyle.neon:
+        // Neon: Dark background, bright border, no drop shadow (mostly)
+        final color = _getDiceColors().last;
+        decoration = BoxDecoration(
+          color: color.withValues(alpha: 0.1), // Dark inner
+          borderRadius: BorderRadius.circular(size * 0.2),
+          border: Border.all(
+            color: color, // Glowing border
+            width: size * 0.08,
+          ),
+          boxShadow: enableShadows ? [
+            BoxShadow(
+              color: color.withValues(alpha: 0.4),
+              blurRadius: 4, // Very Small Glow
+              spreadRadius: 1,
+            ) 
+          ] : null, // No heavy shadow
+        );
+        break;
+        
+      case DiceStyle.retro:
+        // Retro: Solid colors, thick black border, hard offset shadow
+        decoration = BoxDecoration(
+          color: _getDiceColors().first,
+          borderRadius: BorderRadius.circular(size * 0.1),
+          border: Border.all(
+             color: Colors.black87,
+             width: size * 0.05,
+          ),
+          boxShadow: [
+             // Hard Shadow (No Blur = Fast)
+             BoxShadow(
+               color: Colors.black38,
+               blurRadius: 0, 
+               offset: Offset(size * 0.08, size * 0.08),
+             ),
+          ],
+        );
+        break;
+        
+      case DiceStyle.glass:
+        // Glass: Gradient fill, white border, no shadow
+         decoration = BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+               _getDiceColors().first.withValues(alpha: 0.7),
+               _getDiceColors().last.withValues(alpha: 0.4),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(size * 0.2),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.6),
+            width: 1.5,
+          ),
+        );
+        break;
+        
+      case DiceStyle.standard:
+      default:
+        // Standard (Gradient + soft shadow)
+        decoration = BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: _getDiceColors(),
+          ),
+          borderRadius: BorderRadius.circular(size * 0.15),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.3),
+            width: 2,
+          ),
+          boxShadow: enableShadows ? [
+            BoxShadow(
+              color: _getDiceColors().first.withValues(alpha: 0.3),
+              blurRadius: blurRadius, // Use theme blur
+              offset: const Offset(0, 2),
+            ),
+          ] : null,
+        );
+        break;
+    }
+
+    // Wrap static content in RepaintBoundary for better caching
     Widget diceWidget = Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: _getDiceColors(),
-        ),
-        borderRadius: BorderRadius.circular(size * 0.15),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.3),
-          width: 2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: _getDiceColors().first.withValues(alpha: 0.4),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      decoration: decoration,
       child: dice.isMagic
           ? _buildMagicDice()
           : _buildNormalDice(),
     );
     
-    // 새 주사위 애니메이션
+    // Only animate when needed - reduce animation overhead
     if (isNew) {
-      diceWidget = TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0.0, end: 1.0),
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOutBack,
-        builder: (context, scale, child) {
-          return Transform.scale(scale: scale, child: child);
-        },
-        child: diceWidget,
+      return RepaintBoundary(
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.0, end: 1.0),
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.elasticOut,
+          builder: (context, value, child) {
+            return Transform.scale(
+              scale: value,
+              child: Transform.rotate(
+                angle: (1 - value) * 0.5,
+                child: child,
+              ),
+            );
+          },
+          child: diceWidget,
+        ),
       );
     }
     
-    // 머지 애니메이션
     if (isMerging) {
-      diceWidget = TweenAnimationBuilder<double>(
-        tween: Tween(begin: 1.3, end: 1.0),
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.elasticOut,
-        builder: (context, scale, child) {
-          return Transform.scale(scale: scale, child: child);
-        },
-        child: diceWidget,
+      return RepaintBoundary(
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.0, end: 1.0),
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.elasticOut,
+          builder: (context, value, child) {
+            final scale = 0.5 + value * 0.5;
+            return Transform.scale(
+              scale: scale,
+              child: Opacity(
+                opacity: value,
+                child: child,
+              ),
+            );
+          },
+          child: diceWidget,
+        ),
       );
     }
     
-    return diceWidget;
+    return RepaintBoundary(child: diceWidget);
   }
   
+  // ... _getDiceColors restored ...
   List<Color> _getDiceColors() {
     if (dice.isMagic) {
       return [
@@ -106,7 +199,7 @@ class DiceWidget extends StatelessWidget {
       _ => [Colors.grey, Colors.grey.shade600],
     };
   }
-  
+
   Widget _buildMagicDice() {
     return Center(
       child: Text(
@@ -116,6 +209,7 @@ class DiceWidget extends StatelessWidget {
     );
   }
   
+  // Refactor Dots to simple shapes
   Widget _buildNormalDice() {
     return Padding(
       padding: EdgeInsets.all(size * 0.15),
@@ -124,23 +218,28 @@ class DiceWidget extends StatelessWidget {
   }
   
   Widget _buildDots() {
-    final dotSize = size * 0.18;
+    final dotSize = size * 0.16; // Reduced from 0.18 to prevent overflow
+    final style = theme?.style ?? DiceStyle.standard;
     
+    Color dotColor = Colors.white;
+    if (style == DiceStyle.neon) {
+       dotColor = _getDiceColors().last; // Dots match neon color
+    } else if (style == DiceStyle.glass) {
+       dotColor = Colors.white.withValues(alpha: 0.9);
+    }
+    
+    // Simple Circle Container (No Shadow)
     Widget dot = Container(
       width: dotSize,
       height: dotSize,
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: dotColor,
         shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 2,
-            offset: Offset(1, 1),
-          ),
-        ],
+        // No dot shadows for anyone for performance
       ),
     );
+
+    // ... Layout logic remains same ...
     
     switch (dice.value) {
       case 1:
@@ -237,13 +336,12 @@ class DiceBoardWidget extends StatefulWidget {
 }
 
 class _DiceBoardWidgetState extends State<DiceBoardWidget> {
-  int? _hoveredColumn;
   
   @override
   Widget build(BuildContext context) {
     // 테마 색상 (없으면 기본값)
     final boardColor = widget.theme?.boardColor ?? const Color(0xFF2D3436);
-    final cellColor = widget.theme?.cellColor ?? Colors.transparent; // Not strictly used in current layout but good for future
+    final cellColor = widget.theme?.cellColor ?? Colors.transparent; 
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -256,73 +354,129 @@ class _DiceBoardWidgetState extends State<DiceBoardWidget> {
         final boardHeight = cellSize * DiceMergeBoard.rows + 16;
         
         return Center(
-          child: MouseRegion(
-            onExit: (_) => setState(() => _hoveredColumn = null),
-            child: Container(
-              width: boardWidth,
-              height: boardHeight,
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: boardColor, // Theme Color
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    blurRadius: 15,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: List.generate(DiceMergeBoard.rows, (row) {
-                  return Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: List.generate(DiceMergeBoard.cols, (col) {
-                      final dice = widget.board.getDice(row, col);
-                      final isNew = widget.newDice.contains((row, col));
-                      final isMerging = widget.mergingDice.contains((row, col));
-                      final isSelected = _hoveredColumn == col;
-                      
-                      return MouseRegion(
-                        onEnter: (_) => setState(() => _hoveredColumn = col),
-                        child: GestureDetector(
-                          onTap: () => widget.onColumnTap?.call(col),
-                          child: Container(
-                            width: cellSize,
-                            height: cellSize,
-                            padding: const EdgeInsets.all(2),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? Colors.white.withValues(alpha: 0.15)
-                                  : cellColor.withValues(alpha: 0.1), // Slight tint for cell
-                              border: Border.all(
-                                color: isSelected 
-                                    ? Colors.white.withValues(alpha: 0.3)
-                                    : Colors.white.withValues(alpha: 0.05),
-                                width: 0.5,
-                              ),
-                            ),
-                            child: dice != null
-                                ? DiceWidget(
-                                    dice: dice,
-                                    size: cellSize - 4,
-                                    isNew: isNew,
-                                    isMerging: isMerging,
-                                    theme: widget.theme, // Pass Theme
-                                  )
-                                : null,
-                          ),
-                        ),
-                      );
-                    }),
-                  );
-                }),
-              ),
+          child: Container(
+            width: boardWidth,
+            height: boardHeight,
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: boardColor,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: _BoardGrid(
+              board: widget.board,
+              cellSize: cellSize,
+              cellColor: cellColor,
+              newDice: widget.newDice,
+              mergingDice: widget.mergingDice,
+              onColumnTap: widget.onColumnTap,
+              theme: widget.theme,
             ),
           ),
         );
       },
+    );
+  }
+}
+
+/// Separated grid widget for better performance
+class _BoardGrid extends StatelessWidget {
+  final DiceMergeBoard board;
+  final double cellSize;
+  final Color cellColor;
+  final Set<(int, int)> newDice;
+  final Set<(int, int)> mergingDice;
+  final Function(int)? onColumnTap;
+  final DiceThemeData? theme;
+
+  const _BoardGrid({
+    required this.board,
+    required this.cellSize,
+    required this.cellColor,
+    required this.newDice,
+    required this.mergingDice,
+    required this.onColumnTap,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (int row = 0; row < DiceMergeBoard.rows; row++)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (int col = 0; col < DiceMergeBoard.cols; col++)
+                _BoardCell(
+                  row: row,
+                  col: col,
+                  board: board,
+                  cellSize: cellSize,
+                  cellColor: cellColor,
+                  isNew: newDice.contains((row, col)),
+                  isMerging: mergingDice.contains((row, col)),
+                  onTap: onColumnTap,
+                  theme: theme,
+                ),
+            ],
+          ),
+      ],
+    );
+  }
+}
+
+/// Individual cell widget for optimization
+class _BoardCell extends StatelessWidget {
+  final int row;
+  final int col;
+  final DiceMergeBoard board;
+  final double cellSize;
+  final Color cellColor;
+  final bool isNew;
+  final bool isMerging;
+  final Function(int)? onTap;
+  final DiceThemeData? theme;
+
+  const _BoardCell({
+    required this.row,
+    required this.col,
+    required this.board,
+    required this.cellSize,
+    required this.cellColor,
+    required this.isNew,
+    required this.isMerging,
+    required this.onTap,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final dice = board.getDice(row, col);
+    
+    return GestureDetector(
+      onTap: () => onTap?.call(col),
+      child: Container(
+        width: cellSize,
+        height: cellSize,
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: cellColor.withValues(alpha: 0.1),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.05),
+            width: 0.5,
+          ),
+        ),
+        child: dice != null
+            ? DiceWidget(
+                dice: dice,
+                size: cellSize - 4,
+                isNew: isNew,
+                isMerging: isMerging,
+                theme: theme,
+              )
+            : null,
+      ),
     );
   }
 }

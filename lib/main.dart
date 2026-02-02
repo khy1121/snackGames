@@ -20,13 +20,13 @@ Future<void> main() async {
   await SettingsService.init();
   
   // SystemChrome.setPreferredOrientations removed for Web compatibility
-  runApp(const SnackGamesApp());
+  runApp(const DiceMergeMasterApp());
 }
 
 /// 스낵게임즈 - 기다림을 게임으로 바꾸다
 /// 짧게, 가볍게, 계속하게
-class SnackGamesApp extends StatelessWidget {
-  const SnackGamesApp({super.key});
+class DiceMergeMasterApp extends StatelessWidget {
+  const DiceMergeMasterApp({super.key});
 
   @override
   Widget build(BuildContext context) {

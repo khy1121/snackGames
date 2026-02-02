@@ -184,23 +184,23 @@ class ChallengeService {
     }
   }
 
-  /// XP 추가
-  static Future<void> addXP(int amount) async {
+  /// XP 추가 (non-blocking)
+  static void addXP(int amount) {
     final current = getCurrentXP();
-    await prefs.setInt(_keyXP, current + amount);
+    prefs.setInt(_keyXP, current + amount);
   }
 
-  /// 게임 완료 시 XP 계산 및 추가
-  static Future<void> onGameComplete(int score) async {
+  /// 게임 완료 시 XP 계산 및 추가 (non-blocking)
+  static void onGameComplete(int score) {
     // XP = 기본 10 + 점수/100
     final xpGain = 10 + (score ~/ 100);
-    await addXP(xpGain);
+    addXP(xpGain);
   }
 
-  /// 도전과제 진행도 업데이트 및 새로 완료된 도전과제 반환
+  /// 도전과제 진행도 업데이트 및 새로 완료된 도전과제 반환 (non-blocking but returns sync result)
   static Future<List<String>> updateProgressAndGetCompleted(String type, int value) async {
     final oldValue = prefs.getInt('$_keyChallengeProgress$type') ?? 0;
-    await prefs.setInt('$_keyChallengeProgress$type', value);
+    prefs.setInt('$_keyChallengeProgress$type', value); // Non-blocking
     
     // 현재 레벨의 도전과제 중 새로 완료된 것 찾기
     final completedChallenges = <String>[];
@@ -218,9 +218,9 @@ class ChallengeService {
     return completedChallenges;
   }
 
-  /// 도전과제 진행도 업데이트 (기존 호환성)
-  static Future<void> updateProgress(String type, int value) async {
-    await prefs.setInt('$_keyChallengeProgress$type', value);
+  /// 도전과제 진행도 업데이트 (기존 호환성, non-blocking)
+  static void updateProgress(String type, int value) {
+    prefs.setInt('$_keyChallengeProgress$type', value);
   }
 
   /// 도전과제 진행도 가져오기

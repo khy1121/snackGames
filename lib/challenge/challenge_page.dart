@@ -52,7 +52,7 @@ class _ChallengePageState extends State<ChallengePage> {
     if (ChallengeService.canLevelUp()) {
       final reward = await ChallengeService.levelUp();
       if (reward > 0) {
-        await GameDataService.addPoints(reward);
+        GameDataService.addPoints(reward);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

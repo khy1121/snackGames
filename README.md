@@ -1,6 +1,7 @@
-# game2048
 
-A new Flutter project.
+# Dice Merge Master
+
+주사위 합치기 메인 게임, 2048은 서브 미니게임으로 제공됩니다.
 
 ## Getting Started
 

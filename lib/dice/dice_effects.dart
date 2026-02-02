@@ -1,224 +1,9 @@
+import 'dart:async';
+import 'package:flutter/scheduler.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
 
-/// 화면 흔들림 효과 위젯
-class ScreenShake extends StatefulWidget {
-  final Widget child;
-  final Duration duration;
-  final double intensity;
 
-  const ScreenShake({
-    super.key,
-    required this.child,
-    this.duration = const Duration(milliseconds: 300),
-    this.intensity = 5.0,
-  });
-
-  @override
-  State<ScreenShake> createState() => ScreenShakeState();
-}
-
-class ScreenShakeState extends State<ScreenShake> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-  final Random _random = Random();
-
-  double _offsetX = 0;
-  double _offsetY = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(vsync: this, duration: widget.duration);
-    _animation = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    )..addListener(() {
-        if (_controller.isAnimating) {
-          setState(() {
-            _offsetX = (_random.nextDouble() * 2 - 1) * widget.intensity * _animation.value;
-            _offsetY = (_random.nextDouble() * 2 - 1) * widget.intensity * _animation.value;
-          });
-        } else {
-          setState(() {
-            _offsetX = 0;
-            _offsetY = 0;
-          });
-        }
-      });
-  }
-
-  void shake() {
-    _controller.forward(from: 0);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Transform.translate(
-      offset: Offset(_offsetX, _offsetY),
-      child: widget.child,
-    );
-  }
-}
-
-class DiceEffectsOverlay extends StatefulWidget {
-  final List<EffectEvent> events;
-  final VoidCallback onClearEvents;
-
-  const DiceEffectsOverlay({
-    super.key,
-    required this.events,
-    required this.onClearEvents,
-  });
-
-  @override
-  State<DiceEffectsOverlay> createState() => _DiceEffectsOverlayState();
-}
-
-class _DiceEffectsOverlayState extends State<DiceEffectsOverlay>
-    with TickerProviderStateMixin {
-  late AnimationController _controller;
-  final List<Widget> _activeEffects = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..addListener(() {
-      setState(() {});
-    });
-    _controller.repeat(); // Keep running for particle updates
-  }
-
-  @override
-  void didUpdateWidget(DiceEffectsOverlay oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.events.isNotEmpty) {
-      _processEvents();
-      widget.onClearEvents();
-    }
-  }
-
-  void _processEvents() {
-    for (final event in widget.events) {
-      if (event is ExplosionEvent) {
-        _addExplosion(event);
-      } else if (event is TextPopupEvent) {
-        _addTextPopup(event);
-      } else if (event is ShockwaveEvent) {
-        _addShockwave(event);
-      } else if (event is LightningEvent) {
-        _addLightning(event);
-      }
-    }
-  }
-
-  void _addLightning(LightningEvent event) {
-    final key = UniqueKey();
-    _activeEffects.add(
-      _LightningWidget(
-        key: key,
-        color: event.color,
-        onFinished: () {
-          setState(() {
-            _activeEffects.removeWhere((w) => w.key == key);
-          });
-        },
-      ),
-    );
-  }
-
-  void _addShockwave(ShockwaveEvent event) {
-    final key = UniqueKey();
-    _activeEffects.add(
-      _ShockwaveWidget(
-        key: key,
-        position: event.position,
-        color: event.color,
-        onFinished: () {
-          setState(() {
-            _activeEffects.removeWhere((w) => w.key == key);
-          });
-        },
-      ),
-    );
-  }
-
-  void _addExplosion(ExplosionEvent event) {
-    final key = UniqueKey();
-    // Simple particle system
-    final count = event.isMagic ? 40 : 15;
-    
-    final particles = List.generate(count, (i) {
-      final random = Random();
-      final angle = random.nextDouble() * 2 * pi;
-      // Magic explosions are faster and reach further
-      final speed = random.nextDouble() * (event.isMagic ? 200 : 100) + 50; 
-      
-      return _Particle(
-        position: event.position,
-        velocity: Offset(cos(angle) * speed, sin(angle) * speed),
-        color: event.isMagic 
-            ? HSVColor.fromAHSV(1, (random.nextDouble() * 360), 1, 1).toColor() 
-            : event.color,
-        size: random.nextDouble() * (event.isMagic ? 12 : 6) + 3,
-      );
-    });
-
-    _activeEffects.add(
-      _ParticleEffectWidget(
-        key: key,
-        particles: particles,
-        duration: const Duration(milliseconds: 800),
-        onFinished: () {
-          setState(() {
-            _activeEffects.removeWhere((w) => w.key == key);
-          });
-        },
-      ),
-    );
-  }
-
-  void _addTextPopup(TextPopupEvent event) {
-    final key = UniqueKey();
-    _activeEffects.add(
-      _TextPopupWidget(
-        key: key,
-        text: event.text,
-        position: event.position,
-        color: event.color,
-        fontSize: event.fontSize,
-        onFinished: () {
-          setState(() {
-            _activeEffects.removeWhere((w) => w.key == key);
-          });
-        },
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Stack(
-        children: _activeEffects,
-      ),
-    );
-  }
-}
 
 // --- Event Classes ---
 
@@ -252,30 +37,35 @@ class TextPopupEvent extends EffectEvent {
   TextPopupEvent(this.text, this.position, this.color, {this.fontSize = 24});
 }
 
-// --- Internal Widgets ---
+/// 화면 흔들림 효과 위젯
+class ScreenShake extends StatefulWidget {
+  final Widget child;
+  final Duration duration;
+  final double intensity;
 
-class _LightningWidget extends StatefulWidget {
-  final Color color;
-  final VoidCallback onFinished;
-
-  const _LightningWidget({
+  const ScreenShake({
     super.key,
-    required this.color,
-    required this.onFinished,
+    required this.child,
+    this.duration = const Duration(milliseconds: 300),
+    this.intensity = 5.0,
   });
 
   @override
-  State<_LightningWidget> createState() => _LightningWidgetState();
+  State<ScreenShake> createState() => ScreenShakeState();
 }
 
-class _LightningWidgetState extends State<_LightningWidget> with SingleTickerProviderStateMixin {
+class ScreenShakeState extends State<ScreenShake> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  
+  final Random _random = Random();
+
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
-    _controller.forward().whenComplete(widget.onFinished);
+    _controller = AnimationController(vsync: this, duration: widget.duration);
+  }
+
+  void shake() {
+    _controller.forward(from: 0);
   }
 
   @override
@@ -286,153 +76,189 @@ class _LightningWidgetState extends State<_LightningWidget> with SingleTickerPro
 
   @override
   Widget build(BuildContext context) {
+    // Use AnimatedBuilder instead of setState for better performance
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
-        return CustomPaint(
-          size: Size.infinite,
-          painter: _LightningPainter(widget.color, _controller.value),
+        if (!_controller.isAnimating) {
+          return child!;
+        }
+        
+        final intensity = widget.intensity * (1.0 - _controller.value);
+        final offsetX = (_random.nextDouble() * 2 - 1) * intensity;
+        final offsetY = (_random.nextDouble() * 2 - 1) * intensity;
+        
+        return Transform.translate(
+          offset: Offset(offsetX, offsetY),
+          child: child,
         );
       },
+      child: widget.child,
     );
   }
 }
 
-class _LightningPainter extends CustomPainter {
-  final Color color;
-  final double progress;
-  final Random _random = Random(123); // Consistent seed for jitter if needed, or variable
+class DiceEffectsOverlay extends StatefulWidget {
+  final Stream<EffectEvent> eventStream;
 
-  _LightningPainter(this.color, this.progress);
+  const DiceEffectsOverlay({
+    super.key,
+    required this.eventStream,
+  });
+
+  @override
+  State<DiceEffectsOverlay> createState() => _DiceEffectsOverlayState();
+}
+
+class _DiceEffectsOverlayState extends State<DiceEffectsOverlay>
+    with SingleTickerProviderStateMixin {
+  late Ticker _ticker;
+  final List<_ActiveEffect> _activeEffects = [];
+  Duration _lastElapsed = Duration.zero;
+  late final StreamSubscription<EffectEvent> _subscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = createTicker(_onTick)..start();
+    _subscription = widget.eventStream.listen(_addEffect);
+  }
+
+  @override
+  void didUpdateWidget(DiceEffectsOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.eventStream != widget.eventStream) {
+      _subscription.cancel();
+      _subscription = widget.eventStream.listen(_addEffect);
+    }
+  }
+
+  void _addEffect(EffectEvent event) {
+    if (event is ExplosionEvent) {
+      _activeEffects.add(_ExplosionEffect(event.position, event.color, event.isMagic));
+    } else if (event is TextPopupEvent) {
+      _activeEffects.add(_TextPopupEffect(event.text, event.position, event.color, event.fontSize));
+    } else if (event is ShockwaveEvent) {
+      _activeEffects.add(_ShockwaveEffect(event.position, event.color));
+    } else if (event is LightningEvent) {
+      _activeEffects.add(_LightningEffect(event.color));
+    }
+  }
+
+  void _onTick(Duration elapsed) {
+    if (_activeEffects.isEmpty) {
+      _lastElapsed = elapsed;
+      return;
+    }
+
+    final dt = (elapsed - _lastElapsed).inMicroseconds / 1000000.0;
+    _lastElapsed = elapsed;
+
+    // Cap dt to prevent huge jumps (max 100ms)
+    final safeDt = dt > 0.1 ? 0.1 : dt;
+
+    // Throttle updates to 30fps for effects (every ~33ms)
+    if (safeDt > 0 && safeDt >= 0.016) {
+      setState(() {
+        _activeEffects.removeWhere((effect) => !effect.update(safeDt));
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _ticker.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Only rebuild when effects list changes
+    if (_activeEffects.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    
+    return RepaintBoundary(
+      child: IgnorePointer(
+        child: CustomPaint(
+          size: Size.infinite,
+          painter: _EffectsPainter(_activeEffects),
+        ),
+      ),
+    );
+  }
+}
+
+class _EffectsPainter extends CustomPainter {
+  final List<_ActiveEffect> effects;
+
+  _EffectsPainter(this.effects);
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (progress > 1.0) return;
-    
-    final paint = Paint()
-      ..color = color.withValues(alpha: 1.0 - progress) // Fade out
-      ..strokeWidth = 3
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    final path = Path();
-    
-    // Create detailed jagged lines
-    // Top-Left to Bottom-Right
-    _drawBolt(path, Offset.zero, Offset(size.width, size.height), 20);
-    // Top-Right to Bottom-Left
-    _drawBolt(path, Offset(size.width, 0), Offset(0, size.height), 20);
-    
-    canvas.drawPath(path, paint);
-    
-    // Flash effect
-    if (progress < 0.2) {
-      canvas.drawColor(Colors.white.withValues(alpha: (0.2 - progress) * 2), BlendMode.lighten);
+    for (final effect in effects) {
+      effect.draw(canvas, size);
     }
   }
+
+  @override
+  bool shouldRepaint(_EffectsPainter oldDelegate) {
+    // Only repaint if effects count changed or always repaint if effects exist
+    return effects.isNotEmpty;
+  }
+}
+
+// --- Active Effect Classes (Optimized) ---
+
+abstract class _ActiveEffect {
+  /// Updates state. Returns false if effect is finished.
+  bool update(double dt);
+  void draw(Canvas canvas, Size size);
+}
+
+class _ExplosionEffect extends _ActiveEffect {
+  final List<_Particle> particles;
   
-  void _drawBolt(Path path, Offset start, Offset end, int segments) {
-    path.moveTo(start.dx, start.dy);
-    
-    Offset current = start;
-    final dx = (end.dx - start.dx) / segments;
-    final dy = (end.dy - start.dy) / segments;
-    
-    // Re-seed for animation frame variance if desired, or keep consistent shape
-    final random = Random(); 
+  _ExplosionEffect(Offset position, Color color, bool isMagic) 
+      : particles = List.generate(isMagic ? 20 : 8, (_) {
+          final random = Random();
+          final angle = random.nextDouble() * 2 * pi;
+          final speed = random.nextDouble() * (isMagic ? 200 : 100) + 50;
+          final pColor = isMagic
+              ? HSVColor.fromAHSV(1, (random.nextDouble() * 360), 1, 1).toColor()
+              : color;
+          return _Particle(
+            position: position,
+            velocity: Offset(cos(angle) * speed, sin(angle) * speed),
+            color: pColor,
+            size: random.nextDouble() * (isMagic ? 12 : 6) + 3,
+            life: 1.0, 
+          );
+        });
 
-    for (int i = 0; i < segments; i++) {
-        final jitterX = (random.nextDouble() - 0.5) * 50;
-        final jitterY = (random.nextDouble() - 0.5) * 50;
-        
-        final next = Offset(
-           start.dx + dx * (i + 1) + jitterX,
-           start.dy + dy * (i + 1) + jitterY
-        );
-        
-        path.lineTo(next.dx, next.dy);
-        current = next;
+  @override
+  bool update(double dt) {
+    bool anyAlive = false;
+    for (final p in particles) {
+      if (p.life > 0) {
+        p.position += p.velocity * dt;
+        p.velocity += Offset(0, 200 * dt); // Gravity
+        p.life -= dt * 1.5; // Decay
+        if (p.life > 0) anyAlive = true;
+      }
     }
-    path.lineTo(end.dx, end.dy);
+    return anyAlive;
   }
 
   @override
-  bool shouldRepaint(_LightningPainter oldDelegate) => true;
-}
-
-
-// --- Internal Widgets ---
-
-class _ShockwaveWidget extends StatefulWidget {
-  final Offset position;
-  final Color color;
-  final VoidCallback onFinished;
-
-  const _ShockwaveWidget({
-    super.key,
-    required this.position,
-    required this.color,
-    required this.onFinished,
-  });
-
-  @override
-  State<_ShockwaveWidget> createState() => _ShockwaveWidgetState();
-}
-
-class _ShockwaveWidgetState extends State<_ShockwaveWidget> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _radius;
-  late Animation<double> _opacity;
-  late Animation<double> _width;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
-    
-    _radius = Tween<double>(begin: 0, end: 150).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutQuart),
-    );
-    
-    _opacity = Tween<double>(begin: 0.8, end: 0.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
-    
-    _width = Tween<double>(begin: 20, end: 0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
-
-    _controller.forward().whenComplete(widget.onFinished);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Positioned(
-          left: widget.position.dx - _radius.value,
-          top: widget.position.dy - _radius.value,
-          width: _radius.value * 2,
-          height: _radius.value * 2,
-          child: Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: widget.color.withValues(alpha: _opacity.value),
-                width: _width.value,
-              ),
-            ),
-          ),
-        );
-      },
-    );
+  void draw(Canvas canvas, Size size) {
+    for (final p in particles) {
+      if (p.life <= 0) continue;
+      final paint = Paint()
+        ..color = p.color.withValues(alpha: p.life)
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(p.position, p.size * p.life, paint);
+    }
   }
 }
 
@@ -441,195 +267,187 @@ class _Particle {
   Offset velocity;
   final Color color;
   final double size;
-  double life = 1.0;
+  double life;
 
   _Particle({
     required this.position,
     required this.velocity,
     required this.color,
     required this.size,
+    required this.life,
   });
-
-  void update(double dt) {
-    position += velocity * dt;
-    velocity += Offset(0, 200 * dt); // Gravity
-    life -= dt * 1.5; // Decay
-  }
 }
 
-class _ParticleEffectWidget extends StatefulWidget {
-  final List<_Particle> particles;
-  final Duration duration;
-  final VoidCallback onFinished;
-
-  const _ParticleEffectWidget({
-    super.key,
-    required this.particles,
-    required this.duration,
-    required this.onFinished,
-  });
-
-  @override
-  State<_ParticleEffectWidget> createState() => _ParticleEffectWidgetState();
-}
-
-class _ParticleEffectWidgetState extends State<_ParticleEffectWidget>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  int _lastFrameTime = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(vsync: this, duration: widget.duration);
-    _controller.forward().whenComplete(widget.onFinished);
-    _controller.addListener(_updateParticles);
-    _lastFrameTime = DateTime.now().millisecondsSinceEpoch;
-  }
-
-  void _updateParticles() {
-    final now = DateTime.now().millisecondsSinceEpoch;
-    final dt = (now - _lastFrameTime) / 1000.0;
-    _lastFrameTime = now;
-
-    if (dt > 0.1) return; // Prevent huge jumps
-
-    setState(() {
-      for (var p in widget.particles) {
-        p.update(dt);
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: _ParticlePainter(widget.particles),
-      size: Size.infinite,
-    );
-  }
-}
-
-class _ParticlePainter extends CustomPainter {
-  final List<_Particle> particles;
-
-  _ParticlePainter(this.particles);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    for (var p in particles) {
-      if (p.life <= 0) continue;
-      final paint = Paint()
-        ..color = p.color.withValues(alpha: p.life)
-        ..style = PaintingStyle.fill;
-      canvas.drawCircle(p.position, p.size * p.life, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_ParticlePainter oldDelegate) => true;
-}
-
-class _TextPopupWidget extends StatefulWidget {
+class _TextPopupEffect extends _ActiveEffect {
   final String text;
-  final Offset position;
+  final Offset startPos;
   final Color color;
   final double fontSize;
-  final VoidCallback onFinished;
+  double time = 0;
+  final double duration = 1.0;
+  
+  // Cache the painter
+  late final TextPainter _textPainter;
 
-  const _TextPopupWidget({
-    super.key,
-    required this.text,
-    required this.position,
-    required this.color,
-    this.fontSize = 24,
-    required this.onFinished,
-  });
+  _TextPopupEffect(this.text, this.startPos, this.color, this.fontSize) {
+    final textSpan = TextSpan(
+      text: text,
+      style: TextStyle(
+        fontSize: fontSize,
+        fontWeight: FontWeight.w900,
+        color: color,
+        // Shadows removed for emulator performance
+      ),
+    );
+
+    _textPainter = TextPainter(
+      text: textSpan,
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    );
+    _textPainter.layout();
+  }
 
   @override
-  State<_TextPopupWidget> createState() => _TextPopupWidgetState();
+  bool update(double dt) {
+    time += dt;
+    // Fade out color opacity in draw, not here
+    return time < duration;
+  }
+
+  @override
+  void draw(Canvas canvas, Size size) {
+    final progress = time / duration;
+    final opacity = (progress > 0.5) ? (1.0 - progress) * 2 : 1.0;
+    
+    // Scale effect
+    final scale = (progress < 0.2) ? progress * 6 : (progress < 0.4 ? 1.2 : 1.0); 
+
+    if (opacity <= 0) return;
+
+    final offset = startPos - Offset(0, 100 * (1 - pow(1 - progress, 2).toDouble()));
+
+    canvas.save();
+    canvas.translate(offset.dx, offset.dy);
+    canvas.scale(scale, scale);
+    
+    // Use saveLayer with alpha for efficient fading without recreating TextPainter
+    if (opacity < 1.0) {
+      canvas.saveLayer(null, Paint()..color = Color.fromRGBO(255, 255, 255, opacity));
+    }
+    
+    _textPainter.paint(canvas, Offset(-_textPainter.width / 2, -_textPainter.height / 2));
+    
+    if (opacity < 1.0) {
+      canvas.restore();
+    }
+
+    canvas.restore();
+  }
 }
 
-class _TextPopupWidgetState extends State<_TextPopupWidget>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _opacity;
-  late Animation<Offset> _offset;
-  late Animation<double> _scale;
+class _ShockwaveEffect extends _ActiveEffect {
+  final Offset position;
+  final Color color;
+  double time = 0;
+  final double duration = 0.6;
+
+  _ShockwaveEffect(this.position, this.color);
 
   @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1000));
+  bool update(double dt) {
+    time += dt;
+    return time < duration;
+  }
 
-    _opacity = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(parent: _controller, curve: const Interval(0.5, 1.0)),
-    );
+  @override
+  void draw(Canvas canvas, Size size) {
+    final progress = time / duration;
+    final radius = 150 * pow(progress, 0.25).toDouble(); // easeOutQuart approx
+    final opacity = 1.0 - progress; // easeOut approx
+    final width = 20 * (1.0 - progress);
 
-    _offset = Tween<Offset>(
-            begin: widget.position, end: widget.position - const Offset(0, 100))
-        .animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutQuad),
-    );
+    if (opacity <= 0) return;
+
+    final paint = Paint()
+      ..color = color.withValues(alpha: opacity * 0.8)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = width;
+
+    canvas.drawCircle(position, radius, paint);
+  }
+}
+
+class _LightningEffect extends _ActiveEffect {
+  final Color color;
+  double time = 0;
+  final double duration = 0.4;
+  final Random _random = Random();
+  
+  // Fix late initialization
+  List<Offset>? _points1;
+  List<Offset>? _points2;
+
+  _LightningEffect(this.color);
+
+  @override
+  bool update(double dt) {
+    time += dt;
+    return time < duration;
+  }
+
+  // Pre-calculate bolts when needed (lazy init or in draw if null)
+  List<Offset> _generateBolt(Offset start, Offset end, int segments) {
+    final points = <Offset>[start];
+    final dx = (end.dx - start.dx) / segments;
+    final dy = (end.dy - start.dy) / segments;
     
-    _scale = TweenSequence([
-      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.2), weight: 20),
-      TweenSequenceItem(tween: Tween(begin: 1.2, end: 1.0), weight: 20),
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.0), weight: 60),
-    ]).animate(_controller);
-
-    _controller.forward().whenComplete(widget.onFinished);
+    for (int i = 1; i < segments; i++) {
+        final jitterX = (_random.nextDouble() - 0.5) * 50;
+        final jitterY = (_random.nextDouble() - 0.5) * 50;
+        points.add(Offset(
+           start.dx + dx * i + jitterX,
+           start.dy + dy * i + jitterY
+        ));
+    }
+    points.add(end);
+    return points;
   }
 
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  void draw(Canvas canvas, Size size) {
+    if (time >= duration) return;
 
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Positioned(
-          left: _offset.value.dx - 100, // Center approx
-          top: _offset.value.dy,
-          width: 200,
-          child: Opacity(
-            opacity: _opacity.value,
-            child: Transform.scale(
-              scale: _scale.value,
-              child: Center(
-                child: Text(
-                  widget.text,
-                  style: TextStyle(
-                    fontSize: widget.fontSize,
-                    fontWeight: FontWeight.w900,
-                    color: widget.color,
-                    shadows: [
-                      Shadow(
-                          color: Colors.black.withValues(alpha: 0.5),
-                          offset: const Offset(2, 2),
-                          blurRadius: 4),
-                      Shadow(
-                          color: widget.color.withValues(alpha: 0.8),
-                          blurRadius: 10),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
+    _points1 ??= _generateBolt(Offset.zero, Offset(size.width, size.height), 10);
+    _points2 ??= _generateBolt(Offset(size.width, 0), Offset(0, size.height), 10);
+
+    final progress = time / duration;
+    final alpha = 1.0 - progress;
+    
+    final paint = Paint()
+      ..color = color.withValues(alpha: alpha)
+      ..strokeWidth = 3
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final path = Path();
+    
+    // Path 1
+    if (_points1 != null) {
+      path.moveTo(_points1![0].dx, _points1![0].dy);
+      for (int i=1; i<_points1!.length; i++) path.lineTo(_points1![i].dx, _points1![i].dy);
+    }
+    // Path 2
+    if (_points2 != null) {
+      path.moveTo(_points2![0].dx, _points2![0].dy);
+      for (int i=1; i<_points2!.length; i++) path.lineTo(_points2![i].dx, _points2![i].dy);
+    }
+    
+    canvas.drawPath(path, paint);
+    
+    // Flash background
+    if (progress < 0.2) {
+       canvas.drawColor(Colors.white.withValues(alpha: (0.2 - progress) * 2), BlendMode.srcOver);
+    }
   }
 }

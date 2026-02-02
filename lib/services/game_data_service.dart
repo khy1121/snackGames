@@ -24,10 +24,10 @@ class GameDataService {
     return prefs.getInt(_keyPoints) ?? 0;
   }
 
-  /// 포인트 추가/차감
-  static Future<void> addPoints(int amount) async {
+  /// 포인트 추가/차감 (non-blocking)
+  static void addPoints(int amount) {
     final current = getPoints();
-    await prefs.setInt(_keyPoints, current + amount);
+    prefs.setInt(_keyPoints, current + amount);
   }
 
   /// 광고 제거 여부
@@ -35,9 +35,9 @@ class GameDataService {
     return prefs.getBool(_keyAdRemoved) ?? false;
   }
 
-  /// 광고 제거 구매 처리
-  static Future<void> removeAds() async {
-    await prefs.setBool(_keyAdRemoved, true);
+  /// 광고 제거 구매 처리 (non-blocking)
+  static void removeAds() {
+    prefs.setBool(_keyAdRemoved, true);
   }
 
   /// 보유 테마 목록 (ID 리스트)
@@ -45,12 +45,12 @@ class GameDataService {
     return prefs.getStringList(_keyOwnedThemes) ?? ['cyberpunk']; // Default
   }
 
-  /// 테마 구매/획득
-  static Future<void> addTheme(String themeId) async {
+  /// 테마 구매/획득 (non-blocking)
+  static void addTheme(String themeId) {
     final themes = getOwnedThemes();
     if (!themes.contains(themeId)) {
       themes.add(themeId);
-      await prefs.setStringList(_keyOwnedThemes, themes);
+      prefs.setStringList(_keyOwnedThemes, themes);
     }
   }
 
@@ -59,9 +59,9 @@ class GameDataService {
     return prefs.getString(_keySelectedTheme) ?? 'cyberpunk';
   }
 
-  /// 테마 변경
-  static Future<void> setTheme(String themeId) async {
-    await prefs.setString(_keySelectedTheme, themeId);
+  /// 테마 변경 (non-blocking)
+  static void setTheme(String themeId) {
+    prefs.setString(_keySelectedTheme, themeId);
   }
   // ... methods continuing ...
 
@@ -98,11 +98,11 @@ class GameDataService {
     return prefs.getInt('$_keyBestScore$gameId') ?? 0;
   }
 
-  /// 최고 점수 저장
-  static Future<void> setBestScore(String gameId, int score) async {
+  /// 최고 점수 저장 (non-blocking)
+  static void setBestScore(String gameId, int score) {
     final current = getBestScore(gameId);
     if (score > current) {
-      await prefs.setInt('$_keyBestScore$gameId', score);
+      prefs.setInt('$_keyBestScore$gameId', score);
     }
   }
 
@@ -112,20 +112,20 @@ class GameDataService {
     return prefs.getInt('$_keyTodayScore$gameId') ?? 0;
   }
 
-  /// 오늘 점수 저장 (최고 기록만)
-  static Future<void> setTodayScore(String gameId, int score) async {
+  /// 오늘 점수 저장 (최고 기록만, non-blocking)
+  static void setTodayScore(String gameId, int score) {
     _checkAndResetDailyScores();
     final current = getTodayScore(gameId);
     if (score > current) {
-      await prefs.setInt('$_keyTodayScore$gameId', score);
+      prefs.setInt('$_keyTodayScore$gameId', score);
     }
   }
 
-  /// 게임 점수 기록 (최고 점수 + 오늘 점수 동시 업데이트)
-  static Future<void> recordScore(String gameId, int score) async {
-    await setBestScore(gameId, score);
-    await setTodayScore(gameId, score);
-    await incrementGamesPlayed();
+  /// 게임 점수 기록 (최고 점수 + 오늘 점수 동시 업데이트, non-blocking)
+  static void recordScore(String gameId, int score) {
+    setBestScore(gameId, score);
+    setTodayScore(gameId, score);
+    incrementGamesPlayed();
   }
 
   // ========== 플레이 기록 ==========
@@ -135,9 +135,9 @@ class GameDataService {
     return prefs.getString(_keyLastPlayed);
   }
 
-  /// 마지막 플레이한 게임 저장
-  static Future<void> setLastPlayedGame(String gameId) async {
-    await prefs.setString(_keyLastPlayed, gameId);
+  /// 마지막 플레이한 게임 저장 (non-blocking)
+  static void setLastPlayedGame(String gameId) {
+    prefs.setString(_keyLastPlayed, gameId);
   }
 
   /// 총 플레이 시간 (분)
@@ -145,10 +145,10 @@ class GameDataService {
     return prefs.getInt(_keyTotalPlayTime) ?? 0;
   }
 
-  /// 플레이 시간 추가
-  static Future<void> addPlayTime(int minutes) async {
+  /// 플레이 시간 추가 (non-blocking)
+  static void addPlayTime(int minutes) {
     final current = getTotalPlayTime();
-    await prefs.setInt(_keyTotalPlayTime, current + minutes);
+    prefs.setInt(_keyTotalPlayTime, current + minutes);
   }
 
   /// 총 게임 플레이 횟수
@@ -156,10 +156,10 @@ class GameDataService {
     return prefs.getInt(_keyTotalGamesPlayed) ?? 0;
   }
 
-  /// 게임 플레이 횟수 증가
-  static Future<void> incrementGamesPlayed() async {
+  /// 게임 플레이 횟수 증가 (non-blocking)
+  static void incrementGamesPlayed() {
     final current = getTotalGamesPlayed();
-    await prefs.setInt(_keyTotalGamesPlayed, current + 1);
+    prefs.setInt(_keyTotalGamesPlayed, current + 1);
   }
 
   // ========== 게임 정보 ==========
