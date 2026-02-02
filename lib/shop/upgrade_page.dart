@@ -244,22 +244,22 @@ class _UpgradeCard extends StatelessWidget {
     return Opacity(
       opacity: isLocked ? 0.6 : 1.0,
       child: Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.white.withValues(alpha: 0.15),
-            Colors.white.withValues(alpha: 0.05),
-          ],
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Colors.white.withValues(alpha: 0.15),
+              Colors.white.withValues(alpha: 0.05),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isMaxLevel 
+                ? Colors.amber.withValues(alpha: 0.5)
+                : Colors.white.withValues(alpha: 0.2),
+            width: isMaxLevel ? 2 : 1,
+          ),
         ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isMaxLevel 
-              ? Colors.amber.withValues(alpha: 0.5)
-              : Colors.white.withValues(alpha: 0.2),
-          width: isMaxLevel ? 2 : 1,
-        ),
-      ),
-      child: Column(
+        child: Column(
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
@@ -461,6 +461,7 @@ class _UpgradeCard extends StatelessWidget {
               ),
             ),
         ],
+      ),
       ),
     );
   }
