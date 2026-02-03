@@ -773,8 +773,6 @@ class _HomePageState extends State<HomePage> {
                         ),
                       )
                     : const SizedBox.shrink(),
-                  ),
-                ),
               // 업그레이드 버튼 (New)
               GestureDetector(
                 onTap: () {
