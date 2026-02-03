@@ -1,5 +1,5 @@
 // Service Worker for PWA
-const CACHE_NAME = 'snack-games-v1';
+const CACHE_NAME = 'snack-games-v2';
 const urlsToCache = [
     '/',
     '/index.html',
