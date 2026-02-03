@@ -8,6 +8,7 @@ import '../services/challenge_service.dart';
 import '../services/settings_service.dart';
 import '../services/upgrade_service.dart';
 import '../services/achievement_service.dart';
+import '../services/vibration_service.dart';
 import '../widgets/challenge_toast.dart';
 
 /// 2048 게임 메인 페이지
@@ -78,8 +79,16 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
     final result = _board.move(direction);
     
     if (result.moved) {
-      if (SettingsService.vibrationEnabled.value) {
-        HapticFeedback.lightImpact();
+      // 진동 피드백
+      if (result.merges.isNotEmpty) {
+        final maxMergeValue = result.merges.map((m) => m.$3).reduce((a, b) => a > b ? a : b);
+        if (maxMergeValue >= 512) {
+          VibrationService.heavy(); // 큰 타일 합체
+        } else {
+          VibrationService.medium(); // 일반 합체
+        }
+      } else {
+        VibrationService.light(); // 이동만
       }
       
       // 병합된 타일 찾기
@@ -116,6 +125,7 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
 
           // 게임 오버 또는 승리 체크
           if (_board.isGameOver) {
+            VibrationService.error(); // 게임 오버 진동
             _showGameOverDialog();
           } else if (_board.hasWon) {
             _showWinDialog();

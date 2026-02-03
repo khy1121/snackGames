@@ -15,6 +15,7 @@ import '../services/upgrade_service.dart';
 import '../services/daily_attendance_service.dart';
 import '../services/lucky_wheel_service.dart';
 import '../services/pwa_install_service.dart';
+import '../services/vibration_service.dart';
 import '../challenge/challenge_page.dart';
 import '../settings/settings_page.dart';
 import '../widgets/glassmorphism_card.dart';
@@ -179,6 +180,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _initServices() async {
     await GameDataService.init();
+    await VibrationService.init(GameDataService.prefs);
     await DailyMissionService.init(GameDataService.prefs);
     await AchievementService.init(GameDataService.prefs);
     await ChallengeService.init(GameDataService.prefs);
@@ -771,6 +773,8 @@ class _HomePageState extends State<HomePage> {
                         ),
                       )
                     : const SizedBox.shrink(),
+                  ),
+                ),
               // 업그레이드 버튼 (New)
               GestureDetector(
                 onTap: () {

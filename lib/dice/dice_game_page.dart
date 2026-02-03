@@ -12,6 +12,7 @@ import '../services/challenge_service.dart';
 import '../services/settings_service.dart';
 import '../services/upgrade_service.dart';
 import '../services/achievement_service.dart';
+import '../services/vibration_service.dart';
 import '../widgets/challenge_toast.dart';
 import '../widgets/theme_shop_dialog.dart';
 import '../widgets/animated_counter.dart';
@@ -215,6 +216,7 @@ class _DiceGamePageState extends State<DiceGamePage>
       });
 
       if (_board.isGameOver) {
+        VibrationService.error(); // 게임 오버
         _showGameOverDialog();
         GameDataService.clearGameState('dice'); // 게임 오버 시 저장 삭제
       } else {
