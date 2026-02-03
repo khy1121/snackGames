@@ -1,4 +1,7 @@
 {
+  "buildCommand": "echo 'Using pre-built files'",
+  "outputDirectory": "build/web",
+  "installCommand": "echo 'No install needed'",
   "routes": [
     {
       "handle": "filesystem"
