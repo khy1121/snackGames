@@ -61,6 +61,28 @@ class PWAInstallService {
     }
   }
 
+  /// Check if device is iOS
+  static bool isIOS() {
+    try {
+      final userAgent = html.window.navigator.userAgent.toLowerCase();
+      return userAgent.contains('iphone') || 
+             userAgent.contains('ipad') || 
+             userAgent.contains('ipod');
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Check if should show install button (iOS manual or Chrome auto)
+  static bool shouldShowInstallButton() {
+    // iOS에서는 standalone이 아니면 항상 표시
+    if (isIOS() && !isRunningAsApp()) {
+      return true;
+    }
+    // 다른 브라우저는 installable일 때만 표시
+    return _isInstallable && !isRunningAsApp();
+  }
+
   /// Get current installability status
   static bool get isInstallable => _isInstallable;
 

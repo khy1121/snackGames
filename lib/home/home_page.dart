@@ -111,11 +111,55 @@ class _HomePageState extends State<HomePage> {
   void _initPWA() {
     PWAInstallService.initialize();
     setState(() {
-      _isPWAInstallable = PWAInstallService.isPWAInstallable();
+      _isPWAInstallable = PWAInstallService.shouldShowInstallButton();
     });
   }
 
   Future<void> _installPWA() async {
+    // iOS인 경우 설치 안내 표시
+    if (PWAInstallService.isIOS() && mounted) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.apple, color: Colors.black),
+              SizedBox(width: 8),
+              Text('iOS 앱 설치 방법'),
+            ],
+          ),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '1. 하단의 공유 버튼 (📤)을 누르세요',
+                style: TextStyle(fontSize: 16),
+              ),
+              SizedBox(height: 12),
+              Text(
+                '2. "홈 화면에 추가"를 선택하세요',
+                style: TextStyle(fontSize: 16),
+              ),
+              SizedBox(height: 12),
+              Text(
+                '3. "추가"를 눌러 설치를 완료하세요',
+                style: TextStyle(fontSize: 16),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('확인'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+    
+    // Android/Chrome - 자동 설치 프롬프트
     final success = await PWAInstallService.installPWA();
     if (success && mounted) {
       // 설치가 승인됨 - 버튼 숨김
@@ -128,13 +172,8 @@ class _HomePageState extends State<HomePage> {
     } else if (mounted) {
       // 사용자가 거부했거나 설치 불가능 - 버튼 유지
       setState(() {
-        _isPWAInstallable = PWAInstallService.isPWAInstallable();
+        _isPWAInstallable = PWAInstallService.shouldShowInstallButton();
       });
-      if (!_isPWAInstallable) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('❌ 앱 설치가 불가능합니다. 이미 설치되었거나 브라우저가 지원하지 않습니다.')),
-        );
-      }
     }
   }
 
@@ -665,43 +704,73 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
               const Spacer(),
-              // PWA 설치 버튼 (웹에서만 표시, 설치 가능할 때만)
-              if (kIsWeb && _isPWAInstallable && !PWAInstallService.isRunningAsApp())
-                GestureDetector(
-                  onTap: _installPWA,
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF00B894), Color(0xFF00CEC9)],
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF00B894).withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
+              // PWA 설치 버튼 또는 설치됨 표시
+              if (kIsWeb)
+                PWAInstallService.isRunningAsApp()
+                  ? Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                          width: 1,
                         ),
-                      ],
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.download, color: Colors.white, size: 16),
-                        SizedBox(width: 4),
-                        Text(
-                          '앱 설치',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.check_circle, color: Colors.white, size: 16),
+                          SizedBox(width: 4),
+                          Text(
+                            '앱 설치됨',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : _isPWAInstallable
+                    ? GestureDetector(
+                        onTap: _installPWA,
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF00B894), Color(0xFF00CEC9)],
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF00B894).withValues(alpha: 0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.download, color: Colors.white, size: 16),
+                              SizedBox(width: 4),
+                              Text(
+                                '앱 설치',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
+                      )
+                    : const SizedBox.shrink(),
               // 업그레이드 버튼 (New)
               GestureDetector(
                 onTap: () {
