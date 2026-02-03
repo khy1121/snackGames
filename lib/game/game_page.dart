@@ -6,6 +6,8 @@ import 'tile_widget.dart';
 import '../services/game_data_service.dart';
 import '../services/challenge_service.dart';
 import '../services/settings_service.dart';
+import '../services/upgrade_service.dart';
+import '../services/achievement_service.dart';
 import '../widgets/challenge_toast.dart';
 
 /// 2048 게임 메인 페이지
@@ -46,6 +48,9 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
     _startTime = DateTime.now();
     final savedBest = GameDataService.getBestScore('2048');
     _board = GameBoard.newGame(bestScore: savedBest);
+    
+    // Apply starting bonus from upgrades
+    _board.score += UpgradeService.getStartingBonus();
   }
   
   void _startNewGame() {
@@ -54,6 +59,9 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
       _board = GameBoard.newGame(bestScore: prevBest);
       _newTiles = {};
       _mergedTiles = {};
+      
+      // Apply starting bonus from upgrades
+      _board.score += UpgradeService.getStartingBonus();
     });
   }
   
@@ -99,6 +107,13 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
             _mergedTiles = {};
           });
           
+          // 최대 타일 업적 실시간 체크
+          final maxTile = _board.highestTile;
+          if (maxTile >= 256) AchievementService.updateProgress('2048_256', 256);
+          if (maxTile >= 512) AchievementService.updateProgress('2048_512', 512);
+          if (maxTile >= 1024) AchievementService.updateProgress('2048_1024', 1024);
+          if (maxTile >= 2048) AchievementService.updateProgress('2048_2048', 2048);
+
           // 게임 오버 또는 승리 체크
           if (_board.isGameOver) {
             _showGameOverDialog();
@@ -138,26 +153,43 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
   }
   
   void _showGameOverDialog() {
-    // 점수 기록
-    GameDataService.recordScore('2048', _board.score);
+    // Get upgrade multipliers
+    final scoreMultiplier = UpgradeService.getScoreMultiplier();
+    final pointsMultiplier = UpgradeService.getPointsMultiplier();
     
-    // 리워드 계산 (2048은 점수가 더 높으므로 200점당 1P)
-    final reward = (_board.score / 200).floor();
+    // Apply score multiplier to final score
+    final finalScore = (_board.score * scoreMultiplier).round();
+    
+    // 점수 기록
+    GameDataService.recordScore('2048', finalScore);
+    
+    // 리워드 계산 (2048은 점수가 더 높으므로 200점당 1P) + 포인트 배율
+    final baseReward = (finalScore / 200).floor();
+    final finalReward = (baseReward * pointsMultiplier).round();
     
     // XP 계산 (기본 10 + 점수/200)
-    final xpGain = 10 + (_board.score ~/ 200);
+    final xpGain = 10 + (finalScore ~/ 200);
     
     // 포인트 지급
-    GameDataService.addPoints(reward);
+    GameDataService.addPoints(finalReward);
     
     // XP 지급
     ChallengeService.addXP(xpGain);
     
+    // 업적 동기화 (게임 횟수)
+    AchievementService.syncFromGameData(GameDataService.getTotalGamesPlayed());
+    
+    // 최대 타일 업적 체크
+    final maxTile = _board.highestTile;
+    if (maxTile >= 256) AchievementService.updateProgress('2048_256', 256);
+    if (maxTile >= 512) AchievementService.updateProgress('2048_512', 512);
+    if (maxTile >= 1024) AchievementService.updateProgress('2048_1024', 1024);
+    if (maxTile >= 2048) AchievementService.updateProgress('2048_2048', 2048);
+
     // 도전과제 진행도 업데이트 및 토스트 표시
     _checkAndShowChallengeToasts();
     
     // 최대 타일 표시
-    final maxTile = _board.highestTile;
 
     showGeneralDialog(
       context: context,
@@ -214,7 +246,7 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
                             
                             // Score
                             Text(
-                              '${_board.score}',
+                              '$finalScore',
                               style: const TextStyle(
                                 fontSize: 48,
                                 fontWeight: FontWeight.w900,
@@ -225,7 +257,7 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
                             const SizedBox(height: 8),
                             
                             // New Best Badge 
-                            if (_board.score >= _board.bestScore && _board.score > 0)
+                            if (finalScore >= _board.bestScore && finalScore > 0)
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                 decoration: BoxDecoration(
@@ -281,7 +313,7 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
                                         Row(
                                           children: [
                                             Text(
-                                              '+${reward}P',
+                                              '+${finalReward}P',
                                               style: const TextStyle(
                                                 color: Colors.white,
                                                 fontWeight: FontWeight.bold,

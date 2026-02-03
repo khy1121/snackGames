@@ -42,11 +42,15 @@ class DiceMergeMasterApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             theme: ThemeData(
               colorScheme: ColorScheme.fromSeed(
-                seedColor: const Color(0xFF6C5CE7),
-                brightness: Brightness.light,
+                seedColor: const Color(0xFF2E5940), // Forest Green
+                primary: const Color(0xFF2E5940),
+                secondary: const Color(0xFF8DA399), // Sage Green
+                surface: const Color(0xFFF7F5EC), // Warm Beige
+                background: const Color(0xFFF7F5EC),
               ),
+              scaffoldBackgroundColor: const Color(0xFFF7F5EC),
               useMaterial3: true,
-              fontFamily: 'Roboto',
+              fontFamily: 'Pretendard', // Using a modern font if available, or fallback
             ),
             home: const HomePage(),
           ),

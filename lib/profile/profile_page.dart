@@ -26,17 +26,17 @@ class ProfilePage extends StatelessWidget {
         (nextRank.minPoints - rank.minPoints).clamp(1, double.infinity);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+          icon: Icon(Icons.arrow_back_ios, color: Theme.of(context).primaryColor),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           '프로필',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
       ),
@@ -50,19 +50,19 @@ class ProfilePage extends StatelessWidget {
             const SizedBox(height: 20),
 
             // 통계
-            _buildStatsRow(totalGames, totalTime, rewards),
+            _buildStatsRow(context, totalGames, totalTime, rewards),
             const SizedBox(height: 24),
 
             // High Scores 섹션
-            _buildSectionHeader('🏆 High Scores'),
+            _buildSectionHeader(context, '🏆 High Scores'),
             const SizedBox(height: 12),
-            _buildHighScores(),
+            _buildHighScores(context),
             const SizedBox(height: 24),
 
             // 업적 섹션
-            _buildSectionHeader('🎖️ Achievements'),
+            _buildSectionHeader(context, '🎖️ Achievements'),
             const SizedBox(height: 12),
-            ...achievements.map((a) => _buildAchievementItem(a)),
+            ...achievements.map((a) => _buildAchievementItem(context, a)),
 
             // 브랜드 푸터
             const SizedBox(height: 32),
@@ -84,13 +84,13 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(BuildContext context, String title) {
     return Text(
       title,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.bold,
-        color: Colors.white,
+        color: Theme.of(context).primaryColor,
       ),
     );
   }
@@ -195,29 +195,29 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildStatsRow(int totalGames, int totalTime, int rewards) {
+  Widget _buildStatsRow(BuildContext context, int totalGames, int totalTime, int rewards) {
     return Row(
       children: [
         Expanded(
-          child: _buildStatCard('🎮', '총 게임', '$totalGames회'),
+          child: _buildStatCard(context, '🎮', '총 게임', '$totalGames회'),
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: _buildStatCard('⏱️', '플레이 시간', '$totalTime분'),
+          child: _buildStatCard(context, '⏱️', '플레이 시간', '$totalTime분'),
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: _buildStatCard('🎁', '보상', '$rewards'),
+          child: _buildStatCard(context, '🎁', '보상', '$rewards'),
         ),
       ],
     );
   }
 
-  Widget _buildStatCard(String emoji, String label, String value) {
+  Widget _buildStatCard(BuildContext context, String emoji, String label, String value) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
+        color: Theme.of(context).primaryColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -226,10 +226,10 @@ class ProfilePage extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Theme.of(context).primaryColor,
             ),
           ),
           const SizedBox(height: 2),
@@ -237,7 +237,7 @@ class ProfilePage extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: 10,
-              color: Colors.white.withValues(alpha: 0.6),
+              color: Theme.of(context).primaryColor.withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -245,7 +245,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildHighScores() {
+  Widget _buildHighScores(BuildContext context) {
     final games = [
       {'icon': '🔢', 'name': '2048', 'score': GameDataService.getBestScore('2048')},
       {'icon': '🎲', 'name': 'Dice Merge', 'score': GameDataService.getBestScore('dice')},
@@ -255,7 +255,7 @@ class ProfilePage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
+        color: Theme.of(context).primaryColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -280,16 +280,16 @@ class ProfilePage extends StatelessWidget {
                 Expanded(
                   child: Text(
                     game['name'] as String,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
+                    style: TextStyle(
+                      color: Theme.of(context).primaryColor,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
                 Text(
                   (game['score'] as int) > 0 ? '${game['score']}점' : '--',
-                  style: const TextStyle(
-                    color: Color(0xFFFFD700),
+                  style: TextStyle(
+                    color: Theme.of(context).primaryColor,
                     fontWeight: FontWeight.bold,
                     fontSize: 15,
                   ),
@@ -302,7 +302,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildAchievementItem(Achievement achievement) {
+  Widget _buildAchievementItem(BuildContext context, Achievement achievement) {
     final isUnlocked = achievement.isUnlocked;
     final progressValue = achievement.currentValue / achievement.targetValue;
 
@@ -311,8 +311,8 @@ class ProfilePage extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: isUnlocked
-            ? const Color(0xFF667EEA).withValues(alpha: 0.15)
-            : Colors.white.withValues(alpha: 0.05),
+            ? const Color(0xFF667EEA).withValues(alpha: 0.1)
+            : Theme.of(context).primaryColor.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(14),
         border: isUnlocked
             ? Border.all(color: const Color(0xFF667EEA).withValues(alpha: 0.3))
@@ -326,7 +326,7 @@ class ProfilePage extends StatelessWidget {
             height: 40,
             decoration: BoxDecoration(
               color: isUnlocked
-                  ? const Color(0xFF667EEA).withValues(alpha: 0.3)
+                  ? const Color(0xFF667EEA).withValues(alpha: 0.2)
                   : Colors.white.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
@@ -335,7 +335,7 @@ class ProfilePage extends StatelessWidget {
                 achievement.icon,
                 style: TextStyle(
                   fontSize: 20,
-                  color: isUnlocked ? null : Colors.grey,
+                  color: isUnlocked ? const Color(0xFF667EEA) : Colors.grey,
                 ),
               ),
             ),
@@ -350,7 +350,9 @@ class ProfilePage extends StatelessWidget {
                   achievement.title,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: isUnlocked ? Colors.white : Colors.grey,
+                    color: isUnlocked 
+                        ? Theme.of(context).primaryColor 
+                        : Colors.grey,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -359,7 +361,7 @@ class ProfilePage extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     color: isUnlocked
-                        ? Colors.white.withValues(alpha: 0.7)
+                        ? Theme.of(context).primaryColor.withValues(alpha: 0.7)
                         : Colors.grey.withValues(alpha: 0.7),
                   ),
                 ),

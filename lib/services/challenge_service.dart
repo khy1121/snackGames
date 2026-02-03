@@ -287,6 +287,22 @@ class ChallengeService {
     return progress.clamp(0.0, 1.0);
   }
 
+  /// 외부 데이터(GameDataService)와 동기화
+  static void syncFromGameData(int totalGames, int bestScore2048, int bestScoreDice) {
+    // 플레이 횟수 관련 도전과제 동기화
+    final playIds = ['play_1', 'play_3', 'play_5', 'play_10', 'play_15', 'play_20', 'play_30', 'play_40', 'play_50', 'play_75'];
+    for (final id in playIds) {
+      updateProgress(id, totalGames);
+    }
+    
+    // 점수 관련 도전과제 동기화 (두 게임 중 최고 점수 사용)
+    final bestScore = bestScore2048 > bestScoreDice ? bestScore2048 : bestScoreDice;
+    final scoreIds = ['score_300', 'score_500', 'score_1000', 'score_1500', 'score_2000', 'score_3000', 'score_4000', 'score_5000', 'score_7500'];
+    for (final id in scoreIds) {
+      updateProgress(id, bestScore);
+    }
+  }
+
   static void _loadProgress() {
     // 초기화 시 필요한 로직
   }

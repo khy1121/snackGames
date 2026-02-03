@@ -208,6 +208,22 @@ class AchievementService {
     return true;
   }
 
+  /// 업적 진행도 증가 (누적형 업적)
+  static Future<bool> incrementProgress(String achievementId, int amount) async {
+    final achievement = _achievements[achievementId];
+    if (achievement == null || achievement.isUnlocked) return false;
+
+    return await updateProgress(achievementId, achievement.currentValue + amount);
+  }
+
+  /// 외부 데이터(GameDataService)와 동기화
+  static Future<void> syncFromGameData(int totalGames) async {
+    // 게임 횟수 업적 동기화
+    await updateProgress('first_game', totalGames);
+    await updateProgress('games_10', totalGames);
+    await updateProgress('games_50', totalGames);
+  }
+
   // ========== 랭크 시스템 ==========
 
   /// 총 포인트

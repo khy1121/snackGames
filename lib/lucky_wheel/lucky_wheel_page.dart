@@ -170,7 +170,7 @@ class _LuckyWheelPageState extends State<LuckyWheelPage>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -224,7 +224,7 @@ class _LuckyWheelPageState extends State<LuckyWheelPage>
                             color: _isSpinning ? Colors.grey : Colors.yellow,
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.3),
+                                color: Colors.black.withValues(alpha: 0.3),
                                 blurRadius: 10,
                                 spreadRadius: 2,
                               ),
@@ -263,7 +263,7 @@ class _LuckyWheelPageState extends State<LuckyWheelPage>
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Column(
@@ -287,7 +287,7 @@ class _LuckyWheelPageState extends State<LuckyWheelPage>
                           Text(
                             '총 플레이: ${LuckyWheelService.getTotalSpins()}회',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.8),
+                              color: Colors.white.withValues(alpha: 0.8),
                               fontSize: 14,
                             ),
                           ),

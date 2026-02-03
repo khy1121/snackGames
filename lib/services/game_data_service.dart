@@ -140,6 +140,29 @@ class GameDataService {
     prefs.setString(_keyLastPlayed, gameId);
   }
 
+  // ========== 게임 상태 저장 (Resume) ==========
+  static const String _keyGameStatePrefix = 'game_state_';
+
+  /// 게임 상태 저장
+  static Future<void> saveGameState(String gameId, String jsonState) async {
+    await prefs.setString('$_keyGameStatePrefix$gameId', jsonState);
+  }
+
+  /// 게임 상태 로드
+  static String? loadGameState(String gameId) {
+    return prefs.getString('$_keyGameStatePrefix$gameId');
+  }
+
+  /// 게임 상태 삭제 (게임 오버/초기화 시)
+  static Future<void> clearGameState(String gameId) async {
+    await prefs.remove('$_keyGameStatePrefix$gameId');
+  }
+
+  /// 저장된 게임이 있는지 확인
+  static bool hasSavedGame(String gameId) {
+    return prefs.containsKey('$_keyGameStatePrefix$gameId');
+  }
+
   /// 총 플레이 시간 (분)
   static int getTotalPlayTime() {
     return prefs.getInt(_keyTotalPlayTime) ?? 0;

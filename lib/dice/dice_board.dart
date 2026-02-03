@@ -41,6 +41,22 @@ class Dice {
       id: id,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'value': value,
+      'type': type.index,
+      'id': id,
+    };
+  }
+
+  factory Dice.fromJson(Map<String, dynamic> json) {
+    return Dice(
+      value: json['value'],
+      type: DiceType.values[json['type'] ?? 0],
+      id: json['id'],
+    );
+  }
 }
 
 /// 게임 보드 셀
@@ -74,6 +90,49 @@ class DiceMergeBoard {
     _generateNextDice();
     // Apply starting bonus from upgrades
     score = UpgradeService.getStartingBonus();
+  }
+  
+  // Load from save
+  DiceMergeBoard.fromSave({
+    required this.cells,
+    required this.score,
+    required this.bestScore,
+    required this.totalMerges,
+    this.nextDice,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'rows': rows,
+      'cols': cols,
+      'cells': cells.map((row) => row.map((cell) => cell.dice?.toJson()).toList()).toList(),
+      'score': score,
+      'bestScore': bestScore,
+      'totalMerges': totalMerges,
+      'nextDice': nextDice?.toJson(),
+    };
+  }
+
+  factory DiceMergeBoard.fromJson(Map<String, dynamic> json) {
+    final gridData = json['cells'] as List;
+    final loadedCells = List.generate(rows, (r) {
+      return List.generate(cols, (c) {
+        final cellData = gridData[r][c];
+        return BoardCell(
+          row: r, 
+          col: c, 
+          dice: cellData != null ? Dice.fromJson(cellData) : null
+        );
+      });
+    });
+
+    return DiceMergeBoard.fromSave(
+      cells: loadedCells,
+      score: json['score'] ?? 0,
+      bestScore: json['bestScore'] ?? 0,
+      totalMerges: json['totalMerges'] ?? 0,
+      nextDice: json['nextDice'] != null ? Dice.fromJson(json['nextDice']) : null,
+    );
   }
   
   void _initBoard() {

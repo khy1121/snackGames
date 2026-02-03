@@ -318,7 +318,7 @@ class _TextPopupEffect extends _ActiveEffect {
   @override
   void draw(Canvas canvas, Size size) {
     final progress = time / duration;
-    final opacity = (progress > 0.5) ? (1.0 - progress) * 2 : 1.0;
+    final opacity = ((progress > 0.5) ? (1.0 - progress) * 2 : 1.0).clamp(0.0, 1.0);
     
     // Scale effect
     final scale = (progress < 0.2) ? progress * 6 : (progress < 0.4 ? 1.2 : 1.0); 
@@ -364,7 +364,7 @@ class _ShockwaveEffect extends _ActiveEffect {
   void draw(Canvas canvas, Size size) {
     final progress = time / duration;
     final radius = 150 * pow(progress, 0.25).toDouble(); // easeOutQuart approx
-    final opacity = 1.0 - progress; // easeOut approx
+    final opacity = (1.0 - progress).clamp(0.0, 1.0); // easeOut approx
     final width = 20 * (1.0 - progress);
 
     if (opacity <= 0) return;
@@ -422,7 +422,7 @@ class _LightningEffect extends _ActiveEffect {
     _points2 ??= _generateBolt(Offset(size.width, 0), Offset(0, size.height), 10);
 
     final progress = time / duration;
-    final alpha = 1.0 - progress;
+    final alpha = (1.0 - progress).clamp(0.0, 1.0);
     
     final paint = Paint()
       ..color = color.withValues(alpha: alpha)

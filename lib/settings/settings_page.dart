@@ -15,16 +15,13 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1E1E2E), // Dark theme background
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor, // Theme background
       appBar: AppBar(
-        title: const Text('설정'),
+        title: Text('설정', style: TextStyle(color: Theme.of(context).primaryColor)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: false,
       ),
       body: SafeArea(
         child: ListView(
@@ -83,21 +80,21 @@ class _SettingsPageState extends State<SettingsPage> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        border: Border.all(color: Theme.of(context).primaryColor.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.format_size, color: Colors.white, size: 24),
+              Icon(Icons.format_size, color: Theme.of(context).primaryColor, size: 24),
               SizedBox(width: 12),
               Text(
                 '글자 크기',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: Theme.of(context).primaryColor,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -112,10 +109,10 @@ class _SettingsPageState extends State<SettingsPage> {
                 children: [
                   SliderTheme(
                     data: SliderTheme.of(context).copyWith(
-                      activeTrackColor: const Color(0xFF667EEA),
-                      inactiveTrackColor: Colors.white.withValues(alpha: 0.2),
-                      thumbColor: const Color(0xFF667EEA),
-                      overlayColor: const Color(0xFF667EEA).withValues(alpha: 0.2),
+                      activeTrackColor: Theme.of(context).primaryColor,
+                      inactiveTrackColor: Theme.of(context).primaryColor.withValues(alpha: 0.2),
+                      thumbColor: Theme.of(context).primaryColor,
+                      overlayColor: Theme.of(context).primaryColor.withValues(alpha: 0.2),
                       trackHeight: 8.0,
                     ),
                     child: Slider(
@@ -134,16 +131,20 @@ class _SettingsPageState extends State<SettingsPage> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.1),
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                      ),
                     ),
                     child: Center(
                       child: Text(
                         '글자가 이 크기로 보입니다.\n편안하게 읽으실 수 있나요?',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: Colors.white,
+                          color: Theme.of(context).primaryColor,
                           fontSize: 16 * scale, // Apply scale locally for preview
+                          height: 1.5,
                         ),
                       ),
                     ),
@@ -161,9 +162,9 @@ class _SettingsPageState extends State<SettingsPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        border: Border.all(color: Theme.of(context).primaryColor.withValues(alpha: 0.1)),
       ),
       child: Column(
         children: [
@@ -172,9 +173,9 @@ class _SettingsPageState extends State<SettingsPage> {
             valueListenable: SettingsService.soundEnabled,
             builder: (context, enabled, child) {
               return SwitchListTile(
-                title: const Text(
+                title: Text(
                   '효과음',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold),
                 ),
                 subtitle: Text(
                   enabled ? '켜짐' : '꺼짐',
@@ -197,9 +198,9 @@ class _SettingsPageState extends State<SettingsPage> {
             valueListenable: SettingsService.vibrationEnabled,
             builder: (context, enabled, child) {
               return SwitchListTile(
-                title: const Text(
+                title: Text(
                   '진동',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold),
                 ),
                 subtitle: Text(
                   enabled ? '켜짐' : '꺼짐',
@@ -225,9 +226,9 @@ class _SettingsPageState extends State<SettingsPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        border: Border.all(color: Theme.of(context).primaryColor.withValues(alpha: 0.1)),
       ),
       child: Column(
         children: [

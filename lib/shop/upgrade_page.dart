@@ -70,13 +70,7 @@ class _UpgradePageState extends State<UpgradePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF1E3A8A), Color(0xFF312E81)],
-          ),
-        ),
+        color: Theme.of(context).scaffoldBackgroundColor,
         child: SafeArea(
           child: Column(
             children: [
@@ -113,14 +107,14 @@ class _UpgradePageState extends State<UpgradePage> {
         children: [
           IconButton(
             onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+            icon: Icon(Icons.close, color: Theme.of(context).primaryColor),
           ),
-          const Text(
+          Text(
             '⚡ 업그레이드',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Theme.of(context).primaryColor,
             ),
           ),
           const Spacer(),
@@ -137,8 +131,8 @@ class _UpgradePageState extends State<UpgradePage> {
                 const SizedBox(width: 6),
                 Text(
                   '$_currentPoints P',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: Theme.of(context).primaryColor,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -159,26 +153,27 @@ class _UpgradePageState extends State<UpgradePage> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.purple.withValues(alpha: 0.3),
-            Colors.blue.withValues(alpha: 0.2),
-          ],
-        ),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
               Icon(Icons.analytics, color: Colors.white70, size: 20),
               SizedBox(width: 8),
               Text(
                 '현재 효과',
                 style: TextStyle(
-                  color: Colors.white70,
+                  color: Theme.of(context).primaryColor,
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
@@ -213,8 +208,8 @@ class _UpgradePageState extends State<UpgradePage> {
         const SizedBox(height: 4),
         Text(
           label,
-          style: const TextStyle(
-            color: Colors.white60,
+          style: TextStyle(
+            color: Theme.of(context).primaryColor.withValues(alpha: 0.7),
             fontSize: 12,
           ),
         ),
@@ -245,19 +240,24 @@ class _UpgradeCard extends StatelessWidget {
       opacity: isLocked ? 0.6 : 1.0,
       child: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Colors.white.withValues(alpha: 0.15),
-              Colors.white.withValues(alpha: 0.05),
-            ],
-          ),
+          color: isLocked
+              ? Colors.grey.withValues(alpha: 0.1)
+              : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isMaxLevel 
                 ? Colors.amber.withValues(alpha: 0.5)
-                : Colors.white.withValues(alpha: 0.2),
+                : Colors.transparent,
             width: isMaxLevel ? 2 : 1,
           ),
+          boxShadow: [
+            if (!isLocked)
+              BoxShadow(
+                color: Colors.grey.withValues(alpha: 0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+          ],
         ),
         child: Column(
         children: [
@@ -270,7 +270,7 @@ class _UpgradeCard extends StatelessWidget {
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
+                    color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
@@ -290,8 +290,8 @@ class _UpgradeCard extends StatelessWidget {
                         children: [
                           Text(
                             upgrade.info.name,
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: Theme.of(context).primaryColor,
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
@@ -319,8 +319,8 @@ class _UpgradeCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         upgrade.info.description,
-                        style: const TextStyle(
-                          color: Colors.white60,
+                        style: TextStyle(
+                          color: Theme.of(context).primaryColor.withValues(alpha: 0.6),
                           fontSize: 12,
                         ),
                       ),
@@ -453,8 +453,8 @@ class _UpgradeCard extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
               child: Text(
                 '다음: ${upgrade.nextEffect}',
-                style: const TextStyle(
-                  color: Colors.white38,
+                style: TextStyle(
+                  color: Theme.of(context).primaryColor.withValues(alpha: 0.5),
                   fontSize: 11,
                   fontStyle: FontStyle.italic,
                 ),

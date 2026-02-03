@@ -74,7 +74,7 @@ class _ShopPageState extends State<ShopPage> {
   }
 
   // Mock Purchase
-  void _purchaseAdRemoval(bool isPermanent) async {
+  void _purchaseAdRemoval(bool isPermanent, BuildContext scaffoldContext) async {
     // 실제 결제 로직 연동 부분 (현재는 Mock)
     bool success = await showDialog(
       context: context,
@@ -100,18 +100,22 @@ class _ShopPageState extends State<ShopPage> {
       GameDataService.removeAds();
       _loadData();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ 결제 완료! 광고가 제거되었습니다.')),
-        );
+        ScaffoldMessenger.of(scaffoldContext)
+          ..clearSnackBars()
+          ..showSnackBar(
+            const SnackBar(content: Text('✅ 결제 완료! 광고가 제거되었습니다.')),
+          );
       }
     }
   }
 
-  void _purchaseTheme(String themeId, int price) async {
+  void _purchaseTheme(String themeId, int price, BuildContext scaffoldContext) async {
     if (_userPoints < price) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('❌ 포인트가 부족합니다! 열심히 게임을 플레이해보세요.')),
-      );
+      ScaffoldMessenger.of(scaffoldContext)
+        ..clearSnackBars()
+        ..showSnackBar(
+          const SnackBar(content: Text('❌ 포인트가 부족합니다! 열심히 게임을 플레이해보세요.')),
+        );
       return;
     }
 
@@ -138,185 +142,201 @@ class _ShopPageState extends State<ShopPage> {
       GameDataService.addTheme(themeId);
       _loadData();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✨ 테마 구매 완료!')),
-        );
+        ScaffoldMessenger.of(scaffoldContext)
+          ..clearSnackBars()
+          ..showSnackBar(
+            const SnackBar(content: Text('✨ 테마 구매 완료!')),
+          );
       }
     }
   }
 
-  void _selectTheme(String themeId) {
+  void _selectTheme(String themeId, BuildContext scaffoldContext) {
     GameDataService.setTheme(themeId);
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('🎨 테마가 적용되었습니다.')),
-      );
+      ScaffoldMessenger.of(scaffoldContext)
+        ..clearSnackBars()
+        ..showSnackBar(
+          const SnackBar(content: Text('🎨 테마가 적용되었습니다.')),
+        );
     }
     setState(() {}); // UI 갱신
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF1E1E2E),
-      appBar: AppBar(
-        title: const Text('STORE'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          Center(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              margin: const EdgeInsets.only(right: 16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFD700).withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFFFD700)),
+    return ScaffoldMessenger(
+      child: Builder(
+        builder: (messengerContext) {
+          return Scaffold(
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            appBar: AppBar(
+              title: const Text('STORE'),
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              centerTitle: true,
+              leading: IconButton(
+                icon: Icon(Icons.arrow_back_ios, color: Theme.of(context).primaryColor),
+                onPressed: () => Navigator.pop(context),
               ),
-              child: Row(
+              actions: [
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    margin: const EdgeInsets.only(right: 16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFD700).withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFFFFD700)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Text('P ', style: TextStyle(color: Color(0xFFFFD700), fontWeight: FontWeight.bold)),
+                        Text(
+                          '$_userPoints',
+                          style: const TextStyle(
+                            color: Color(0xFF2E5940),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+      body: Builder(
+        builder: (BuildContext scaffoldContext) {
+          return SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('P ', style: TextStyle(color: Color(0xFFFFD700), fontWeight: FontWeight.bold)),
+                  // 1. Subscription / Ads
                   Text(
-                    '$_userPoints',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    '💎 PREMIUM',
+                    style: TextStyle(
+                      color: Theme.of(context).primaryColor,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  if (_isAdRemoved)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(colors: [Color(0xFF6D28D9), Color(0xFF8B5CF6)]),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.check_circle, color: Colors.white),
+                          SizedBox(width: 8),
+                          Text(
+                            'PREMIUM ACTIVATED',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildProductCard(
+                            title: '광고 제거 (영구)',
+                            price: '₩9,900',
+                            icon: Icons.block,
+                            color: const Color(0xFFE17055),
+                            onTap: () => _purchaseAdRemoval(true, messengerContext),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildProductCard(
+                            title: '월간 구독',
+                            price: '₩2,500/월',
+                            icon: Icons.calendar_today,
+                            color: const Color(0xFF00B894),
+                            onTap: () => _purchaseAdRemoval(false, messengerContext),
+                          ),
+                        ),
+                      ],
+                    ),
+      
+                  const SizedBox(height: 32),
+      
+                  // 2. Themes
+                  Text(
+                    '🎨 THEMES',
+                    style: TextStyle(
+                      color: Theme.of(context).primaryColor,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 220,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.only(left: 4, right: 80), // Right padding to show partial next card
+                      clipBehavior: Clip.none,
+                      itemCount: _themes.length,
+                      separatorBuilder: (context, index) => const SizedBox(width: 12),
+                      itemBuilder: (context, index) {
+                        final theme = _themes[index];
+                        final isOwned = _ownedThemes.contains(theme['id']);
+                        final isSelected = GameDataService.getSelectedTheme() == theme['id'];
+      
+                        return _buildThemeCard(theme, isOwned, isSelected, messengerContext);
+                      },
+                    ),
+                  ),
+      
+                   const SizedBox(height: 32),
+      
+                  // 3. Gold / Items (Placeholder)
+                  Text(
+                    '🎒 ITEMS',
+                    style: TextStyle(
+                      color: Theme.of(context).primaryColor,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                   const SizedBox(height: 12),
+                   Container(
+                     padding: const EdgeInsets.all(24),
+                     width: double.infinity,
+                     decoration: BoxDecoration(
+                       color: Colors.white.withValues(alpha: 0.05),
+                       borderRadius: BorderRadius.circular(16),
+                       border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                     ),
+                     child: const Column(
+                       children: [
+                         Icon(Icons.construction, color: Colors.grey, size: 40),
+                         SizedBox(height: 8),
+                          Text(
+                            'Coming Soon',
+                             style: TextStyle(color: Colors.grey),
+                         ),
+                       ],
+                     ),
+                   ),
                 ],
               ),
             ),
-          ),
-        ],
+          );
+        },
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 1. Subscription / Ads
-              const Text(
-                '💎 PREMIUM',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-              if (_isAdRemoved)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: [Color(0xFF6D28D9), Color(0xFF8B5CF6)]),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.check_circle, color: Colors.white),
-                      SizedBox(width: 8),
-                      Text(
-                        'PREMIUM ACTIVATED',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                    ],
-                  ),
-                )
-              else
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildProductCard(
-                        title: '광고 제거 (영구)',
-                        price: '₩9,900',
-                        icon: Icons.block,
-                        color: const Color(0xFFE17055),
-                        onTap: () => _purchaseAdRemoval(true),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildProductCard(
-                        title: '월간 구독',
-                        price: '₩2,500/월',
-                        icon: Icons.calendar_today,
-                        color: const Color(0xFF00B894),
-                        onTap: () => _purchaseAdRemoval(false),
-                      ),
-                    ),
-                  ],
-                ),
-  
-              const SizedBox(height: 32),
-  
-              // 2. Themes
-              const Text(
-                '🎨 THEMES',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 220,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _themes.length,
-                  separatorBuilder: (context, index) => const SizedBox(width: 16),
-                  itemBuilder: (context, index) {
-                    final theme = _themes[index];
-                    final isOwned = _ownedThemes.contains(theme['id']);
-                    final isSelected = GameDataService.getSelectedTheme() == theme['id'];
-  
-                    return _buildThemeCard(theme, isOwned, isSelected);
-                  },
-                ),
-              ),
-  
-               const SizedBox(height: 32),
-  
-              // 3. Gold / Items (Placeholder)
-              const Text(
-                '🎒 ITEMS',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-               const SizedBox(height: 12),
-               Container(
-                 padding: const EdgeInsets.all(24),
-                 width: double.infinity,
-                 decoration: BoxDecoration(
-                   color: Colors.white.withValues(alpha: 0.05),
-                   borderRadius: BorderRadius.circular(16),
-                   border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                 ),
-                 child: const Column(
-                   children: [
-                     Icon(Icons.construction, color: Colors.grey, size: 40),
-                     SizedBox(height: 8),
-                      Text(
-                        'Coming Soon',
-                         style: TextStyle(color: Colors.grey),
-                     ),
-                   ],
-                 ),
-               ),
-            ],
-          ),
-        ),
+        );
+        },
       ),
     );
   }
@@ -344,7 +364,7 @@ class _ShopPageState extends State<ShopPage> {
             Text(
               title,
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.9),
+                color: Theme.of(context).primaryColor.withValues(alpha: 0.9),
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
               ),
@@ -365,9 +385,9 @@ class _ShopPageState extends State<ShopPage> {
     );
   }
 
-  Widget _buildThemeCard(Map<String, dynamic> theme, bool isOwned, bool isSelected) {
+  Widget _buildThemeCard(Map<String, dynamic> theme, bool isOwned, bool isSelected, BuildContext scaffoldContext) {
     return Container(
-      width: 160,
+      width: 130,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: theme['colors'],
@@ -431,7 +451,7 @@ class _ShopPageState extends State<ShopPage> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () => _selectTheme(theme['id']),
+                        onPressed: () => _selectTheme(theme['id'], scaffoldContext),
                         style: ElevatedButton.styleFrom(
                            backgroundColor: Colors.white,
                            foregroundColor: Colors.black,
@@ -445,7 +465,7 @@ class _ShopPageState extends State<ShopPage> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () => _purchaseTheme(theme['id'], theme['price']),
+                        onPressed: () => _purchaseTheme(theme['id'], theme['price'], scaffoldContext),
                         style: ElevatedButton.styleFrom(
                            backgroundColor: const Color(0xFFFFD700),
                            foregroundColor: Colors.black,

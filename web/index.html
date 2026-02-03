@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
@@ -18,21 +19,89 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="배수의 법칙과 합쳐라! 주사위 - 프리미엄 미니 게임 컬렉션. 오프라인에서도 즐길 수 있는 중독성 있는 퍼즐 게임!">
 
-  <!-- iOS meta tags & icons -->
+  <!-- PWA Meta Tags -->
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="Dice Merge Master">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="스넥게임즈">
+  <meta name="theme-color" content="#2E5940">
+
+  <!-- iOS Icons -->
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="icons/Icon-512.png">
 
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="icon" type="image/png" href="favicon.png" />
 
-  <title>Dice Merge Master</title>
+  <title>스넥게임즈 - 배수의 법칙 & 합쳐라! 주사위</title>
   <link rel="manifest" href="manifest.json">
 </head>
+
 <body>
+  <script>
+    // Register Service Worker for PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then((registration) => {
+            console.log('ServiceWorker registration successful:', registration.scope);
+          })
+          .catch((error) => {
+            console.log('ServiceWorker registration failed:', error);
+          });
+      });
+    }
+
+    // PWA Install Prompt - Global variable accessible from Flutter
+    window.deferredPrompt = null;
+    window.pwaInstallable = false;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      window.deferredPrompt = e;
+      window.pwaInstallable = true;
+      console.log('PWA install prompt available');
+
+      // Dispatch custom event to notify Flutter
+      window.dispatchEvent(new CustomEvent('pwa-installable'));
+    });
+
+    window.addEventListener('appinstalled', () => {
+      console.log('PWA was installed');
+      window.deferredPrompt = null;
+      window.pwaInstallable = false;
+
+      // Dispatch custom event to notify Flutter
+      window.dispatchEvent(new CustomEvent('pwa-installed'));
+    });
+
+    // Global function to trigger PWA install
+    window.installPWA = function () {
+      if (window.deferredPrompt) {
+        window.deferredPrompt.prompt();
+        window.deferredPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') {
+            console.log('User accepted the install prompt');
+          } else {
+            console.log('User dismissed the install prompt');
+          }
+          window.deferredPrompt = null;
+        });
+        return true;
+      }
+      return false;
+    };
+
+    // Function to check if PWA is installable
+    window.isPWAInstallable = function () {
+      return window.pwaInstallable === true;
+    };
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
+
 </html>

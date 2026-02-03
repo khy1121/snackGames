@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../game/game_page.dart';
 import '../dice/dice_game_page.dart';
 
@@ -13,6 +14,7 @@ import '../services/challenge_service.dart';
 import '../services/upgrade_service.dart';
 import '../services/daily_attendance_service.dart';
 import '../services/lucky_wheel_service.dart';
+import '../services/pwa_install_service.dart';
 import '../challenge/challenge_page.dart';
 import '../settings/settings_page.dart';
 import '../widgets/glassmorphism_card.dart';
@@ -45,7 +47,7 @@ class GameInfo {
 final List<GameInfo> gameList = [
   GameInfo(
     id: 'dice',
-    title: 'Dice Merge',
+    title: '합쳐라! 주사위',
     subtitle: '주사위 3개 매칭하기',
     icon: '🎲',
     colors: const [Color(0xFF00B894), Color(0xFF00CEC9)],
@@ -61,7 +63,7 @@ final List<GameInfo> gameList = [
 
   GameInfo(
     id: '2048',
-    title: '2048',
+    title: '배수의 법칙',
     subtitle: '스와이프로 숫자 합치기',
     icon: '🔢',
     colors: const [Color(0xFFEDC22E), Color(0xFFF39C12)],
@@ -87,6 +89,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   bool _isLoading = true;
   int _currentNavIndex = 0;
+  bool _isPWAInstallable = false;
   
   // Cached data to prevent excessive service calls
   String? _lastPlayed;
@@ -100,6 +103,29 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _initServices();
+    if (kIsWeb) {
+      _initPWA();
+    }
+  }
+
+  void _initPWA() {
+    PWAInstallService.initialize();
+    setState(() {
+      _isPWAInstallable = PWAInstallService.isPWAInstallable();
+    });
+  }
+
+  Future<void> _installPWA() async {
+    final success = await PWAInstallService.installPWA();
+    if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('📱 앱 설치 프롬프트가 표시되었습니다!')),
+      );
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('❌ 앱 설치가 불가능합니다. 이미 설치되었거나 브라우저가 지원하지 않습니다.')),
+      );
+    }
   }
 
   Future<void> _initServices() async {
@@ -119,6 +145,14 @@ class _HomePageState extends State<HomePage> {
   
   /// Load and cache all data to prevent excessive service calls
   void _loadCachedData() {
+    // Sync external data first
+    final totalGames = GameDataService.getTotalGamesPlayed();
+    final bestScore2048 = GameDataService.getBestScore('2048');
+    final bestScoreDice = GameDataService.getBestScore('dice');
+    
+    AchievementService.syncFromGameData(totalGames);
+    ChallengeService.syncFromGameData(totalGames, bestScore2048, bestScoreDice);
+
     _lastPlayed = GameDataService.getLastPlayedGame();
     _mission = DailyMissionService.currentMission;
     _rank = AchievementService.getCurrentRank();
@@ -214,19 +248,19 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: const Color(0xFF667EEA),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text('🍿', style: TextStyle(fontSize: 64)),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 '스낵게임즈',
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Theme.of(context).primaryColor,
                 ),
               ),
               const SizedBox(height: 8),
@@ -234,11 +268,11 @@ class _HomePageState extends State<HomePage> {
                 '기다림을 게임으로 바꾸다',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.white.withValues(alpha: 0.8),
+                  color: Theme.of(context).primaryColor.withValues(alpha: 0.8),
                 ),
               ),
               const SizedBox(height: 32),
-              const CircularProgressIndicator(color: Colors.white),
+              CircularProgressIndicator(color: Theme.of(context).primaryColor),
             ],
           ),
         ),
@@ -247,41 +281,27 @@ class _HomePageState extends State<HomePage> {
 
     // Use cached data instead of calling services every build
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFF8B5CF6),
-              const Color(0xFF6D28D9),
-              const Color(0xFF5B21B6),
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // 헤더 (항상 표시)
-              if (_rank != null) _buildHeader(_rank!, _level, _xpProgress),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // 헤더 (홈, 게임 탭에서만 표시)
+            if (_rank != null && _currentNavIndex < 2) _buildHeader(_rank!, _level, _xpProgress),
 
-              // 메인 컨텐츠 (탭에 따라 변경)
-              Expanded(
-                child: _currentNavIndex == 1
-                    ? _buildGameListView()
-                    : _buildHubView(_lastPlayed, _mission, _levelData),
-              ),
-            ],
-          ),
+            // 메인 컨텐츠 (탭에 따라 변경)
+            Expanded(
+              child: _buildBody(),
+            ),
+          ],
         ),
       ),
       // 하단 네비게이션 바
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1A2E),
+          color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 20,
               offset: const Offset(0, -5),
             ),
@@ -336,9 +356,15 @@ class _HomePageState extends State<HomePage> {
           child: Container(
              padding: const EdgeInsets.all(16),
              decoration: BoxDecoration(
-               color: Colors.white.withValues(alpha: 0.1),
+               color: const Color(0xFF2E5940),
                borderRadius: BorderRadius.circular(16),
-               border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+               boxShadow: [
+                 BoxShadow(
+                   color: const Color(0xFF2E5940).withValues(alpha: 0.3),
+                   blurRadius: 8,
+                   offset: const Offset(0, 4),
+                 ),
+               ],
              ),
              child: Row(
                children: [
@@ -393,19 +419,34 @@ class _HomePageState extends State<HomePage> {
         ),
         
         const SizedBox(height: 40),
-        const Center(
-          child: Text(
-            '짧게, 가볍게, 계속하게 \u26A1',
-            style: TextStyle(
-              color: Colors.white54,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+          const Center(
+            child: Text(
+              '짧게, 가볍게, 계속하게 \u26A1',
+              style: TextStyle(
+                color: Color(0xFF2E5940),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
-        ),
         const SizedBox(height: 20),
       ],
     );
+  }
+
+  Widget _buildBody() {
+    switch (_currentNavIndex) {
+      case 0:
+        return _buildHubView(_lastPlayed, _mission, _levelData);
+      case 1:
+        return _buildGameListView();
+      case 2:
+        return const ChallengePage();
+      case 3:
+        return const SettingsPage();
+      default:
+        return _buildHubView(_lastPlayed, _mission, _levelData);
+    }
   }
 
   Widget _buildGameListView() {
@@ -418,12 +459,12 @@ class _HomePageState extends State<HomePage> {
           padding: const EdgeInsets.only(bottom: 12),
           child: Row(
             children: [
-              const Text(
+              Text(
                 '🎮 모든 게임',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Theme.of(context).primaryColor,
                 ),
               ),
               const Spacer(),
@@ -431,7 +472,7 @@ class _HomePageState extends State<HomePage> {
                 '${gameList.length}개',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.white.withValues(alpha: 0.7),
+                  color: Theme.of(context).primaryColor.withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -461,15 +502,22 @@ class _HomePageState extends State<HomePage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        border: Border.all(color: const Color(0xFF2E5940).withValues(alpha: 0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
           CircleAvatar(
             radius: 24,
-            backgroundColor: const Color(0xFF6C5CE7),
+            backgroundColor: const Color(0xFF2E5940),
             child: Text(
               '${levelData.level}',
               style: const TextStyle(
@@ -483,7 +531,7 @@ class _HomePageState extends State<HomePage> {
               Text(
                 'Lv.${levelData.level} ${levelData.name}',
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: Color(0xFF2E5940),
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
                 ),
@@ -492,7 +540,7 @@ class _HomePageState extends State<HomePage> {
               const Text(
                 '게임을 플레이하고 XP를 획득하세요!',
                 style: TextStyle(
-                  color: Colors.white70,
+                  color: Color(0xFF2E5940),
                   fontSize: 12,
                 ),
               ),
@@ -508,49 +556,9 @@ class _HomePageState extends State<HomePage> {
     final isSelected = _currentNavIndex == index;
     return GestureDetector(
       onTap: () {
-        if (index == 2) {
-          Navigator.push(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (context, animation, secondaryAnimation) => const ChallengePage(),
-              transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                return FadeTransition(
-                  opacity: animation,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, 0.1),
-                      end: Offset.zero,
-                    ).animate(CurvedAnimation(
-                      parent: animation,
-                      curve: Curves.easeOutCubic,
-                    )),
-                    child: child,
-                  ),
-                );
-              },
-              transitionDuration: const Duration(milliseconds: 400),
-            ),
-          ).then((_) {
-            // Reload data when returning from challenge page
-            if (mounted) {
-              _loadCachedData();
-              setState(() {});
-            }
-          });
-        } else if (index == 3) {
-          Navigator.push(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (context, animation, secondaryAnimation) => const SettingsPage(),
-              transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                return FadeTransition(opacity: animation, child: child);
-              },
-              transitionDuration: const Duration(milliseconds: 300),
-            ),
-          );
-        } else {
-          setState(() => _currentNavIndex = index);
-        }
+        setState(() => _currentNavIndex = index);
+        // 탭 전환 시 데이터 리프레시
+        if (index == 0) _loadCachedData(); 
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
@@ -571,7 +579,7 @@ class _HomePageState extends State<HomePage> {
               curve: Curves.easeOutCubic,
               child: Icon(
                 icon,
-                color: isSelected ? const Color(0xFF667EEA) : Colors.grey,
+                color: isSelected ? const Color(0xFF2E5940) : Colors.grey,
                 size: 24,
               ),
             ),
@@ -580,7 +588,7 @@ class _HomePageState extends State<HomePage> {
               label,
               style: TextStyle(
                 fontSize: 11,
-                color: isSelected ? const Color(0xFF667EEA) : Colors.grey,
+                color: isSelected ? const Color(0xFF2E5940) : Colors.grey,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
             ),
@@ -608,7 +616,7 @@ class _HomePageState extends State<HomePage> {
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: Color(0xFF2E5940),
                     ),
                   ),
                   Row(
@@ -647,19 +655,47 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
               const Spacer(),
+              // PWA 설치 버튼 (웹에서만 표시, 설치 가능할 때만)
+              if (kIsWeb && _isPWAInstallable && !PWAInstallService.isRunningAsApp())
+                GestureDetector(
+                  onTap: _installPWA,
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF00B894), Color(0xFF00CEC9)],
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF00B894).withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.download, color: Colors.white, size: 16),
+                        SizedBox(width: 4),
+                        Text(
+                          '앱 설치',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               // 업그레이드 버튼 (New)
               GestureDetector(
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const UpgradePage()),
-                  ).then((_) {
-                    // Reload data when returning from upgrade
-                    if (mounted) {
-                      _loadCachedData();
-                      setState(() {});
-                    }
-                  });
+                  _showPopup(const UpgradePage());
                 },
                 child: Container(
                   margin: const EdgeInsets.only(right: 8),
@@ -675,16 +711,7 @@ class _HomePageState extends State<HomePage> {
               // 상점 버튼
               GestureDetector(
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const ShopPage()),
-                  ).then((_) {
-                    // Reload data when returning from shop
-                    if (mounted) {
-                      _loadCachedData();
-                      setState(() {});
-                    }
-                  });
+                  _showPopup(const ShopPage());
                 },
                 child: Container(
                   margin: const EdgeInsets.only(right: 8),
@@ -701,26 +728,24 @@ class _HomePageState extends State<HomePage> {
               // 프로필 버튼
               GestureDetector(
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const ProfilePage()),
-                  ).then((_) {
-                    // Reload data when returning from profile
-                    if (mounted) {
-                      _loadCachedData();
-                      setState(() {});
-                    }
-                  });
+                  _showPopup(const ProfilePage());
                 },
                 child: Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.3),
+                      color: const Color(0xFF2E5940).withValues(alpha: 0.1),
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -730,7 +755,7 @@ class _HomePageState extends State<HomePage> {
                       Text(
                         rank.name,
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: Color(0xFF2E5940),
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
                         ),
@@ -743,12 +768,12 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 12),
           // 모토 (Pill-shaped translucent container)
-          Container(
+           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
+              color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+              border: Border.all(color: const Color(0xFF2E5940).withValues(alpha: 0.1)),
             ),
             child: const Row(
               mainAxisSize: MainAxisSize.min,
@@ -757,7 +782,7 @@ class _HomePageState extends State<HomePage> {
                   '기다림을 게임으로 바꾸다 ✨',
                   style: TextStyle(
                     fontSize: 13,
-                    color: Colors.white,
+                    color: Color(0xFF2E5940),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -797,11 +822,11 @@ class _HomePageState extends State<HomePage> {
                 child: const Icon(Icons.play_arrow, color: Colors.white, size: 20),
               ),
               const SizedBox(width: 12),
-              const Text(
+              Text(
                 '이어하기',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.white,
+                  color: Theme.of(context).primaryColor,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -821,17 +846,17 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     Text(
                       game.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: Theme.of(context).primaryColor,
                       ),
                     ),
                     Text(
                       game.subtitle,
                       style: TextStyle(
                         fontSize: 13,
-                        color: Colors.white.withValues(alpha: 0.8),
+                        color: Theme.of(context).primaryColor.withValues(alpha: 0.8),
                       ),
                     ),
                   ],
@@ -839,10 +864,17 @@ class _HomePageState extends State<HomePage> {
               ),
               ElevatedButton(
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: game.pageBuilder),
-                  );
+                  if (game.id == 'dice') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const DiceGamePage(resume: true)),
+                    );
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: game.pageBuilder),
+                    );
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
@@ -891,13 +923,13 @@ class _HomePageState extends State<HomePage> {
                 child: const Text('📋', style: TextStyle(fontSize: 18)),
               ),
               const SizedBox(width: 10),
-              const Expanded(
+              Expanded(
                 child: Text(
                   '오늘의 미션',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: Theme.of(context).primaryColor,
                   ),
                 ),
               ),
@@ -938,8 +970,8 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(height: 12),
           Text(
             mission.description,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: Theme.of(context).primaryColor,
               fontSize: 15,
             ),
           ),
@@ -1132,6 +1164,35 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
+  }
+
+  void _showPopup(Widget page) {
+    showDialog(
+      context: context,
+      barrierDismissible: true, // 바깥 클릭 시 닫힘
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(20),
+        child: Container(
+          width: double.infinity,
+          height: MediaQuery.of(context).size.height * 0.8, // 화면 높이의 80%
+          constraints: const BoxConstraints(maxWidth: 500), // 최대 너비 제한
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            // Dialog 자체 배경은 투명하게 하고 내부 Page의 배경을 사용하거나,
+            // 여기서 클립을 적용하여 내부 Page가 둥근 모서리를 가지도록 함
+          ),
+          clipBehavior: Clip.hardEdge,
+          child: page,
+        ),
+      ),
+    ).then((_) {
+      // 팝업이 닫힐 때 데이터 새로고침
+      if (mounted) {
+        _loadCachedData();
+        setState(() {});
+      }
+    });
   }
 }
 

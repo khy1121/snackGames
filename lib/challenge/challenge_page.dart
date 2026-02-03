@@ -77,17 +77,14 @@ class _ChallengePageState extends State<ChallengePage> {
     final nextLevel = ChallengeService.getNextLevelData();
 
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
+        automaticallyImplyLeading: false, // 탭 전환이므로 뒤로가기 숨김
+        title: Text(
           '도전과제',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
       ),
@@ -101,12 +98,12 @@ class _ChallengePageState extends State<ChallengePage> {
             const SizedBox(height: 24),
 
             // 도전과제 섹션
-            const Text(
+            Text(
               '🎯 현재 도전과제',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Theme.of(context).primaryColor,
               ),
             ),
             const SizedBox(height: 12),
@@ -144,12 +141,12 @@ class _ChallengePageState extends State<ChallengePage> {
             const SizedBox(height: 32),
 
             // 레벨 목록
-            const Text(
+            Text(
               '📋 전체 레벨',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Theme.of(context).primaryColor,
               ),
             ),
             const SizedBox(height: 12),
@@ -164,14 +161,9 @@ class _ChallengePageState extends State<ChallengePage> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFF667EEA).withValues(alpha: 0.4),
-            const Color(0xFF764BA2).withValues(alpha: 0.3),
-          ],
-        ),
+        color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF667EEA).withValues(alpha: 0.5)),
+        border: Border.all(color: Theme.of(context).primaryColor.withValues(alpha: 0.1)),
       ),
       child: Column(
         children: [
@@ -181,7 +173,7 @@ class _ChallengePageState extends State<ChallengePage> {
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF667EEA),
+                  color: Theme.of(context).primaryColor,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Center(
@@ -202,17 +194,17 @@ class _ChallengePageState extends State<ChallengePage> {
                   children: [
                     Text(
                       data.name,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: Theme.of(context).primaryColor,
                       ),
                     ),
                     Text(
                       'XP: $xp${nextLevel != null ? ' / ${nextLevel.xpRequired}' : ' (MAX)'}',
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.white.withValues(alpha: 0.7),
+                        color: Theme.of(context).primaryColor.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -241,8 +233,8 @@ class _ChallengePageState extends State<ChallengePage> {
               borderRadius: BorderRadius.circular(8),
               child: LinearProgressIndicator(
                 value: xpProgress,
-                backgroundColor: Colors.white.withValues(alpha: 0.2),
-                valueColor: const AlwaysStoppedAnimation(Color(0xFF667EEA)),
+                backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                valueColor: const AlwaysStoppedAnimation(Color(0xFF00B894)),
                 minHeight: 8,
               ),
             ),
@@ -259,7 +251,7 @@ class _ChallengePageState extends State<ChallengePage> {
       decoration: BoxDecoration(
         color: challenge.isCompleted
             ? const Color(0xFF10B981).withValues(alpha: 0.15)
-            : Colors.white.withValues(alpha: 0.05),
+            : Theme.of(context).primaryColor.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(14),
         border: challenge.isCompleted
             ? Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4))
@@ -273,7 +265,7 @@ class _ChallengePageState extends State<ChallengePage> {
             decoration: BoxDecoration(
               color: challenge.isCompleted
                   ? const Color(0xFF10B981).withValues(alpha: 0.3)
-                  : Colors.white.withValues(alpha: 0.1),
+                  : Theme.of(context).primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
@@ -290,7 +282,9 @@ class _ChallengePageState extends State<ChallengePage> {
                   challenge.description,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: challenge.isCompleted ? Colors.white : Colors.grey.shade300,
+                    color: challenge.isCompleted 
+                      ? Theme.of(context).primaryColor 
+                      : Theme.of(context).primaryColor.withValues(alpha: 0.6),
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -298,7 +292,7 @@ class _ChallengePageState extends State<ChallengePage> {
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
                     value: challenge.progress,
-                    backgroundColor: Colors.white.withValues(alpha: 0.1),
+                    backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                     valueColor: AlwaysStoppedAnimation(
                       challenge.isCompleted
                           ? const Color(0xFF10B981)
@@ -333,11 +327,11 @@ class _ChallengePageState extends State<ChallengePage> {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: isCurrent
-            ? const Color(0xFF667EEA).withValues(alpha: 0.2)
-            : Colors.white.withValues(alpha: 0.03),
+            ? Theme.of(context).primaryColor.withValues(alpha: 0.1)
+            : Theme.of(context).primaryColor.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(10),
         border: isCurrent
-            ? Border.all(color: const Color(0xFF667EEA).withValues(alpha: 0.5))
+            ? Border.all(color: Theme.of(context).primaryColor.withValues(alpha: 0.5))
             : null,
       ),
       child: Row(
@@ -347,8 +341,8 @@ class _ChallengePageState extends State<ChallengePage> {
             height: 32,
             decoration: BoxDecoration(
               color: isUnlocked
-                  ? const Color(0xFF667EEA)
-                  : Colors.grey.shade700,
+                  ? Theme.of(context).primaryColor
+                  : Theme.of(context).primaryColor.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Center(
@@ -367,7 +361,9 @@ class _ChallengePageState extends State<ChallengePage> {
             child: Text(
               levelData.name,
               style: TextStyle(
-                color: isUnlocked ? Colors.white : Colors.grey,
+                color: isUnlocked 
+                  ? Theme.of(context).primaryColor 
+                  : Theme.of(context).primaryColor.withValues(alpha: 0.5),
                 fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
               ),
             ),

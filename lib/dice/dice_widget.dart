@@ -156,7 +156,7 @@ class DiceWidget extends StatelessWidget {
             return Transform.scale(
               scale: scale,
               child: Opacity(
-                opacity: value,
+                opacity: value.clamp(0.0, 1.0),
                 child: child,
               ),
             );

@@ -1,5 +1,7 @@
+import 'dart:convert'; // For JSON
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/services.dart';
 import 'dice_board.dart';
 import 'dice_widget.dart';
@@ -9,6 +11,7 @@ import '../services/game_data_service.dart';
 import '../services/challenge_service.dart';
 import '../services/settings_service.dart';
 import '../services/upgrade_service.dart';
+import '../services/achievement_service.dart';
 import '../widgets/challenge_toast.dart';
 import '../widgets/theme_shop_dialog.dart';
 import '../widgets/animated_counter.dart';
@@ -16,7 +19,9 @@ import '../widgets/particle_effect.dart';
 
 /// 주사위 머지 게임 페이지
 class DiceGamePage extends StatefulWidget {
-  const DiceGamePage({super.key});
+  final bool resume; // 이어하기 여부
+
+  const DiceGamePage({super.key, this.resume = false});
 
   @override
   State<DiceGamePage> createState() => _DiceGamePageState();
@@ -33,6 +38,7 @@ class _DiceGamePageState extends State<DiceGamePage>
         GameDataService.addPlayTime(elapsedMinutes);
       }
     }
+    _saveGame(); // 앱 종료/페이지 이탈 시 저장
     super.dispose();
   }
 
@@ -61,6 +67,15 @@ class _DiceGamePageState extends State<DiceGamePage>
     _board = DiceMergeBoard();
     _startTime = DateTime.now();
     _loadTheme();
+    
+    // 만약 'resume' 플래그가 true이거나, 저장된 게임이 있다면 로드 시도
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.resume) {
+        _loadSavedGame();
+      } else if (GameDataService.hasSavedGame('dice')) {
+        _showResumeDialog();
+      }
+    });
   }
   
   void _loadTheme() {
@@ -85,6 +100,60 @@ class _DiceGamePageState extends State<DiceGamePage>
       _consecutiveGamesPlayed++;
       _updateConsecutiveBonus();
     });
+  }
+
+  void _saveGame() {
+    if (_board.isGameOver) return;
+    
+    final gameState = {
+      'board': _board.toJson(),
+      'consecutiveGamesPlayed': _consecutiveGamesPlayed,
+    };
+    
+    GameDataService.saveGameState('dice', jsonEncode(gameState));
+  }
+
+  Future<void> _loadSavedGame() async {
+    final jsonStr = GameDataService.loadGameState('dice');
+    if (jsonStr == null) return;
+
+    try {
+      final data = jsonDecode(jsonStr);
+      setState(() {
+        _board = DiceMergeBoard.fromJson(data['board']);
+        _consecutiveGamesPlayed = data['consecutiveGamesPlayed'] ?? 0;
+        _updateConsecutiveBonus();
+      });
+    } catch (e) {
+      debugPrint('Error loading game: $e');
+    }
+  }
+
+  void _showResumeDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('이어하시겠습니까?'),
+        content: const Text('이전에 진행하던 게임이 있습니다.'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // 닫기
+              _startNewGame(); // 새로 시작
+            },
+            child: const Text('새로 하기'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _loadSavedGame();
+            },
+            child: const Text('이어하기'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _updateConsecutiveBonus() {
@@ -127,6 +196,14 @@ class _DiceGamePageState extends State<DiceGamePage>
     // Trigger VFX after UI update
     _triggerVFX(result);
 
+    // 업적 체크 (비동기)
+    for (final merge in result.merges) {
+      if (merge.isMagicCreated) {
+        AchievementService.updateProgress('dice_star', 1); // 첫 별 달성
+        AchievementService.incrementProgress('dice_5stars', 1); // 별 수집가 (누적)
+      }
+    }
+
     // Single delayed cleanup
     Future.delayed(const Duration(milliseconds: 300), () {
       if (!mounted) return;
@@ -139,6 +216,9 @@ class _DiceGamePageState extends State<DiceGamePage>
 
       if (_board.isGameOver) {
         _showGameOverDialog();
+        GameDataService.clearGameState('dice'); // 게임 오버 시 저장 삭제
+      } else {
+        _saveGame(); // 매 턴마다 자동 저장 (안정성)
       }
     });
   }
@@ -311,6 +391,9 @@ class _DiceGamePageState extends State<DiceGamePage>
     
     // XP 지급
     ChallengeService.addXP(xpGain);
+    
+    // 업적 동기화
+    AchievementService.syncFromGameData(GameDataService.getTotalGamesPlayed());
     
     // 도전과제 진행도 업데이트 및 토스트 표시
     _checkAndShowChallengeToasts();
@@ -612,6 +695,7 @@ class _DiceGamePageState extends State<DiceGamePage>
                                   child: ElevatedButton(
                                     onPressed: () {
                                       Navigator.pop(context);
+                                      // 게임 오버 상태이므로 새 게임 시작
                                       _startNewGame();
                                     },
                                     style: ElevatedButton.styleFrom(
@@ -690,8 +774,9 @@ class _DiceGamePageState extends State<DiceGamePage>
 
   @override
   Widget build(BuildContext context) {
+    final isLightTheme = ['nature', 'korean', 'glass'].contains(_theme.id);
     return Theme(
-      data: ThemeData.dark().copyWith(
+      data: (isLightTheme ? ThemeData.light() : ThemeData.dark()).copyWith(
         scaffoldBackgroundColor: Colors.transparent,
         textTheme: GoogleFonts.getTextTheme(_theme.fontHandle, Theme.of(context).textTheme),
       ),

@@ -221,14 +221,40 @@ class DiceTheme {
     ],
   );
 
+  static const DiceThemeData nature = DiceThemeData(
+    id: 'nature',
+    name: 'Nature',
+    description: 'Serene beige and green tones.',
+    price: 0,
+    style: DiceStyle.standard,
+    enableShadows: false,
+    blurRadius: 0,
+    backgroundGradient: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFFF7F5EC), Color(0xFFE8E6D9)],
+    ),
+    boardColor: Color(0xFF2E5940),
+    cellColor: Color(0xFF5D7D6B),
+    textColor: Color(0xFF2E5940),
+    diceColors: [
+      Color(0xFFC8E6C9), // 1
+      Color(0xFFA5D6A7), // 2
+      Color(0xFF81C784), // 3
+      Color(0xFF66BB6A), // 4
+      Color(0xFF43A047), // 5
+      Color(0xFF2E7D32), // 6
+    ],
+  );
+
   static List<DiceThemeData> getAllThemes() {
-    return [cyberpunk, korean, western, tropical, space, glass];
+    return [nature, cyberpunk, korean, western, tropical, space, glass];
   }
 
   static DiceThemeData getTheme(String id) {
     return getAllThemes().firstWhere(
       (t) => t.id == id,
-      orElse: () => cyberpunk,
+      orElse: () => nature,
     );
   }
 }
