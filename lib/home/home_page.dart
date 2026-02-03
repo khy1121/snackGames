@@ -118,13 +118,23 @@ class _HomePageState extends State<HomePage> {
   Future<void> _installPWA() async {
     final success = await PWAInstallService.installPWA();
     if (success && mounted) {
+      // 설치가 승인됨 - 버튼 숨김
+      setState(() {
+        _isPWAInstallable = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('📱 앱 설치 프롬프트가 표시되었습니다!')),
+        const SnackBar(content: Text('📱 앱 설치가 시작되었습니다!')),
       );
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('❌ 앱 설치가 불가능합니다. 이미 설치되었거나 브라우저가 지원하지 않습니다.')),
-      );
+      // 사용자가 거부했거나 설치 불가능 - 버튼 유지
+      setState(() {
+        _isPWAInstallable = PWAInstallService.isPWAInstallable();
+      });
+      if (!_isPWAInstallable) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('❌ 앱 설치가 불가능합니다. 이미 설치되었거나 브라우저가 지원하지 않습니다.')),
+        );
+      }
     }
   }
 

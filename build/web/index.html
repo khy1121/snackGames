@@ -80,18 +80,21 @@
     });
 
     // Global function to trigger PWA install
-    window.installPWA = function () {
+    window.installPWA = async function () {
       if (window.deferredPrompt) {
         window.deferredPrompt.prompt();
-        window.deferredPrompt.userChoice.then((choiceResult) => {
-          if (choiceResult.outcome === 'accepted') {
-            console.log('User accepted the install prompt');
-          } else {
-            console.log('User dismissed the install prompt');
-          }
+        const choiceResult = await window.deferredPrompt.userChoice;
+        
+        if (choiceResult.outcome === 'accepted') {
+          console.log('User accepted the install prompt');
+          window.pwaInstallable = false;
           window.deferredPrompt = null;
-        });
-        return true;
+          return true;
+        } else {
+          console.log('User dismissed the install prompt');
+          // 사용자가 거부했으므로 여전히 설치 가능
+          return false;
+        }
       }
       return false;
     };

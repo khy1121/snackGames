@@ -38,7 +38,11 @@ class PWAInstallService {
   /// Trigger PWA installation prompt
   static Future<bool> installPWA() async {
     try {
-      final result = js.context.callMethod('installPWA');
+      final promise = js.context.callMethod('installPWA');
+      // JavaScript Promise를 Future로 변환
+      final result = await js.JsObject.fromBrowserObject(promise).callMethod('then', [
+        (value) => value,
+      ]);
       return result == true;
     } catch (e) {
       print('Error installing PWA: $e');
