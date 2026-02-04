@@ -12,7 +12,13 @@ class BackgroundMusicService {
   static const String _musicEnabledKey = 'music_enabled';
   static const String _musicVolumeKey = 'music_volume';
   
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  // 웹이 아닐 때만 AudioPlayer 생성 (lazy initialization)
+  AudioPlayer? _audioPlayer;
+  AudioPlayer get audioPlayer {
+    _audioPlayer ??= AudioPlayer();
+    return _audioPlayer!;
+  }
+  
   bool _isInitialized = false;
   bool _isMusicEnabled = true;
   double _volume = 0.3; // 기본 볼륨 30%
@@ -37,8 +43,8 @@ class BackgroundMusicService {
       _volume = prefs.getDouble(_musicVolumeKey) ?? 0.3;
 
       // 무한 반복 설정
-      await _audioPlayer.setReleaseMode(ReleaseMode.loop);
-      await _audioPlayer.setVolume(_volume);
+      await audioPlayer.setReleaseMode(ReleaseMode.loop);
+      await audioPlayer.setVolume(_volume);
 
       // 모바일에서만 자동 재생
       if (_isMusicEnabled) {
@@ -62,7 +68,7 @@ class BackgroundMusicService {
     if (!_isMusicEnabled || _isPlaying) return;
     
     try {
-      await _audioPlayer.play(AssetSource('audio/mainLogo.mp3'));
+      await audioPlayer.play(AssetSource('audio/mainLogo.mp3'));
       _isPlaying = true;
       print('Background music started');
     } catch (e) {
@@ -77,7 +83,7 @@ class BackgroundMusicService {
       await WebAudioService().pause();
       return;
     }
-    await _audioPlayer.pause();
+    await audioPlayer.pause();
     _isPlaying = false;
   }
 
@@ -88,7 +94,7 @@ class BackgroundMusicService {
       return;
     }
     if (!_isMusicEnabled) return;
-    await _audioPlayer.resume();
+    await audioPlayer.resume();
     _isPlaying = true;
   }
 
@@ -98,7 +104,7 @@ class BackgroundMusicService {
       await WebAudioService().stop();
       return;
     }
-    await _audioPlayer.stop();
+    await audioPlayer.stop();
     _isPlaying = false;
   }
 
@@ -136,7 +142,7 @@ class BackgroundMusicService {
       return;
     }
     _volume = volume.clamp(0.0, 1.0);
-    await _audioPlayer.setVolume(_volume);
+    await audioPlayer.setVolume(_volume);
     
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble(_musicVolumeKey, _volume);
@@ -161,7 +167,7 @@ class BackgroundMusicService {
   }
 
   /// 현재 재생 상태 (async)
-  Future<PlayerState> get state async => _audioPlayer.state;
+  Future<PlayerState> get state async => audioPlayer.state;
 
   /// 리소스 정리
   Future<void> dispose() async {
@@ -169,7 +175,7 @@ class BackgroundMusicService {
       WebAudioService().dispose();
       return;
     }
-    await _audioPlayer.dispose();
+    await audioPlayer.dispose();
     _isInitialized = false;
   }
 }
