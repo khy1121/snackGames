@@ -749,7 +749,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                       const SizedBox(width: 6),
                       const Text(
-                        'v2.4.0',
+                        'v2.3.2',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
