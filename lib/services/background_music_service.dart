@@ -20,6 +20,14 @@ class BackgroundMusicService {
   /// 서비스 초기화 및 설정 로드
   Future<void> initialize() async {
     if (_isInitialized) return;
+    
+    // 웹에서는 audioplayers가 제대로 작동하지 않음
+    if (kIsWeb) {
+      _isInitialized = true;
+      _isMusicEnabled = false; // 웹에서는 비활성화
+      print('Background music disabled on web platform');
+      return;
+    }
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -30,8 +38,8 @@ class BackgroundMusicService {
       await _audioPlayer.setReleaseMode(ReleaseMode.loop);
       await _audioPlayer.setVolume(_volume);
 
-      // 웹이 아닌 경우에만 자동 재생 (웹은 사용자 상호작용 필요)
-      if (!kIsWeb && _isMusicEnabled) {
+      // 모바일에서만 자동 재생
+      if (_isMusicEnabled) {
         await play();
       }
 
