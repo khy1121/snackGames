@@ -176,7 +176,7 @@
 
   <script>
     // Current SW Version
-    window.currentSWVersion = '2.3.3'; // Service Worker와 동일한 버전
+    window.currentSWVersion = '2.3.4'; // Service Worker와 동일한 버전
     
     // 현재 활성화된 SW의 실제 버전 (초기화 시 null)
     window.activeSWVersion = null;
@@ -278,7 +278,7 @@
     // Register Service Worker for PWA with update detection
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
+        navigator.serviceWorker.register('/sw.js?v=' + window.currentSWVersion)
           .then((registration) => {
             console.log('ServiceWorker registration successful:', registration.scope);
             
@@ -293,11 +293,11 @@
               console.log('Initial update check completed');
             });
 
-            // Check for updates periodically (every 5 minutes for testing)
+            // Check for updates periodically (every 30 minutes)
             setInterval(() => {
               registration.update();
               console.log('Checking for SW updates...');
-            }, 5 * 60 * 1000);
+            }, 30 * 60 * 1000);
 
             // Detect when a new SW is waiting to activate
             registration.addEventListener('updatefound', () => {
