@@ -21,8 +21,13 @@ import '../widgets/particle_effect.dart';
 /// 주사위 머지 게임 페이지
 class DiceGamePage extends StatefulWidget {
   final bool resume; // 이어하기 여부
+  final bool isTutorial; // 튜토리얼 모드
 
-  const DiceGamePage({super.key, this.resume = false});
+  const DiceGamePage({
+    super.key,
+    this.resume = false,
+    this.isTutorial = false,
+  });
 
   @override
   State<DiceGamePage> createState() => _DiceGamePageState();
@@ -61,6 +66,10 @@ class _DiceGamePageState extends State<DiceGamePage>
   // 연속 플레이 보너스
   int _consecutiveGamesPlayed = 0;
   double _consecutiveBonusMultiplier = 1.0;
+
+  // 튜토리얼 상태
+  int _tutorialStep = 0;
+  bool _tutorialCompleted = false;
 
   @override
   void initState() {
@@ -902,6 +911,9 @@ class _DiceGamePageState extends State<DiceGamePage>
               ),
             ),
           ),
+          // 튜토리얼 오버레이
+          if (widget.isTutorial && !_tutorialCompleted)
+            _buildTutorialOverlay(),
         ),
       ),
     );
@@ -1078,6 +1090,203 @@ class _DiceGamePageState extends State<DiceGamePage>
         ],
       ),
     );
+  }
+
+  // 튜토리얼 오버레이
+  Widget _buildTutorialOverlay() {
+    final tutorialSteps = [
+      {
+        'title': '환영합니다! 👋',
+        'description': '주사위 합치기 게임에 오신 것을 환영합니다!\n\n같은 숫자 3개를 모아서 더 큰 숫자로 만들어보세요.',
+        'highlight': null,
+      },
+      {
+        'title': '주사위 놓기 📍',
+        'description': '화면 하단에서 다음 주사위를 확인하고,\n원하는 열을 탭하여 주사위를 놓으세요.\n\n한 번 놓아볼까요?',
+        'highlight': 'board',
+      },
+      {
+        'title': '합치기 기본 ✨',
+        'description': '같은 숫자 3개가 세로나 가로로 연속되면\n자동으로 합쳐져 더 큰 숫자가 됩니다!\n\n1 + 1 + 1 = 2',
+        'highlight': 'board',
+      },
+      {
+        'title': '더 큰 주사위 🎲',
+        'description': '2 + 2 + 2 = 3\n3 + 3 + 3 = 4\n4 + 4 + 4 = 5\n5 + 5 + 5 = 6\n\n계속 합쳐서 큰 숫자를 만드세요!',
+        'highlight': null,
+      },
+      {
+        'title': '콤보 점수 🔥',
+        'description': '한 번에 여러 개가 합쳐지면\n콤보 보너스 점수를 받을 수 있어요!',
+        'highlight': 'score',
+      },
+      {
+        'title': '별 주사위 ⭐',
+        'description': '별 주사위는 모든 숫자와 매칭됩니다!\n\n⭐ + 2 + 2 = 3\n⭐ + ⭐ + 5 = 6',
+        'highlight': 'next',
+      },
+      {
+        'title': '매직 주사위 ✨',
+        'description': '6 + 6 + 6 = ✨ 매직 주사위!\n\n✨는 주변 9칸의 주사위를 모두 없애고\n엄청난 점수를 줍니다!',
+        'highlight': null,
+      },
+      {
+        'title': '게임 오버 조건 ⚠️',
+        'description': '보드가 가득 차면 게임이 끝납니다.\n\n전략적으로 주사위를 배치하여\n최대한 많은 콤보를 만들어보세요!',
+        'highlight': 'board',
+      },
+      {
+        'title': '준비되셨나요? 🎮',
+        'description': '이제 게임을 시작할 준비가 되었습니다!\n\n최고 점수에 도전해보세요!\n행운을 빕니다! 🍀',
+        'highlight': null,
+      },
+    ];
+
+    final step = tutorialSteps[_tutorialStep];
+    
+    return Stack(
+      children: [
+        // 반투명 배경
+        GestureDetector(
+          onTap: () {}, // 백그라운드 탭 무시
+          child: Container(
+            color: Colors.black.withValues(alpha: 0.7),
+          ),
+        ),
+        
+        // 하이라이트 영역
+        if (step['highlight'] != null)
+          _buildHighlightArea(step['highlight'] as String),
+        
+        // 설명 카드
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 400),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    step['title'] as String,
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2C3E50),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    step['description'] as String,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      height: 1.6,
+                      color: Color(0xFF34495E),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // 진행 표시
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(
+                      tutorialSteps.length,
+                      (index) => Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        width: index == _tutorialStep ? 12 : 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: index == _tutorialStep
+                              ? const Color(0xFF00B894)
+                              : Colors.grey.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // 버튼
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      if (_tutorialStep > 0)
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _tutorialStep--;
+                            });
+                          },
+                          child: const Text(
+                            '이전',
+                            style: TextStyle(fontSize: 18),
+                          ),
+                        )
+                      else
+                        const SizedBox(width: 80),
+                      
+                      ElevatedButton(
+                        onPressed: () {
+                          if (_tutorialStep < tutorialSteps.length - 1) {
+                            setState(() {
+                              _tutorialStep++;
+                            });
+                          } else {
+                            setState(() {
+                              _tutorialCompleted = true;
+                            });
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF00B894),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 32,
+                            vertical: 16,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          _tutorialStep < tutorialSteps.length - 1
+                              ? '다음'
+                              : '시작하기',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHighlightArea(String area) {
+    // 하이라이트할 영역의 위치를 찾아서 그 부분만 밝게 표시
+    // 실제 구현 시 GlobalKey를 사용하여 정확한 위치를 찾을 수 있습니다
+    return Container(); // 간단한 구현
   }
 }
 

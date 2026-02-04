@@ -446,7 +446,7 @@ class _HomePageState extends State<HomePage> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => const DiceTutorialPage(),
+                builder: (context) => const DiceGamePage(isTutorial: true),
               ),
             );
           },
@@ -474,7 +474,7 @@ class _HomePageState extends State<HomePage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '합쳐라 주사위',
+                        '주사위 합치기를 배워볼까요?',
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -483,7 +483,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                       SizedBox(height: 4),
                       Text(
-                        '주사위 3개 매칭하기',
+                        '쉽고 재미있는 튜토리얼',
                         style: TextStyle(
                           color: Colors.white70,
                           fontSize: 13,
