@@ -854,66 +854,71 @@ class _DiceGamePageState extends State<DiceGamePage>
       child: ScreenShake(
         key: _shakeKey,
         child: Scaffold(
-          body: Container(
-            decoration: BoxDecoration(
-              gradient: _theme.backgroundGradient,
-            ),
-            child: SafeArea(
-              child: Column(
-                children: [
-                  _buildHeader(),
-                  const SizedBox(height: 8),
-                  _buildScoreAndNextDice(),
-                  const SizedBox(height: 8),
-                  
-                  // Game Board Area with VFX Overlay
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: RepaintBoundary(
-                        child: Stack(
-                          children: [
-                             // Actual Board
-                             DiceBoardWidget(
-                               key: _boardKey,
-                               board: _board,
-                               newDice: _newDice,
-                               mergingDice: _mergingDice,
-                               onColumnTap: _onColumnTap,
-                               theme: _theme,
-                             ),
-                             
-                              // VFX Overlay
-                             // Position.fill ensures it matches Board size
-                             Positioned.fill(
-                               child: DiceEffectsOverlay(
-                                 eventStream: _eventController.stream,
-                               ),
-                             ),
-                          ],
+          body: Stack(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  gradient: _theme.backgroundGradient,
+                ),
+                child: SafeArea(
+                  child: Column(
+                    children: [
+                      _buildHeader(),
+                      const SizedBox(height: 8),
+                      _buildScoreAndNextDice(),
+                      const SizedBox(height: 8),
+                      
+                      // Game Board Area with VFX Overlay
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: RepaintBoundary(
+                            child: Stack(
+                              children: [
+                                 // Actual Board
+                                 DiceBoardWidget(
+                                   key: _boardKey,
+                                   board: _board,
+                                   newDice: _newDice,
+                                   mergingDice: _mergingDice,
+                                   onColumnTap: _onColumnTap,
+                                   theme: _theme,
+                                 ),
+                                 
+                                  // VFX Overlay
+                                 // Position.fill ensures it matches Board size
+                                 Positioned.fill(
+                                   child: DiceEffectsOverlay(
+                                     eventStream: _eventController.stream,
+                                   ),
+                                 ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
 
-                  Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Text(
-                      'Tap column to drop • Match 3 to merge • 6+6+6 = ✨Magic!',
-                      style: TextStyle(
-                        color: _theme.textColor.withValues(alpha: 0.6),
-                        fontSize: 11,
+                      Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Text(
+                          'Tap column to drop • Match 3 to merge • 6+6+6 = ✨Magic!',
+                          style: TextStyle(
+                            color: _theme.textColor.withValues(alpha: 0.6),
+                            fontSize: 11,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                       ),
-                      textAlign: TextAlign.center,
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
+              
+              // 튜토리얼 오버레이
+              if (widget.isTutorial && !_tutorialCompleted)
+                _buildTutorialOverlay(),
+            ],
           ),
-          // 튜토리얼 오버레이
-          if (widget.isTutorial && !_tutorialCompleted)
-            _buildTutorialOverlay(),
         ),
       ),
     );

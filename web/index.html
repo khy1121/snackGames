@@ -284,14 +284,20 @@
             
             // 페이지 로드 시 현재 활성 SW 버전 가져오기
             if (navigator.serviceWorker.controller) {
+              console.log('Requesting version from active SW...');
               navigator.serviceWorker.controller.postMessage({ type: 'GET_VERSION' });
             }
 
-            // Check for updates periodically (every 30 minutes)
+            // 즉시 업데이트 체크
+            registration.update().then(() => {
+              console.log('Initial update check completed');
+            });
+
+            // Check for updates periodically (every 5 minutes for testing)
             setInterval(() => {
               registration.update();
               console.log('Checking for SW updates...');
-            }, 30 * 60 * 1000);
+            }, 5 * 60 * 1000);
 
             // Detect when a new SW is waiting to activate
             registration.addEventListener('updatefound', () => {
@@ -317,19 +323,24 @@
 
         // Listen for messages from Service Worker
         navigator.serviceWorker.addEventListener('message', (event) => {
+          console.log('Received message from SW:', event.data);
+          
           if (event.data.type === 'SW_UPDATED') {
             console.log('SW Updated to version:', event.data.version);
             // 버전 비교: 현재 버전과 다를 때만 토스트 표시
             if (window.activeSWVersion && window.activeSWVersion !== event.data.version) {
               console.log(`Version changed: ${window.activeSWVersion} -> ${event.data.version}`);
               window.showUpdateToast(event.data.version);
+              window.activeSWVersion = event.data.version;
             } else if (!window.activeSWVersion) {
-              // 최초 로드 시에는 토스트 표시 안 함
-              console.log('First load, no toast shown');
+              // 최초 로드 시에는 버전만 저장
+              window.activeSWVersion = event.data.version;
+              console.log('First load, version set to:', event.data.version);
             } else {
               console.log('Same version, no update needed');
             }
           }
+          
           if (event.data.type === 'SW_VERSION') {
             const newVersion = event.data.version;
             console.log('Received SW Version:', newVersion);
@@ -342,6 +353,9 @@
               // 버전이 다르면 토스트 표시
               console.log(`Version difference detected: ${window.activeSWVersion} -> ${newVersion}`);
               window.showUpdateToast(newVersion);
+              window.activeSWVersion = newVersion;
+            } else {
+              console.log('Version unchanged:', newVersion);
             }
             
             // 토스트 메시지 업데이트
