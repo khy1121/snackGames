@@ -141,12 +141,15 @@
       <span class="toast-message" id="toast-version-msg">새 버전이 준비되었습니다.</span>
     </div>
     <div class="toast-actions">
-      <button class="btn-refresh" onclick="window.refreshForUpdate()">새로고침</button>
+      <button class="btn-refresh" onclick="window.refreshForUpdate()">업데이트</button>
       <button class="btn-later" onclick="window.dismissUpdateToast()">나중에</button>
     </div>
   </div>
 
   <script>
+    // Current SW Version
+    window.currentSWVersion = '2.2.0'; // Service Worker와 동일한 버전
+    
     // PWA Update Toast Functions
     window.showUpdateToast = function (version) {
       const toast = document.getElementById('pwa-update-toast');
@@ -163,7 +166,18 @@
     };
 
     window.refreshForUpdate = function () {
-      window.location.reload();
+      // 업데이트 시작 - 토스트 숨기기
+      window.dismissUpdateToast();
+      
+      // 서비스 워커에게 skipWaiting 메시지 전송
+      if (navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
+      }
+      
+      // 짧은 지연 후 새로고침 (서비스 워커 활성화 대기)
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
     };
 
     // Register Service Worker for PWA with update detection
@@ -218,6 +232,12 @@
         navigator.serviceWorker.addEventListener('controllerchange', () => {
           if (refreshing) return;
           refreshing = true;
+          console.log('Service Worker controller changed - updating complete');
+          
+          // 업데이트 완료 - 버전 정보 갱신 요청
+          if (navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({ type: 'GET_VERSION' });
+          }
           console.log('Controller changed, new SW activated');
         });
       });

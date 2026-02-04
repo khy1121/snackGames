@@ -662,13 +662,26 @@ class _HomePageState extends State<HomePage> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    '스낵게임즈',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2E5940),
-                    ),
+                  Row(
+                    children: [
+                      const Text(
+                        '스낵게임즈',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2E5940),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      const Text(
+                        'v2.2.0',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF00B894),
+                        ),
+                      ),
+                    ],
                   ),
                   Row(
                     children: [

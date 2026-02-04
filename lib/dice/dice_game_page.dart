@@ -231,19 +231,32 @@ class _DiceGamePageState extends State<DiceGamePage>
     if (hasMerge) {
       _comboStreak++;
       
-      // 진동 피드백 추가
+      // 진동 피드백 - 주사위 눈금에 따라 세기 조절
       if (result.merges.any((m) => m.isMagicClear)) {
-        // 매직 폭발 - 강력한 진동
+        // 매직 폭발 - 최대 강도
         VibrationService.explosion();
       } else if (result.merges.length >= 3) {
         // 3개 이상 콤보 - 콤보 진동
         VibrationService.combo();
       } else if (result.merges.any((m) => m.isMagicCreated)) {
-        // 별 생성 - 중간 진동
+        // 별 생성 - 매우 강한 진동
         VibrationService.heavy();
       } else {
-        // 일반 머지 - 가벼운 진동
-        VibrationService.medium();
+        // 일반 머지 - 주사위 눈금에 따라 진동 세기 결정
+        final maxDiceValue = result.merges
+            .where((m) => m.resultDice != null)
+            .map((m) => m.resultDice!.value)
+            .fold<int>(0, (max, value) => value > max ? value : max);
+        
+        if (maxDiceValue >= 6) {
+          VibrationService.heavy();    // 6: 강함
+        } else if (maxDiceValue >= 5) {
+          VibrationService.medium();   // 5: 중간
+        } else if (maxDiceValue >= 3) {
+          VibrationService.light();    // 3-4: 약함
+        } else {
+          VibrationService.light();    // 1-2: 매우 약함
+        }
       }
       
       // Every merge triggers a small shake

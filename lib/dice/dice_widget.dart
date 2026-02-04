@@ -129,7 +129,7 @@ class DiceWidget extends StatelessWidget {
       return RepaintBoundary(
         child: TweenAnimationBuilder<double>(
           tween: Tween(begin: 0.0, end: 1.0),
-          duration: const Duration(milliseconds: 800), // 800ms로 증가
+          duration: const Duration(milliseconds: 350), // 빠른 생성 애니메이션
           curve: _getAnimationCurve(),
           builder: (context, value, child) {
             return _buildNewDiceAnimation(value, child!);
@@ -143,42 +143,10 @@ class DiceWidget extends StatelessWidget {
       return RepaintBoundary(
         child: TweenAnimationBuilder<double>(
           tween: Tween(begin: 0.0, end: 1.0),
-          duration: const Duration(milliseconds: 1000), // 1000ms로 증가
-          curve: Curves.easeOutBack,
+          duration: const Duration(milliseconds: 600), // 적당한 머지 속도
+          curve: _getMergingAnimationCurve(),
           builder: (context, value, child) {
-            // 펄스 효과: 작아졌다가 커지는 효과
-            final pulseScale = value < 0.3 
-                ? 1.0 - (value / 0.3) * 0.5  // 0.5배로 줄어듦
-                : 0.5 + ((value - 0.3) / 0.7) * 0.7; // 1.2배로 커짐
-            
-            // 회전 효과
-            final rotation = value * 3.14159 * 2; // 360도 회전
-            
-            // 발광 효과
-            final glowIntensity = value < 0.5 ? value * 2 : (1.0 - value) * 2;
-            
-            return Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: _getDiceColors().last.withValues(alpha: glowIntensity * 0.8),
-                    blurRadius: 20 * glowIntensity,
-                    spreadRadius: 5 * glowIntensity,
-                  ),
-                ],
-              ),
-              child: Transform.scale(
-                scale: pulseScale,
-                child: Transform.rotate(
-                  angle: rotation,
-                  child: Opacity(
-                    opacity: value.clamp(0.0, 1.0),
-                    child: child,
-                  ),
-                ),
-              ),
-            );
+            return _buildMergingAnimation(value, child!);
           },
           child: diceWidget,
         ),
@@ -188,7 +156,7 @@ class DiceWidget extends StatelessWidget {
     return RepaintBoundary(child: diceWidget);
   }
   
-  // 주사위 숫자별 애니메이션 커브
+  // 주사위 숫자별 생성 애니메이션 커브
   Curve _getAnimationCurve() {
     if (dice.isMagic) return Curves.elasticOut;
     return switch (dice.value) {
@@ -200,6 +168,169 @@ class DiceWidget extends StatelessWidget {
       6 => Curves.easeOutExpo,        // 폭발적 감속
       _ => Curves.easeOut,
     };
+  }
+  
+  // 주사위 숫자별 합쳐질 때 애니메이션 커브
+  Curve _getMergingAnimationCurve() {
+    if (dice.isMagic) return Curves.elasticOut;
+    return switch (dice.value) {
+      1 => Curves.easeOut,            // 1: 심플
+      2 => Curves.easeOutQuad,        // 2: 약간 부드럽게
+      3 => Curves.easeOutBack,        // 3: 살짝 튕김
+      4 => Curves.bounceOut,          // 4: 바운스
+      5 => Curves.elasticOut,         // 5: 탄력적
+      6 => Curves.easeOutExpo,        // 6: 폭발적
+      _ => Curves.easeOut,
+    };
+  }
+  
+  // 주사위 숫자별 합쳐질 때 애니메이션 (숫자 높을수록 화려)
+  Widget _buildMergingAnimation(double value, Widget child) {
+    if (dice.isMagic) {
+      // 매직: 무지개 펄스 + 강력한 발광
+      final pulseScale = 0.5 + value * 0.8;
+      final rotation = value * 3.14159 * 4; // 720도
+      final hue = (value * 360 * 2) % 360;
+      return Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: HSVColor.fromAHSV(0.8, hue, 1, 1).toColor(),
+              blurRadius: 40 * value,
+              spreadRadius: 12 * value,
+            ),
+          ],
+        ),
+        child: Transform.scale(
+          scale: pulseScale,
+          child: Transform.rotate(
+            angle: rotation,
+            child: child,
+          ),
+        ),
+      );
+    }
+    
+    return switch (dice.value) {
+      1 => _buildMergeDice1(value, child),  // 가장 심플
+      2 => _buildMergeDice2(value, child),
+      3 => _buildMergeDice3(value, child),
+      4 => _buildMergeDice4(value, child),
+      5 => _buildMergeDice5(value, child),
+      6 => _buildMergeDice6(value, child),  // 가장 화려
+      _ => Transform.scale(scale: 0.8 + value * 0.4, child: child),
+    };
+  }
+  
+  // 1: 심플한 펄스 (작아졌다 커짐)
+  Widget _buildMergeDice1(double value, Widget child) {
+    final scale = value < 0.5 
+        ? 1.0 - (value * 0.4)  // 0.8배로 줄어듦
+        : 0.8 + ((value - 0.5) * 0.4); // 1.0배로 복귀
+    return Transform.scale(scale: scale, child: child);
+  }
+  
+  // 2: 펄스 + 약간의 회전
+  Widget _buildMergeDice2(double value, Widget child) {
+    final scale = value < 0.5 ? 1.0 - (value * 0.5) : 0.5 + ((value - 0.5) * 1.0);
+    final rotation = value * 3.14159 * 0.5; // 90도
+    return Transform.scale(
+      scale: scale,
+      child: Transform.rotate(angle: rotation, child: child),
+    );
+  }
+  
+  // 3: 펄스 + 회전 + 약한 발광
+  Widget _buildMergeDice3(double value, Widget child) {
+    final scale = value < 0.4 ? 1.0 - (value * 0.75) : 0.7 + ((value - 0.4) / 0.6 * 0.6);
+    final rotation = value * 3.14159; // 180도
+    final glowIntensity = value < 0.5 ? value : (1.0 - value);
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: _getDiceColors().last.withValues(alpha: glowIntensity * 0.4),
+            blurRadius: 15 * glowIntensity,
+            spreadRadius: 3 * glowIntensity,
+          ),
+        ],
+      ),
+      child: Transform.scale(
+        scale: scale,
+        child: Transform.rotate(angle: rotation, child: child),
+      ),
+    );
+  }
+  
+  // 4: 바운스 + 발광
+  Widget _buildMergeDice4(double value, Widget child) {
+    final scale = value < 0.3 ? 1.0 - (value / 0.3 * 0.6) : 0.4 + ((value - 0.3) / 0.7 * 0.8);
+    final rotation = value * 3.14159 * 1.5; // 270도
+    final glowIntensity = value < 0.5 ? value * 1.5 : (1.0 - value) * 1.5;
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: _getDiceColors().last.withValues(alpha: glowIntensity * 0.5),
+            blurRadius: 20 * glowIntensity,
+            spreadRadius: 5 * glowIntensity,
+          ),
+        ],
+      ),
+      child: Transform.scale(
+        scale: scale,
+        child: Transform.rotate(angle: rotation, child: child),
+      ),
+    );
+  }
+  
+  // 5: 강력한 펄스 + 360도 회전 + 강한 발광
+  Widget _buildMergeDice5(double value, Widget child) {
+    final scale = value < 0.3 ? 1.0 - (value / 0.3 * 0.7) : 0.3 + ((value - 0.3) / 0.7 * 1.0);
+    final rotation = value * 3.14159 * 2; // 360도
+    final glowIntensity = value < 0.5 ? value * 2 : (1.0 - value) * 2;
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: _getDiceColors().last.withValues(alpha: glowIntensity * 0.7),
+            blurRadius: 25 * glowIntensity,
+            spreadRadius: 7 * glowIntensity,
+          ),
+        ],
+      ),
+      child: Transform.scale(
+        scale: scale,
+        child: Transform.rotate(angle: rotation, child: child),
+      ),
+    );
+  }
+  
+  // 6: 가장 화려 - 폭발적 펄스 + 540도 회전 + 최대 발광
+  Widget _buildMergeDice6(double value, Widget child) {
+    final scale = value < 0.3 ? 1.0 - (value / 0.3 * 0.8) : 0.2 + ((value - 0.3) / 0.7 * 1.2);
+    final rotation = value * 3.14159 * 3; // 540도
+    final glowIntensity = value < 0.5 ? value * 2 : (1.0 - value) * 2;
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: _getDiceColors().last.withValues(alpha: glowIntensity * 0.9),
+            blurRadius: 35 * glowIntensity,
+            spreadRadius: 10 * glowIntensity,
+          ),
+        ],
+      ),
+      child: Transform.scale(
+        scale: scale,
+        child: Transform.rotate(angle: rotation, child: child),
+      ),
+    );
   }
   
   // 주사위 숫자별 고유 등장 애니메이션
