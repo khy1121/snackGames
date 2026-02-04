@@ -313,7 +313,7 @@ class _TextPopupEffect extends _ActiveEffect {
   final Color color;
   final double fontSize;
   double time = 0;
-  final double duration = 1.0;
+  final double duration = 0.8; // 짧게 조정
   
   // Cache the painter
   late final TextPainter _textPainter;
@@ -379,7 +379,7 @@ class _ShockwaveEffect extends _ActiveEffect {
   final Offset position;
   final Color color;
   double time = 0;
-  final double duration = 0.6;
+  final double duration = 0.5; // 빠르게
 
   _ShockwaveEffect(this.position, this.color);
 
@@ -412,7 +412,7 @@ class _MergeAnimationEffect extends _ActiveEffect {
   final Offset toPosition;
   final Color color;
   double time = 0;
-  final double duration = 0.4;
+  final double duration = 0.35; // 빠르게 빨려들어가기
   
   _MergeAnimationEffect(this.fromPositions, this.toPosition, this.color);
   
@@ -455,7 +455,7 @@ class _ScorePopupEffect extends _ActiveEffect {
   final Offset position;
   final bool isBig;
   double time = 0;
-  final double duration = 1.0;
+  final double duration = 0.8; // 짧게
   
   _ScorePopupEffect(this.score, this.position, this.isBig);
   
@@ -507,7 +507,7 @@ class _ComboIndicatorEffect extends _ActiveEffect {
   final int combo;
   final Offset position;
   double time = 0;
-  final double duration = 0.8;
+  final double duration = 0.7; // 빠르게
   
   _ComboIndicatorEffect(this.combo, this.position);
   
@@ -572,7 +572,7 @@ class _ComboIndicatorEffect extends _ActiveEffect {
 class _LightningEffect extends _ActiveEffect {
   final Color color;
   double time = 0;
-  final double duration = 0.4;
+  final double duration = 0.35; // 빠르게
   final Random _random = Random();
   
   // Fix late initialization

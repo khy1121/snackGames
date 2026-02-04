@@ -205,8 +205,8 @@ class _DiceGamePageState extends State<DiceGamePage>
       }
     }
 
-    // Single delayed cleanup - 애니메이션을 볼 수 있도록 지연 시간 증가
-    Future.delayed(const Duration(milliseconds: 1200), () {
+    // Single delayed cleanup - 애니메이션 타이밍에 맞춰 조정
+    Future.delayed(const Duration(milliseconds: 700), () {
       if (!mounted) return;
       
       setState(() {

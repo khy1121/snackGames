@@ -129,7 +129,7 @@ class DiceWidget extends StatelessWidget {
       return RepaintBoundary(
         child: TweenAnimationBuilder<double>(
           tween: Tween(begin: 0.0, end: 1.0),
-          duration: const Duration(milliseconds: 350), // 빠른 생성 애니메이션
+          duration: const Duration(milliseconds: 250), // 빠른 생성 (캐주얼 게임 스타일)
           curve: _getAnimationCurve(),
           builder: (context, value, child) {
             return _buildNewDiceAnimation(value, child!);
@@ -143,7 +143,7 @@ class DiceWidget extends StatelessWidget {
       return RepaintBoundary(
         child: TweenAnimationBuilder<double>(
           tween: Tween(begin: 0.0, end: 1.0),
-          duration: const Duration(milliseconds: 600), // 적당한 머지 속도
+          duration: const Duration(milliseconds: 450), // 빠르고 간결한 머지
           curve: _getMergingAnimationCurve(),
           builder: (context, value, child) {
             return _buildMergingAnimation(value, child!);
@@ -225,16 +225,16 @@ class DiceWidget extends StatelessWidget {
   
   // 1: 심플한 펄스 (작아졌다 커짐)
   Widget _buildMergeDice1(double value, Widget child) {
-    final scale = value < 0.5 
-        ? 1.0 - (value * 0.4)  // 0.8배로 줄어듦
-        : 0.8 + ((value - 0.5) * 0.4); // 1.0배로 복귀
+    final scale = value < 0.4 
+        ? 1.0 - (value * 0.5)  // 0.8배로 줍 줄어듦
+        : 0.8 + ((value - 0.4) * 0.33); // 1.0배로 복귀
     return Transform.scale(scale: scale, child: child);
   }
   
   // 2: 펄스 + 약간의 회전
   Widget _buildMergeDice2(double value, Widget child) {
-    final scale = value < 0.5 ? 1.0 - (value * 0.5) : 0.5 + ((value - 0.5) * 1.0);
-    final rotation = value * 3.14159 * 0.5; // 90도
+    final scale = value < 0.4 ? 1.0 - (value * 0.75) : 0.7 + ((value - 0.4) * 0.5);
+    final rotation = value * 3.14159 * 0.3; // 54도
     return Transform.scale(
       scale: scale,
       child: Transform.rotate(angle: rotation, child: child),
@@ -243,17 +243,17 @@ class DiceWidget extends StatelessWidget {
   
   // 3: 펄스 + 회전 + 약한 발광
   Widget _buildMergeDice3(double value, Widget child) {
-    final scale = value < 0.4 ? 1.0 - (value * 0.75) : 0.7 + ((value - 0.4) / 0.6 * 0.6);
-    final rotation = value * 3.14159; // 180도
-    final glowIntensity = value < 0.5 ? value : (1.0 - value);
+    final scale = value < 0.35 ? 1.0 - (value * 1.0) : 0.65 + ((value - 0.35) / 0.65 * 0.5);
+    final rotation = value * 3.14159 * 0.5; // 90도
+    final glowIntensity = value < 0.5 ? value * 0.8 : (1.0 - value) * 0.8;
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: _getDiceColors().last.withValues(alpha: glowIntensity * 0.4),
-            blurRadius: 15 * glowIntensity,
-            spreadRadius: 3 * glowIntensity,
+            color: _getDiceColors().last.withValues(alpha: glowIntensity * 0.3),
+            blurRadius: 12 * glowIntensity,
+            spreadRadius: 2 * glowIntensity,
           ),
         ],
       ),
@@ -266,17 +266,17 @@ class DiceWidget extends StatelessWidget {
   
   // 4: 바운스 + 발광
   Widget _buildMergeDice4(double value, Widget child) {
-    final scale = value < 0.3 ? 1.0 - (value / 0.3 * 0.6) : 0.4 + ((value - 0.3) / 0.7 * 0.8);
-    final rotation = value * 3.14159 * 1.5; // 270도
-    final glowIntensity = value < 0.5 ? value * 1.5 : (1.0 - value) * 1.5;
+    final scale = value < 0.3 ? 1.0 - (value / 0.3 * 0.7) : 0.3 + ((value - 0.3) / 0.7 * 0.85);
+    final rotation = value * 3.14159; // 180도
+    final glowIntensity = value < 0.5 ? value : (1.0 - value);
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: _getDiceColors().last.withValues(alpha: glowIntensity * 0.5),
-            blurRadius: 20 * glowIntensity,
-            spreadRadius: 5 * glowIntensity,
+            color: _getDiceColors().last.withValues(alpha: glowIntensity * 0.4),
+            blurRadius: 16 * glowIntensity,
+            spreadRadius: 3 * glowIntensity,
           ),
         ],
       ),
@@ -289,17 +289,17 @@ class DiceWidget extends StatelessWidget {
   
   // 5: 강력한 펄스 + 360도 회전 + 강한 발광
   Widget _buildMergeDice5(double value, Widget child) {
-    final scale = value < 0.3 ? 1.0 - (value / 0.3 * 0.7) : 0.3 + ((value - 0.3) / 0.7 * 1.0);
-    final rotation = value * 3.14159 * 2; // 360도
-    final glowIntensity = value < 0.5 ? value * 2 : (1.0 - value) * 2;
+    final scale = value < 0.3 ? 1.0 - (value / 0.3 * 0.75) : 0.25 + ((value - 0.3) / 0.7 * 0.95);
+    final rotation = value * 3.14159 * 1.5; // 270도
+    final glowIntensity = value < 0.5 ? value * 1.5 : (1.0 - value) * 1.5;
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: _getDiceColors().last.withValues(alpha: glowIntensity * 0.7),
-            blurRadius: 25 * glowIntensity,
-            spreadRadius: 7 * glowIntensity,
+            color: _getDiceColors().last.withValues(alpha: glowIntensity * 0.5),
+            blurRadius: 20 * glowIntensity,
+            spreadRadius: 4 * glowIntensity,
           ),
         ],
       ),
@@ -312,17 +312,17 @@ class DiceWidget extends StatelessWidget {
   
   // 6: 가장 화려 - 폭발적 펄스 + 540도 회전 + 최대 발광
   Widget _buildMergeDice6(double value, Widget child) {
-    final scale = value < 0.3 ? 1.0 - (value / 0.3 * 0.8) : 0.2 + ((value - 0.3) / 0.7 * 1.2);
-    final rotation = value * 3.14159 * 3; // 540도
-    final glowIntensity = value < 0.5 ? value * 2 : (1.0 - value) * 2;
+    final scale = value < 0.3 ? 1.0 - (value / 0.3 * 0.8) : 0.2 + ((value - 0.3) / 0.7 * 1.0);
+    final rotation = value * 3.14159 * 2; // 360도
+    final glowIntensity = value < 0.5 ? value * 1.8 : (1.0 - value) * 1.8;
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: _getDiceColors().last.withValues(alpha: glowIntensity * 0.9),
-            blurRadius: 35 * glowIntensity,
-            spreadRadius: 10 * glowIntensity,
+            color: _getDiceColors().last.withValues(alpha: glowIntensity * 0.6),
+            blurRadius: 25 * glowIntensity,
+            spreadRadius: 6 * glowIntensity,
           ),
         ],
       ),
