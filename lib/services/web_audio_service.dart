@@ -27,9 +27,9 @@ class WebAudioService {
       _isMusicEnabled = prefs.getBool(_musicEnabledKey) ?? true;
       _volume = prefs.getDouble(_musicVolumeKey) ?? 0.3;
 
-      // HTML5 Audio 요소 생성 - Flutter 웹 에셋 경로 (assets/assets/...)
+      // HTML5 Audio 요소 생성 - web 폴더의 정적 파일 사용
       _audioElement = html.AudioElement()
-        ..src = 'assets/assets/audio/mainLogo.mp3'
+        ..src = 'audio/mainLogo.mp3'
         ..loop = true
         ..volume = _volume;
       

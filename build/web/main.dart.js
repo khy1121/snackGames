@@ -41265,7 +41265,7 @@ n.c=k!==!1
 k=A.aq7(J.aD(m.a,"music_volume"))
 n.d=k==null?0.3:k
 k=A.aB5(null)
-k.src="assets/assets/audio/mainLogo.mp3"
+k.src="audio/mainLogo.mp3"
 k.loop=!0
 k.volume=n.d
 n.a=k
@@ -82784,7 +82784,7 @@ B.VQ=new A.k(!0,null,null,null,null,null,60,null,null,null,null,null,null,null,n
 B.Wn=new A.ay("\ud83c\udf1f",null,B.VQ,null,null,null,null)
 B.Wp=new A.ay("\uc774\uc5b4\ud558\uc2dc\uaca0\uc2b5\ub2c8\uae4c?",null,null,null,null,null,null)
 B.Tu=new A.k(!0,B.aY,null,null,null,null,11,B.a0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null)
-B.Ws=new A.ay("v2.4.1",null,B.Tu,null,null,null,null)
+B.Ws=new A.ay("v2.4.2",null,B.Tu,null,null,null,null)
 B.Wt=new A.ay("SHARE MY SCORE",null,B.f3,null,null,null,null)
 B.St=new A.k(!0,B.as,null,null,null,null,20,B.p,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null)
 B.Ww=new A.ay("\uc2a4\ub0b5\uac8c\uc784\uc988",null,B.St,null,null,null,null)
