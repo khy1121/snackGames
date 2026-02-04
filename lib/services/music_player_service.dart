@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'web_audio_service.dart' if (dart.library.io) 'web_audio_stub.dart';
 
 /// 음악 트랙 정보
 class MusicTrack {
@@ -16,6 +17,22 @@ class MusicTrack {
     required this.fileName,
     this.duration,
   });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'title': title,
+    'artist': artist,
+    'fileName': fileName,
+  };
+
+  factory MusicTrack.fromJson(Map<String, dynamic> json) {
+    return MusicTrack(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      artist: json['artist'] as String,
+      fileName: json['fileName'] as String,
+    );
+  }
 }
 
 /// 반복 모드
@@ -25,7 +42,7 @@ enum RepeatMode {
   one,       // 한 곡 반복
 }
 
-/// 음악 플레이어 서비스 (플레이리스트 지원)
+/// 통합 음악 플레이어 서비스 (플레이리스트 + 실제 재생 관리)
 class MusicPlayerService extends ChangeNotifier {
   static final MusicPlayerService _instance = MusicPlayerService._internal();
   factory MusicPlayerService() => _instance;
@@ -80,6 +97,7 @@ class MusicPlayerService extends ChangeNotifier {
   bool _shuffle = false;
   double _volume = 0.3;
   bool _isInitialized = false;
+  bool _userInteracted = false;
 
   // Getters
   List<MusicTrack> get playlist => _playlist;
@@ -93,6 +111,7 @@ class MusicPlayerService extends ChangeNotifier {
   RepeatMode get repeatMode => _repeatMode;
   bool get shuffle => _shuffle;
   double get volume => _volume;
+  bool get isInitialized => _isInitialized;
 
   /// 초기화
   Future<void> initialize() async {
@@ -112,17 +131,59 @@ class MusicPlayerService extends ChangeNotifier {
               ))
           .toList();
     } else {
-      // 기본 플레이리스트: mainLogo만
-      _playlist = [availableTracks.first];
+      // 기본 플레이리스트: 모든 트랙
+      _playlist = List.from(availableTracks);
+    }
+
+    // 저장된 현재 트랙 인덱스 로드
+    _currentIndex = prefs.getInt('current_track_index') ?? 0;
+    if (_currentIndex >= _playlist.length) {
+      _currentIndex = 0;
     }
 
     final savedRepeatMode = prefs.getInt('repeat_mode') ?? 1;
     _repeatMode = RepeatMode.values[savedRepeatMode];
     
     _shuffle = prefs.getBool('shuffle') ?? false;
-    
+
+    // 웹에서 WebAudioService 초기화 및 트랙 동기화
+    if (kIsWeb) {
+      final webAudio = WebAudioService();
+      await webAudio.initialize();
+      webAudio.setVolume(_volume);
+      
+      // 현재 트랙으로 설정
+      if (currentTrack != null) {
+        await webAudio.changeTrack(currentTrack!.fileName);
+      }
+      
+      // 트랙 종료 콜백 설정
+      webAudio.setOnTrackEnded(_onTrackEnded);
+    }
+
     _isInitialized = true;
     notifyListeners();
+  }
+
+  /// 사용자 상호작용 시 호출 (자동재생 정책 대응)
+  Future<void> onUserInteraction() async {
+    if (_userInteracted) return;
+    _userInteracted = true;
+
+    if (_isMusicEnabled && !_isPlaying) {
+      await play();
+    }
+  }
+
+  /// 트랙 종료 시 호출
+  void _onTrackEnded() {
+    if (_repeatMode == RepeatMode.one) {
+      // 한 곡 반복: 같은 트랙 재생
+      _playCurrentTrack();
+    } else {
+      // 다음 곡으로 이동
+      next();
+    }
   }
 
   /// 플레이리스트에 트랙 추가
@@ -157,71 +218,123 @@ class MusicPlayerService extends ChangeNotifier {
     final index = _playlist.indexWhere((t) => t.id == track.id);
     if (index != -1) {
       _currentIndex = index;
-      _isPlaying = true;
-      notifyListeners();
-      // 실제 오디오 재생은 WebAudioService에서 처리
+      await _saveCurrentIndex();
+      await _playCurrentTrack();
     }
   }
 
-  /// 재생/일시정지 토글
-  void togglePlay() {
-    _isPlaying = !_isPlaying;
+  /// 현재 트랙 실제 재생
+  Future<void> _playCurrentTrack() async {
+    if (!_isMusicEnabled || _playlist.isEmpty) return;
+    
+    final track = currentTrack;
+    if (track == null) return;
+
+    if (kIsWeb) {
+      final webAudio = WebAudioService();
+      await webAudio.changeTrack(track.fileName);
+      await webAudio.play();
+    } else {
+      // 모바일: BackgroundMusicService 사용 (추후 구현)
+      // await BackgroundMusicService().playTrack(track.fileName);
+    }
+    
+    _isPlaying = true;
     notifyListeners();
   }
 
+  /// 재생/일시정지 토글
+  Future<void> togglePlay() async {
+    if (_isPlaying) {
+      await pause();
+    } else {
+      await play();
+    }
+  }
+
   /// 재생
-  void play() {
-    if (_playlist.isEmpty) return;
+  Future<void> play() async {
+    if (_playlist.isEmpty || !_isMusicEnabled) return;
+    
+    if (kIsWeb) {
+      final webAudio = WebAudioService();
+      if (currentTrack != null) {
+        await webAudio.changeTrack(currentTrack!.fileName);
+      }
+      await webAudio.play();
+    }
+    
     _isPlaying = true;
     notifyListeners();
   }
 
   /// 일시정지
-  void pause() {
+  Future<void> pause() async {
+    if (kIsWeb) {
+      await WebAudioService().pause();
+    }
+    
     _isPlaying = false;
     notifyListeners();
   }
 
   /// 정지
-  void stop() {
+  Future<void> stop() async {
+    if (kIsWeb) {
+      await WebAudioService().stop();
+    }
+    
     _isPlaying = false;
     _currentIndex = 0;
     notifyListeners();
   }
 
   /// 다음 곡
-  void next() {
+  Future<void> next() async {
     if (_playlist.isEmpty) return;
     
     if (_shuffle) {
-      _currentIndex = (_currentIndex + 1 + DateTime.now().millisecond) % _playlist.length;
+      // 셔플: 랜덤 트랙 선택 (현재 트랙 제외)
+      if (_playlist.length > 1) {
+        int newIndex;
+        do {
+          newIndex = DateTime.now().millisecond % _playlist.length;
+        } while (newIndex == _currentIndex);
+        _currentIndex = newIndex;
+      }
     } else {
       _currentIndex++;
       if (_currentIndex >= _playlist.length) {
         if (_repeatMode == RepeatMode.all) {
           _currentIndex = 0;
-        } else {
+        } else if (_repeatMode == RepeatMode.none) {
           _currentIndex = _playlist.length - 1;
           _isPlaying = false;
+          notifyListeners();
+          return;
         }
       }
     }
-    notifyListeners();
+    
+    await _saveCurrentIndex();
+    await _playCurrentTrack();
   }
 
   /// 이전 곡
-  void previous() {
+  Future<void> previous() async {
     if (_playlist.isEmpty) return;
     
     _currentIndex--;
     if (_currentIndex < 0) {
-      if (_repeatMode == RepeatMode.all) {
+      if (_repeatMode == RepeatMode.all || _repeatMode == RepeatMode.one) {
         _currentIndex = _playlist.length - 1;
       } else {
         _currentIndex = 0;
       }
     }
-    notifyListeners();
+    
+    await _saveCurrentIndex();
+    await _playCurrentTrack();
   }
 
   /// 반복 모드 변경
@@ -237,6 +350,12 @@ class MusicPlayerService extends ChangeNotifier {
         _repeatMode = RepeatMode.none;
         break;
     }
+    
+    // WebAudioService 루프 모드 업데이트
+    if (kIsWeb) {
+      WebAudioService().setLoopMode(_repeatMode == RepeatMode.one);
+    }
+    
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('repeat_mode', _repeatMode.index);
     notifyListeners();
@@ -253,9 +372,14 @@ class MusicPlayerService extends ChangeNotifier {
   /// 음악 활성화 토글
   Future<void> toggleMusic() async {
     _isMusicEnabled = !_isMusicEnabled;
-    if (!_isMusicEnabled) {
+    
+    if (_isMusicEnabled) {
+      await play();
+    } else {
+      await stop();
       _isPlaying = false;
     }
+    
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('music_enabled', _isMusicEnabled);
     notifyListeners();
@@ -264,6 +388,11 @@ class MusicPlayerService extends ChangeNotifier {
   /// 볼륨 설정
   Future<void> setVolume(double value) async {
     _volume = value.clamp(0.0, 1.0);
+    
+    if (kIsWeb) {
+      await WebAudioService().setVolume(_volume);
+    }
+    
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble('music_volume', _volume);
     notifyListeners();
@@ -273,6 +402,12 @@ class MusicPlayerService extends ChangeNotifier {
   Future<void> _savePlaylist() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList('playlist_ids', _playlist.map((t) => t.id).toList());
+  }
+
+  /// 현재 인덱스 저장
+  Future<void> _saveCurrentIndex() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('current_track_index', _currentIndex);
   }
 
   /// 현재 트랙의 파일 경로 (웹용)

@@ -16,7 +16,7 @@ import '../services/daily_attendance_service.dart';
 import '../services/lucky_wheel_service.dart';
 import '../services/pwa_install_service.dart';
 import '../services/vibration_service.dart';
-import '../services/background_music_service.dart';
+import '../services/music_player_service.dart';
 import '../challenge/challenge_page.dart';
 import '../settings/settings_page.dart';
 import '../widgets/glassmorphism_card.dart';
@@ -190,8 +190,8 @@ class _HomePageState extends State<HomePage> {
     await DailyAttendanceService.init();
     await LuckyWheelService.init();
     
-    // 배경음악 초기화 (웹에서는 사용자 상호작용 후 재생)
-    await BackgroundMusicService().initialize();
+    // 통합 음악 플레이어 초기화 (웹에서는 사용자 상호작용 후 재생)
+    await MusicPlayerService().initialize();
     
     if (mounted) {
       _loadCachedData();
@@ -341,7 +341,7 @@ class _HomePageState extends State<HomePage> {
       onPointerDown: (_) {
         // 웹/PWA에서 사용자 상호작용 시 음악 재생 시작
         if (kIsWeb) {
-          BackgroundMusicService().onUserInteraction();
+          MusicPlayerService().onUserInteraction();
         }
       },
       child: Scaffold(
@@ -891,13 +891,13 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               // 음악 토글 버튼
-              StatefulBuilder(
-                builder: (context, setMusicState) {
-                  final musicService = BackgroundMusicService();
+              ListenableBuilder(
+                listenable: MusicPlayerService(),
+                builder: (context, child) {
+                  final musicService = MusicPlayerService();
                   return GestureDetector(
                     onTap: () async {
                       await musicService.toggleMusic();
-                      setMusicState(() {});
                     },
                     child: Container(
                       margin: const EdgeInsets.only(right: 8),

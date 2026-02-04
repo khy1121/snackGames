@@ -213,7 +213,7 @@ class _MusicPlayerPopupState extends State<MusicPlayerPopup> with SingleTickerPr
             children: [
               // 셔플
               IconButton(
-                onPressed: _playerService.toggleShuffle,
+                onPressed: () => _playerService.toggleShuffle(),
                 icon: Icon(
                   Icons.shuffle,
                   color: _playerService.shuffle 
@@ -224,7 +224,7 @@ class _MusicPlayerPopupState extends State<MusicPlayerPopup> with SingleTickerPr
               
               // 이전 곡
               IconButton(
-                onPressed: _playerService.previous,
+                onPressed: () => _playerService.previous(),
                 icon: const Icon(
                   Icons.skip_previous,
                   color: Colors.white,
@@ -234,7 +234,7 @@ class _MusicPlayerPopupState extends State<MusicPlayerPopup> with SingleTickerPr
               
               // 재생/일시정지
               GestureDetector(
-                onTap: _playerService.togglePlay,
+                onTap: () => _playerService.togglePlay(),
                 child: Container(
                   width: 64,
                   height: 64,
@@ -252,7 +252,7 @@ class _MusicPlayerPopupState extends State<MusicPlayerPopup> with SingleTickerPr
               
               // 다음 곡
               IconButton(
-                onPressed: _playerService.next,
+                onPressed: () => _playerService.next(),
                 icon: const Icon(
                   Icons.skip_next,
                   color: Colors.white,
@@ -262,7 +262,7 @@ class _MusicPlayerPopupState extends State<MusicPlayerPopup> with SingleTickerPr
               
               // 반복 모드
               IconButton(
-                onPressed: _playerService.toggleRepeatMode,
+                onPressed: () => _playerService.toggleRepeatMode(),
                 icon: Icon(
                   _getRepeatIcon(),
                   color: _playerService.repeatMode != RepeatMode.none 

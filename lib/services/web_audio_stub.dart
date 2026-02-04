@@ -13,8 +13,11 @@ class WebAudioService {
   Future<void> stop() async {}
   Future<void> toggleMusic() async {}
   Future<void> setVolume(double volume) async {}
+  void setOnTrackEnded(void Function() callback) {}
+  void setLoopMode(bool loop) {}
   bool get isMusicEnabled => false;
   double get volume => 0.3;
   bool get isPlaying => false;
+  String get currentTrackPath => '';
   void dispose() {}
 }

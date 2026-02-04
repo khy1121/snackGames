@@ -17,7 +17,24 @@ class WebAudioService {
   double _volume = 0.3;
   bool _isPlaying = false;
   bool _userInteracted = false;
+  bool _loopMode = false;  // 한 곡 반복 모드
   String _currentTrackPath = 'audio/mainLogo.mp3';
+  
+  // 트랙 종료 콜백
+  void Function()? _onTrackEnded;
+
+  /// 트랙 종료 콜백 설정
+  void setOnTrackEnded(void Function() callback) {
+    _onTrackEnded = callback;
+  }
+
+  /// 루프 모드 설정 (한 곡 반복)
+  void setLoopMode(bool loop) {
+    _loopMode = loop;
+    if (_audioElement != null) {
+      _audioElement!.loop = loop;
+    }
+  }
 
   /// 서비스 초기화
   Future<void> initialize() async {
@@ -31,7 +48,7 @@ class WebAudioService {
       // HTML5 Audio 요소 생성 - web 폴더의 정적 파일 사용
       _audioElement = html.AudioElement()
         ..src = _currentTrackPath
-        ..loop = true
+        ..loop = _loopMode
         ..volume = _volume;
       
       // preload 설정
@@ -40,6 +57,10 @@ class WebAudioService {
       // 트랙 종료 시 이벤트
       _audioElement!.onEnded.listen((_) {
         _isPlaying = false;
+        // 루프 모드가 아닐 때만 콜백 호출 (루프 모드면 자동 반복)
+        if (!_loopMode && _onTrackEnded != null) {
+          _onTrackEnded!();
+        }
       });
 
       _isInitialized = true;
@@ -53,7 +74,7 @@ class WebAudioService {
   /// 트랙 변경
   Future<void> changeTrack(String fileName) async {
     final newPath = 'audio/$fileName';
-    if (_currentTrackPath == newPath) return;
+    if (_currentTrackPath == newPath && _audioElement != null) return;
     
     _currentTrackPath = newPath;
     
@@ -61,6 +82,7 @@ class WebAudioService {
       final wasPlaying = _isPlaying;
       await stop();
       _audioElement!.src = newPath;
+      _audioElement!.loop = _loopMode;
       _audioElement!.load();
       
       if (wasPlaying && _isMusicEnabled) {
@@ -165,10 +187,14 @@ class WebAudioService {
   /// 현재 재생 중인지 여부
   bool get isPlaying => _isPlaying;
 
+  /// 현재 트랙 경로
+  String get currentTrackPath => _currentTrackPath;
+
   /// 리소스 정리
   void dispose() {
     _audioElement?.pause();
     _audioElement = null;
     _isInitialized = false;
+    _onTrackEnded = null;
   }
 }
