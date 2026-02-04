@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../game/game_page.dart';
 import '../dice/dice_game_page.dart';
+import '../dice/dice_tutorial_page.dart';
 
 import '../profile/profile_page.dart';
 import '../shop/shop_page.dart';
@@ -439,6 +440,80 @@ class _HomePageState extends State<HomePage> {
         
         const SizedBox(height: 16),
         
+        // 튜토리얼 카드
+        GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const DiceTutorialPage(),
+              ),
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF00B894), Color(0xFF00D2A0)],
+              ),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.school, color: Colors.white, size: 28),
+                ),
+                const SizedBox(width: 16),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '합쳐라 주사위',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        '주사위 3개 매칭하기',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Text(
+                    '플레이',
+                    style: TextStyle(
+                      color: Color(0xFF00B894),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        
+        const SizedBox(height: 16),
+        
         // 새 기능: 출석 & 럭키 휠
         Row(
           children: [
@@ -674,7 +749,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                       const SizedBox(width: 6),
                       const Text(
-                        'v2.3.0',
+                        'v2.4.0',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
