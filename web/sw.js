@@ -1,5 +1,7 @@
 // Service Worker for PWA
-const CACHE_NAME = 'snack-games-v2';
+// 버전 업데이트 시 이 숫자를 변경하세요!
+const SW_VERSION = '2.0.1';
+const CACHE_NAME = `snack-games-v${SW_VERSION}`;
 const urlsToCache = [
     '/',
     '/index.html',
@@ -26,11 +28,13 @@ self.addEventListener('install', (event) => {
     self.skipWaiting();
 });
 
-// Activate event - clean up old caches
+// Activate event - clean up old caches and notify clients
 self.addEventListener('activate', (event) => {
     event.waitUntil(
-        caches.keys().then((cacheNames) => {
-            return Promise.all(
+        (async () => {
+            // Clean up old caches
+            const cacheNames = await caches.keys();
+            await Promise.all(
                 cacheNames.map((cacheName) => {
                     if (cacheName !== CACHE_NAME) {
                         console.log('Deleting old cache:', cacheName);
@@ -38,7 +42,17 @@ self.addEventListener('activate', (event) => {
                     }
                 })
             );
-        })
+
+            // Notify all clients about the update
+            const clients = await self.clients.matchAll({ type: 'window' });
+            clients.forEach((client) => {
+                client.postMessage({
+                    type: 'SW_UPDATED',
+                    version: SW_VERSION,
+                    message: '새 버전이 설치되었습니다!'
+                });
+            });
+        })()
     );
     self.clients.claim();
 });
@@ -78,4 +92,18 @@ self.addEventListener('fetch', (event) => {
                 });
             })
     );
+});
+
+// Handle messages from clients
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'GET_VERSION') {
+        event.source.postMessage({
+            type: 'SW_VERSION',
+            version: SW_VERSION
+        });
+    }
+
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
 });
