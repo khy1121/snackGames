@@ -21,20 +21,25 @@ class BackgroundMusicService {
   Future<void> initialize() async {
     if (_isInitialized) return;
 
-    final prefs = await SharedPreferences.getInstance();
-    _isMusicEnabled = prefs.getBool(_musicEnabledKey) ?? true;
-    _volume = prefs.getDouble(_musicVolumeKey) ?? 0.3;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _isMusicEnabled = prefs.getBool(_musicEnabledKey) ?? true;
+      _volume = prefs.getDouble(_musicVolumeKey) ?? 0.3;
 
-    // 무한 반복 설정
-    await _audioPlayer.setReleaseMode(ReleaseMode.loop);
-    await _audioPlayer.setVolume(_volume);
+      // 무한 반복 설정
+      await _audioPlayer.setReleaseMode(ReleaseMode.loop);
+      await _audioPlayer.setVolume(_volume);
 
-    // 웹이 아닌 경우에만 자동 재생 (웹은 사용자 상호작용 필요)
-    if (!kIsWeb && _isMusicEnabled) {
-      await play();
+      // 웹이 아닌 경우에만 자동 재생 (웹은 사용자 상호작용 필요)
+      if (!kIsWeb && _isMusicEnabled) {
+        await play();
+      }
+
+      _isInitialized = true;
+    } catch (e) {
+      print('Failed to initialize background music service: $e');
+      _isInitialized = true; // 에러가 나도 다시 초기화 시도 방지
     }
-
-    _isInitialized = true;
   }
 
   /// 배경음악 재생

@@ -340,9 +340,13 @@ class _HomePageState extends State<HomePage> {
       onPointerDown: (_) async {
         // 웹에서 첫 사용자 상호작용 시 배경음악 재생 시작
         if (kIsWeb) {
-          final musicService = BackgroundMusicService();
-          if (musicService.isMusicEnabled && !await musicService.isPlaying) {
-            await musicService.play();
+          try {
+            final musicService = BackgroundMusicService();
+            if (musicService.isMusicEnabled && !await musicService.isPlaying) {
+              await musicService.play();
+            }
+          } catch (e) {
+            print('Music error: $e');
           }
         }
       },
