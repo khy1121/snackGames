@@ -5,17 +5,14 @@ class WebAudioService {
   WebAudioService._internal();
 
   Future<void> initialize() async {}
-  Future<void> onUserInteraction() async {}
   Future<void> changeTrack(String fileName) async {}
   Future<void> play() async {}
   Future<void> pause() async {}
   Future<void> resume() async {}
   Future<void> stop() async {}
-  Future<void> toggleMusic() async {}
   Future<void> setVolume(double volume) async {}
   void setOnTrackEnded(void Function() callback) {}
   void setLoopMode(bool loop) {}
-  bool get isMusicEnabled => false;
   double get volume => 0.3;
   bool get isPlaying => false;
   String get currentTrackPath => '';

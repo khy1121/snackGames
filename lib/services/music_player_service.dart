@@ -225,10 +225,18 @@ class MusicPlayerService extends ChangeNotifier {
 
   /// 현재 트랙 실제 재생
   Future<void> _playCurrentTrack() async {
-    if (!_isMusicEnabled || _playlist.isEmpty) return;
+    if (!_isMusicEnabled || _playlist.isEmpty) {
+      print('Cannot play: musicEnabled=$_isMusicEnabled, playlist=${_playlist.length}');
+      return;
+    }
     
     final track = currentTrack;
-    if (track == null) return;
+    if (track == null) {
+      print('Cannot play: currentTrack is null');
+      return;
+    }
+
+    print('Playing track: ${track.title} (${track.fileName})');
 
     if (kIsWeb) {
       final webAudio = WebAudioService();
@@ -236,7 +244,6 @@ class MusicPlayerService extends ChangeNotifier {
       await webAudio.play();
     } else {
       // 모바일: BackgroundMusicService 사용 (추후 구현)
-      // await BackgroundMusicService().playTrack(track.fileName);
     }
     
     _isPlaying = true;
@@ -245,6 +252,7 @@ class MusicPlayerService extends ChangeNotifier {
 
   /// 재생/일시정지 토글
   Future<void> togglePlay() async {
+    print('togglePlay called: isPlaying=$_isPlaying');
     if (_isPlaying) {
       await pause();
     } else {
@@ -254,11 +262,22 @@ class MusicPlayerService extends ChangeNotifier {
 
   /// 재생
   Future<void> play() async {
-    if (_playlist.isEmpty || !_isMusicEnabled) return;
+    print('play() called: playlist=${_playlist.length}, musicEnabled=$_isMusicEnabled');
+    
+    if (_playlist.isEmpty) {
+      print('Playlist is empty, cannot play');
+      return;
+    }
+    
+    if (!_isMusicEnabled) {
+      print('Music is disabled');
+      return;
+    }
     
     if (kIsWeb) {
       final webAudio = WebAudioService();
       if (currentTrack != null) {
+        print('Changing track to: ${currentTrack!.fileName}');
         await webAudio.changeTrack(currentTrack!.fileName);
       }
       await webAudio.play();

@@ -1,23 +1,18 @@
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
-import 'package:shared_preferences/shared_preferences.dart';
 
 /// 웹 전용 배경음악 서비스 (HTML5 Audio API 사용)
+/// MusicPlayerService에서 호출하는 저수준 오디오 API
 class WebAudioService {
   static final WebAudioService _instance = WebAudioService._internal();
   factory WebAudioService() => _instance;
   WebAudioService._internal();
 
-  static const String _musicEnabledKey = 'music_enabled';
-  static const String _musicVolumeKey = 'music_volume';
-
   html.AudioElement? _audioElement;
   bool _isInitialized = false;
-  bool _isMusicEnabled = true;
   double _volume = 0.3;
   bool _isPlaying = false;
-  bool _userInteracted = false;
-  bool _loopMode = false;  // 한 곡 반복 모드
+  bool _loopMode = false;
   String _currentTrackPath = 'audio/mainLogo.mp3';
   
   // 트랙 종료 콜백
@@ -41,11 +36,7 @@ class WebAudioService {
     if (_isInitialized) return;
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      _isMusicEnabled = prefs.getBool(_musicEnabledKey) ?? true;
-      _volume = prefs.getDouble(_musicVolumeKey) ?? 0.3;
-
-      // HTML5 Audio 요소 생성 - web 폴더의 정적 파일 사용
+      // HTML5 Audio 요소 생성
       _audioElement = html.AudioElement()
         ..src = _currentTrackPath
         ..loop = _loopMode
@@ -57,10 +48,21 @@ class WebAudioService {
       // 트랙 종료 시 이벤트
       _audioElement!.onEnded.listen((_) {
         _isPlaying = false;
-        // 루프 모드가 아닐 때만 콜백 호출 (루프 모드면 자동 반복)
+        // 루프 모드가 아닐 때만 콜백 호출
         if (!_loopMode && _onTrackEnded != null) {
           _onTrackEnded!();
         }
+      });
+
+      // 에러 이벤트 핸들러
+      _audioElement!.onError.listen((event) {
+        print('Audio error: ${_audioElement?.error?.code}');
+        _isPlaying = false;
+      });
+
+      // canplay 이벤트 핸들러
+      _audioElement!.onCanPlay.listen((_) {
+        print('Audio can play: $_currentTrackPath');
       });
 
       _isInitialized = true;
@@ -74,45 +76,56 @@ class WebAudioService {
   /// 트랙 변경
   Future<void> changeTrack(String fileName) async {
     final newPath = 'audio/$fileName';
-    if (_currentTrackPath == newPath && _audioElement != null) return;
     
+    // 같은 트랙이면 무시
+    if (_currentTrackPath == newPath && _audioElement != null) {
+      print('Same track, skipping change: $newPath');
+      return;
+    }
+    
+    print('Changing track to: $newPath');
     _currentTrackPath = newPath;
     
     if (_audioElement != null) {
       final wasPlaying = _isPlaying;
-      await stop();
+      
+      // 현재 재생 중지
+      _audioElement!.pause();
+      _isPlaying = false;
+      
+      // 새 트랙 설정
       _audioElement!.src = newPath;
       _audioElement!.loop = _loopMode;
       _audioElement!.load();
       
-      if (wasPlaying && _isMusicEnabled) {
-        await Future.delayed(const Duration(milliseconds: 200));
+      // 이전에 재생 중이었다면 다시 재생
+      if (wasPlaying) {
+        await Future.delayed(const Duration(milliseconds: 300));
         await play();
       }
     }
   }
 
-  /// 사용자 상호작용 후 음악 재생 시도
-  Future<void> onUserInteraction() async {
-    if (_userInteracted) return;
-    _userInteracted = true;
-    
-    if (_isMusicEnabled && !_isPlaying) {
-      await play();
-    }
-  }
-
   /// 배경음악 재생
   Future<void> play() async {
-    if (!_isMusicEnabled || _isPlaying || _audioElement == null) return;
+    if (_audioElement == null) {
+      print('Audio element is null');
+      return;
+    }
+    
+    if (_isPlaying) {
+      print('Already playing');
+      return;
+    }
 
     try {
+      print('Attempting to play: $_currentTrackPath');
+      print('Audio readyState: ${_audioElement!.readyState}');
+      
       // 오디오 로드 확인
       if (_audioElement!.readyState < 2) {
-        // HAVE_CURRENT_DATA 이상이어야 재생 가능
         _audioElement!.load();
-        // 잠시 대기 후 재생 시도
-        await Future.delayed(const Duration(milliseconds: 100));
+        await Future.delayed(const Duration(milliseconds: 200));
       }
       
       await _audioElement!.play();
@@ -131,14 +144,16 @@ class WebAudioService {
   Future<void> pause() async {
     _audioElement?.pause();
     _isPlaying = false;
+    print('Audio paused');
   }
 
   /// 배경음악 재개
   Future<void> resume() async {
-    if (!_isMusicEnabled || _audioElement == null) return;
+    if (_audioElement == null) return;
     try {
       await _audioElement!.play();
       _isPlaying = true;
+      print('Audio resumed');
     } catch (e) {
       print('Failed to resume: $e');
     }
@@ -151,20 +166,7 @@ class WebAudioService {
       _audioElement!.currentTime = 0;
     }
     _isPlaying = false;
-  }
-
-  /// 음악 토글 (켜기/끄기)
-  Future<void> toggleMusic() async {
-    _isMusicEnabled = !_isMusicEnabled;
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_musicEnabledKey, _isMusicEnabled);
-
-    if (_isMusicEnabled) {
-      await play();
-    } else {
-      await stop();
-    }
+    print('Audio stopped');
   }
 
   /// 볼륨 설정 (0.0 ~ 1.0)
@@ -173,13 +175,8 @@ class WebAudioService {
     if (_audioElement != null) {
       _audioElement!.volume = _volume;
     }
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble(_musicVolumeKey, _volume);
+    print('Volume set to: $_volume');
   }
-
-  /// 현재 음악 활성화 상태
-  bool get isMusicEnabled => _isMusicEnabled;
 
   /// 현재 볼륨
   double get volume => _volume;

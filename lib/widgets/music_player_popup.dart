@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/music_player_service.dart';
 
-/// 멜론/플로 스타일 음악 플레이어 팝업
+/// 심플한 음악 플레이어 팝업 (토글 스위치 방식)
 class MusicPlayerPopup extends StatefulWidget {
   const MusicPlayerPopup({super.key});
 
@@ -9,20 +9,17 @@ class MusicPlayerPopup extends StatefulWidget {
   State<MusicPlayerPopup> createState() => _MusicPlayerPopupState();
 }
 
-class _MusicPlayerPopupState extends State<MusicPlayerPopup> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _MusicPlayerPopupState extends State<MusicPlayerPopup> {
   final MusicPlayerService _playerService = MusicPlayerService();
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     _playerService.addListener(_onPlayerChanged);
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
     _playerService.removeListener(_onPlayerChanged);
     super.dispose();
   }
@@ -34,7 +31,7 @@ class _MusicPlayerPopupState extends State<MusicPlayerPopup> with SingleTickerPr
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.75,
+      height: MediaQuery.of(context).size.height * 0.7,
       decoration: const BoxDecoration(
         color: Color(0xFF1A1A2E),
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -80,28 +77,52 @@ class _MusicPlayerPopupState extends State<MusicPlayerPopup> with SingleTickerPr
           // 플레이어 컨트롤
           _buildPlayerControls(),
           
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           
-          // 탭 바
-          TabBar(
-            controller: _tabController,
-            indicatorColor: const Color(0xFF00B894),
-            labelColor: const Color(0xFF00B894),
-            unselectedLabelColor: Colors.grey,
-            tabs: const [
-              Tab(text: '플레이리스트'),
-              Tab(text: '전체 음악'),
-            ],
+          // 구분선
+          Divider(color: Colors.grey[700], height: 1),
+          
+          // 플레이리스트 헤더
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  '플레이리스트',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  '${_playerService.playlist.length}곡',
+                  style: TextStyle(
+                    color: Colors.grey[400],
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
           ),
           
-          // 탭 내용
+          // 트랙 리스트 (토글 스위치 방식)
           Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildPlaylistTab(),
-                _buildAllTracksTab(),
-              ],
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: MusicPlayerService.availableTracks.length,
+              itemBuilder: (context, index) {
+                final track = MusicPlayerService.availableTracks[index];
+                final isInPlaylist = _playerService.isInPlaylist(track);
+                final isCurrentTrack = _playerService.currentTrack?.id == track.id;
+                
+                return _buildTrackTile(
+                  track: track,
+                  isInPlaylist: isInPlaylist,
+                  isCurrentTrack: isCurrentTrack,
+                );
+              },
             ),
           ),
         ],
@@ -288,103 +309,12 @@ class _MusicPlayerPopupState extends State<MusicPlayerPopup> with SingleTickerPr
     }
   }
 
-  Widget _buildPlaylistTab() {
-    final playlist = _playerService.playlist;
-    
-    if (playlist.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.queue_music, size: 64, color: Colors.grey[600]),
-            const SizedBox(height: 16),
-            Text(
-              '플레이리스트가 비어있습니다',
-              style: TextStyle(color: Colors.grey[400], fontSize: 16),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '전체 음악 탭에서 곡을 추가해보세요',
-              style: TextStyle(color: Colors.grey[600], fontSize: 14),
-            ),
-          ],
-        ),
-      );
-    }
-    
-    return ReorderableListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: playlist.length,
-      onReorder: (oldIndex, newIndex) {
-        setState(() {
-          if (newIndex > oldIndex) newIndex--;
-          final item = _playerService.playlist.removeAt(oldIndex);
-          _playerService.playlist.insert(newIndex, item);
-        });
-      },
-      itemBuilder: (context, index) {
-        final track = playlist[index];
-        final isCurrentTrack = _playerService.currentIndex == index;
-        
-        return _buildTrackTile(
-          key: ValueKey(track.id),
-          track: track,
-          isCurrentTrack: isCurrentTrack,
-          trailing: IconButton(
-            icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
-            onPressed: () => _playerService.removeFromPlaylist(track),
-          ),
-          onTap: () => _playerService.playTrack(track),
-        );
-      },
-    );
-  }
-
-  Widget _buildAllTracksTab() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: MusicPlayerService.availableTracks.length,
-      itemBuilder: (context, index) {
-        final track = MusicPlayerService.availableTracks[index];
-        final isInPlaylist = _playerService.isInPlaylist(track);
-        
-        return _buildTrackTile(
-          key: ValueKey('all_${track.id}'),
-          track: track,
-          isCurrentTrack: _playerService.currentTrack?.id == track.id,
-          trailing: IconButton(
-            icon: Icon(
-              isInPlaylist ? Icons.check_circle : Icons.add_circle_outline,
-              color: isInPlaylist ? const Color(0xFF00B894) : Colors.grey,
-            ),
-            onPressed: () {
-              if (isInPlaylist) {
-                _playerService.removeFromPlaylist(track);
-              } else {
-                _playerService.addToPlaylist(track);
-              }
-            },
-          ),
-          onTap: () {
-            if (!isInPlaylist) {
-              _playerService.addToPlaylist(track);
-            }
-            _playerService.playTrack(track);
-          },
-        );
-      },
-    );
-  }
-
   Widget _buildTrackTile({
-    required Key key,
     required MusicTrack track,
+    required bool isInPlaylist,
     required bool isCurrentTrack,
-    required Widget trailing,
-    required VoidCallback onTap,
   }) {
     return Container(
-      key: key,
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: isCurrentTrack 
@@ -396,7 +326,16 @@ class _MusicPlayerPopupState extends State<MusicPlayerPopup> with SingleTickerPr
             : null,
       ),
       child: ListTile(
-        onTap: onTap,
+        onTap: () {
+          // 트랙 클릭 시 재생
+          if (isInPlaylist) {
+            _playerService.playTrack(track);
+          } else {
+            // 플레이리스트에 없으면 추가 후 재생
+            _playerService.addToPlaylist(track);
+            _playerService.playTrack(track);
+          }
+        },
         leading: Container(
           width: 48,
           height: 48,
@@ -426,7 +365,21 @@ class _MusicPlayerPopupState extends State<MusicPlayerPopup> with SingleTickerPr
           track.artist,
           style: TextStyle(color: Colors.grey[500], fontSize: 12),
         ),
-        trailing: trailing,
+        // 온/오프 토글 스위치
+        trailing: Switch(
+          value: isInPlaylist,
+          onChanged: (value) {
+            if (value) {
+              _playerService.addToPlaylist(track);
+            } else {
+              _playerService.removeFromPlaylist(track);
+            }
+          },
+          activeColor: const Color(0xFF00B894),
+          activeTrackColor: const Color(0xFF00B894).withValues(alpha: 0.5),
+          inactiveThumbColor: Colors.grey[600],
+          inactiveTrackColor: Colors.grey[800],
+        ),
       ),
     );
   }
