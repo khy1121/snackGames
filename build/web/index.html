@@ -148,26 +148,65 @@
 
   <script>
     // Current SW Version
-    window.currentSWVersion = '2.2.0'; // Service Worker와 동일한 버전
+    window.currentSWVersion = '2.2.1'; // Service Worker와 동일한 버전
+    
+    // 토스트 자동 숨김 타이머
+    let toastAutoHideTimer = null;
     
     // PWA Update Toast Functions
     window.showUpdateToast = function (version) {
       const toast = document.getElementById('pwa-update-toast');
       const versionMsg = document.getElementById('toast-version-msg');
+      
+      // 이미 표시 중이면 타이머만 리셋
+      if (toast.classList.contains('show')) {
+        if (toastAutoHideTimer) clearTimeout(toastAutoHideTimer);
+        toastAutoHideTimer = setTimeout(() => window.dismissUpdateToast(), 15000);
+        return;
+      }
+      
       if (version) {
         versionMsg.textContent = `버전 ${version}이(가) 준비되었습니다.`;
       }
+      
+      // hiding 클래스 제거 후 show 추가
+      toast.classList.remove('hiding');
       toast.classList.add('show');
+      
+      // 15초 후 자동 숨김
+      if (toastAutoHideTimer) clearTimeout(toastAutoHideTimer);
+      toastAutoHideTimer = setTimeout(() => {
+        window.dismissUpdateToast();
+      }, 15000);
     };
 
     window.dismissUpdateToast = function () {
       const toast = document.getElementById('pwa-update-toast');
+      
+      // 타이머 정리
+      if (toastAutoHideTimer) {
+        clearTimeout(toastAutoHideTimer);
+        toastAutoHideTimer = null;
+      }
+      
+      // hiding 애니메이션 시작
+      toast.classList.add('hiding');
       toast.classList.remove('show');
+      
+      // 애니메이션 완료 후 완전히 숨김
+      setTimeout(() => {
+        toast.classList.remove('hiding');
+      }, 400);
     };
 
     window.refreshForUpdate = function () {
-      // 업데이트 시작 - 토스트 숨기기
-      window.dismissUpdateToast();
+      // 업데이트 시작 - 토스트 완전히 제거
+      const toast = document.getElementById('pwa-update-toast');
+      if (toastAutoHideTimer) {
+        clearTimeout(toastAutoHideTimer);
+        toastAutoHideTimer = null;
+      }
+      toast.classList.remove('show', 'hiding');
       
       // 서비스 워커에게 skipWaiting 메시지 전송
       if (navigator.serviceWorker.controller) {
