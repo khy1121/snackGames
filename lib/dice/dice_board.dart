@@ -82,6 +82,7 @@ class DiceMergeBoard {
   int totalMerges = 0;
   bool isGameOver = false;
   Dice? nextDice;
+  (int, int)? lastDroppedPosition; // 마지막 드롭 위치 추적
   
   final Random _random = Random();
   
@@ -217,6 +218,9 @@ class DiceMergeBoard {
     final droppedDice = nextDice!;
     cells[targetRow][col].dice = droppedDice;
     
+    // 마지막 드롭 위치 저장
+    lastDroppedPosition = (targetRow, col);
+    
     // 머지 체크 및 처리 (no debug print)
     final mergeResult = _processMerges();
     
@@ -263,16 +267,14 @@ class DiceMergeBoard {
             // 3개 이상 매칭!
             merged = true;
             
-            // 마지막으로 놓인 위치 (가장 높은 행 = 가장 낮은 r값)가 아닌
-            // 가장 마지막으로 추가된 주사위 위치에 새 주사위 생성
-            // 여기서는 가장 아래쪽 주사위 위치 사용
+            // 마지막에 드롭한 주사위가 매칭에 포함되어 있으면 그 위치 사용
+            // 아니면 현재 검사 중인 위치 사용
             int mergeRow = r;
             int mergeCol = c;
-            for (final pos in matches) {
-              if (pos.$1 > mergeRow || (pos.$1 == mergeRow && pos.$2 > mergeCol)) {
-                mergeRow = pos.$1;
-                mergeCol = pos.$2;
-              }
+            if (lastDroppedPosition != null && 
+                matches.contains(lastDroppedPosition!)) {
+              mergeRow = lastDroppedPosition!.$1;
+              mergeCol = lastDroppedPosition!.$2;
             }
             
             // 매칭된 주사위들 제거

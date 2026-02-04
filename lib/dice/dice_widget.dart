@@ -149,15 +149,40 @@ class DiceWidget extends StatelessWidget {
       return RepaintBoundary(
         child: TweenAnimationBuilder<double>(
           tween: Tween(begin: 0.0, end: 1.0),
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.elasticOut,
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeOutBack,
           builder: (context, value, child) {
-            final scale = 0.5 + value * 0.5;
-            return Transform.scale(
-              scale: scale,
-              child: Opacity(
-                opacity: value.clamp(0.0, 1.0),
-                child: child,
+            // 펄스 효과: 작아졌다가 커지는 효과
+            final pulseScale = value < 0.3 
+                ? 1.0 - (value / 0.3) * 0.5  // 0.5배로 줄어듦
+                : 0.5 + ((value - 0.3) / 0.7) * 0.7; // 1.2배로 커짐
+            
+            // 회전 효과
+            final rotation = value * 3.14159 * 2; // 360도 회전
+            
+            // 발광 효과
+            final glowIntensity = value < 0.5 ? value * 2 : (1.0 - value) * 2;
+            
+            return Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: _getDiceColors().last.withValues(alpha: glowIntensity * 0.8),
+                    blurRadius: 20 * glowIntensity,
+                    spreadRadius: 5 * glowIntensity,
+                  ),
+                ],
+              ),
+              child: Transform.scale(
+                scale: pulseScale,
+                child: Transform.rotate(
+                  angle: rotation,
+                  child: Opacity(
+                    opacity: value.clamp(0.0, 1.0),
+                    child: child,
+                  ),
+                ),
               ),
             );
           },

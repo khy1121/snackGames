@@ -37,6 +37,29 @@ class TextPopupEvent extends EffectEvent {
   TextPopupEvent(this.text, this.position, this.color, {this.fontSize = 24});
 }
 
+class MergeAnimationEvent extends EffectEvent {
+  final List<Offset> fromPositions; // 합쳐지는 주사위들의 위치
+  final Offset toPosition; // 합쳐지는 목표 위치
+  final Color color;
+  
+  MergeAnimationEvent(this.fromPositions, this.toPosition, this.color);
+}
+
+class ScorePopupEvent extends EffectEvent {
+  final int score;
+  final Offset position;
+  final bool isBig;
+  
+  ScorePopupEvent(this.score, this.position, {this.isBig = false});
+}
+
+class ComboIndicatorEvent extends EffectEvent {
+  final int combo;
+  final Offset position;
+  
+  ComboIndicatorEvent(this.combo, this.position);
+}
+
 /// 화면 흔들림 효과 위젯
 class ScreenShake extends StatefulWidget {
   final Widget child;
@@ -142,6 +165,12 @@ class _DiceEffectsOverlayState extends State<DiceEffectsOverlay>
       _activeEffects.add(_ShockwaveEffect(event.position, event.color));
     } else if (event is LightningEvent) {
       _activeEffects.add(_LightningEffect(event.color));
+    } else if (event is MergeAnimationEvent) {
+      _activeEffects.add(_MergeAnimationEffect(event.fromPositions, event.toPosition, event.color));
+    } else if (event is ScorePopupEvent) {
+      _activeEffects.add(_ScorePopupEffect(event.score, event.position, event.isBig));
+    } else if (event is ComboIndicatorEvent) {
+      _activeEffects.add(_ComboIndicatorEffect(event.combo, event.position));
     }
   }
 
@@ -375,6 +404,168 @@ class _ShockwaveEffect extends _ActiveEffect {
       ..strokeWidth = width;
 
     canvas.drawCircle(position, radius, paint);
+  }
+}
+
+class _MergeAnimationEffect extends _ActiveEffect {
+  final List<Offset> fromPositions;
+  final Offset toPosition;
+  final Color color;
+  double time = 0;
+  final double duration = 0.4;
+  
+  _MergeAnimationEffect(this.fromPositions, this.toPosition, this.color);
+  
+  @override
+  bool update(double dt) {
+    time += dt;
+    return time < duration;
+  }
+  
+  @override
+  void draw(Canvas canvas, Size size) {
+    final progress = (time / duration).clamp(0.0, 1.0);
+    final easedProgress = Curves.easeInCubic.transform(progress);
+    
+    final paint = Paint()
+      ..color = color.withValues(alpha: (1.0 - progress) * 0.6)
+      ..style = PaintingStyle.fill;
+    
+    // 각 주사위가 목표 위치로 빨려들어가는 효과
+    for (final from in fromPositions) {
+      final currentX = from.dx + (toPosition.dx - from.dx) * easedProgress;
+      final currentY = from.dy + (toPosition.dy - from.dy) * easedProgress;
+      final size = 30 * (1.0 - easedProgress); // 작아지면서 이동
+      
+      canvas.drawCircle(Offset(currentX, currentY), size, paint);
+      
+      // 궤적 라인
+      final linePaint = Paint()
+        ..color = color.withValues(alpha: (1.0 - progress) * 0.3)
+        ..strokeWidth = 2
+        ..style = PaintingStyle.stroke;
+      
+      canvas.drawLine(from, Offset(currentX, currentY), linePaint);
+    }
+  }
+}
+
+class _ScorePopupEffect extends _ActiveEffect {
+  final int score;
+  final Offset position;
+  final bool isBig;
+  double time = 0;
+  final double duration = 1.0;
+  
+  _ScorePopupEffect(this.score, this.position, this.isBig);
+  
+  @override
+  bool update(double dt) {
+    time += dt;
+    return time < duration;
+  }
+  
+  @override
+  void draw(Canvas canvas, Size size) {
+    final progress = (time / duration).clamp(0.0, 1.0);
+    final y = position.dy - (50 * progress); // 위로 떠오름
+    final opacity = (1.0 - progress).clamp(0.0, 1.0);
+    final scale = 1.0 + (progress * 0.5); // 커지면서 사라짐
+    
+    final textStyle = TextStyle(
+      color: Colors.yellow.withValues(alpha: opacity),
+      fontSize: (isBig ? 36 : 24) * scale,
+      fontWeight: FontWeight.bold,
+      shadows: [
+        Shadow(
+          blurRadius: 10,
+          color: Colors.black.withValues(alpha: opacity * 0.5),
+          offset: const Offset(2, 2),
+        ),
+      ],
+    );
+    
+    final textSpan = TextSpan(
+      text: '+$score',
+      style: textStyle,
+    );
+    
+    final textPainter = TextPainter(
+      text: textSpan,
+      textDirection: TextDirection.ltr,
+    );
+    
+    textPainter.layout();
+    textPainter.paint(
+      canvas,
+      Offset(position.dx - textPainter.width / 2, y),
+    );
+  }
+}
+
+class _ComboIndicatorEffect extends _ActiveEffect {
+  final int combo;
+  final Offset position;
+  double time = 0;
+  final double duration = 0.8;
+  
+  _ComboIndicatorEffect(this.combo, this.position);
+  
+  @override
+  bool update(double dt) {
+    time += dt;
+    return time < duration;
+  }
+  
+  @override
+  void draw(Canvas canvas, Size size) {
+    final progress = (time / duration).clamp(0.0, 1.0);
+    final opacity = progress < 0.2 
+        ? progress / 0.2 
+        : progress > 0.6 
+            ? (1.0 - (progress - 0.6) / 0.4) 
+            : 1.0;
+    final scale = 0.5 + (progress < 0.2 ? progress / 0.2 * 0.5 : 0.5);
+    
+    // 콤보 배경
+    final bgPaint = Paint()
+      ..color = Colors.orange.withValues(alpha: opacity * 0.7)
+      ..style = PaintingStyle.fill;
+    
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: position,
+          width: 120 * scale,
+          height: 50 * scale,
+        ),
+        const Radius.circular(25),
+      ),
+      bgPaint,
+    );
+    
+    // 콤보 텍스트
+    final textStyle = TextStyle(
+      color: Colors.white.withValues(alpha: opacity),
+      fontSize: 24 * scale,
+      fontWeight: FontWeight.bold,
+    );
+    
+    final textSpan = TextSpan(
+      text: '${combo}x COMBO!',
+      style: textStyle,
+    );
+    
+    final textPainter = TextPainter(
+      text: textSpan,
+      textDirection: TextDirection.ltr,
+    );
+    
+    textPainter.layout();
+    textPainter.paint(
+      canvas,
+      Offset(position.dx - textPainter.width / 2, position.dy - textPainter.height / 2),
+    );
   }
 }
 

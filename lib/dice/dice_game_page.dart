@@ -231,6 +231,21 @@ class _DiceGamePageState extends State<DiceGamePage>
     if (hasMerge) {
       _comboStreak++;
       
+      // 진동 피드백 추가
+      if (result.merges.any((m) => m.isMagicClear)) {
+        // 매직 폭발 - 강력한 진동
+        VibrationService.explosion();
+      } else if (result.merges.length >= 3) {
+        // 3개 이상 콤보 - 콤보 진동
+        VibrationService.combo();
+      } else if (result.merges.any((m) => m.isMagicCreated)) {
+        // 별 생성 - 중간 진동
+        VibrationService.heavy();
+      } else {
+        // 일반 머지 - 가벼운 진동
+        VibrationService.medium();
+      }
+      
       // Every merge triggers a small shake
       // _shakeKey.currentState?.shake(); (Disabled for emulator performance)
       
@@ -238,10 +253,6 @@ class _DiceGamePageState extends State<DiceGamePage>
       if (_comboStreak > 0 && _comboStreak % 10 == 0) {
         _eventController.add(LightningEvent());
         // HapticFeedback.heavyImpact(); (Disabled for Emulator Performance)
-      } else {
-         if (SettingsService.vibrationEnabled.value) {
-            // HapticFeedback.lightImpact(); (Disabled for Emulator Performance)
-         }
       }
     } else {
       // No merge, reset streak? 
@@ -251,6 +262,11 @@ class _DiceGamePageState extends State<DiceGamePage>
       // or reset if they want strict combo.
       // Let's reset to make it a "Streak".
       _comboStreak = 0;
+      
+      // 빈 칸 탭 - 가벼운 에러 진동
+      if (result.merges.isEmpty) {
+        VibrationService.light();
+      }
     }
 
 
@@ -288,6 +304,31 @@ class _DiceGamePageState extends State<DiceGamePage>
 
     // 2. Trigger Explosions for Merges (Optimized)
     for (final merge in result.merges) {
+        // 병합 애니메이션 - 주사위가 빨려들어가는 효과
+        final fromPositions = <Offset>[];
+        for (final pos in merge.positions) {
+          final offset = _getCellPosition(pos.$1, pos.$2);
+          if (offset != null) fromPositions.add(offset);
+        }
+        final toPos = _getCellPosition(merge.resultPosition.$1, merge.resultPosition.$2);
+        if (toPos != null && fromPositions.isNotEmpty) {
+          final color = merge.isMagicClear 
+              ? Colors.purple 
+              : merge.isMagicCreated 
+                  ? Colors.amber 
+                  : Colors.blue;
+          _eventController.add(MergeAnimationEvent(fromPositions, toPos, color));
+        }
+        
+        // 점수 팝업
+        if (toPos != null && result.scoreGained > 0) {
+          _eventController.add(ScorePopupEvent(
+            result.scoreGained,
+            toPos,
+            isBig: result.scoreGained > 300,
+          ));
+        }
+        
         // Trigger main explosion at center
         final centerPos = _getCellPosition(merge.resultPosition.$1, merge.resultPosition.$2);
         if (centerPos != null) {
@@ -302,6 +343,12 @@ class _DiceGamePageState extends State<DiceGamePage>
               _eventController.add(ExplosionEvent(p, Colors.orangeAccent.withValues(alpha: 0.5)));
            }
         }
+    }
+    
+    // 콤보 표시 (3개 이상 머지 시)
+    if (result.merges.length >= 2) {
+      final centerPos = _getBoardCenter();
+      _eventController.add(ComboIndicatorEvent(result.merges.length, centerPos));
     }
   }
 
