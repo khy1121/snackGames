@@ -46,7 +46,7 @@
   <style>
     .pwa-update-toast {
       position: fixed;
-      bottom: -100px;
+      bottom: -300px;
       left: 50%;
       transform: translateX(-50%);
       background: linear-gradient(135deg, #2E5940 0%, #1a3528 100%);
@@ -59,12 +59,25 @@
       align-items: center;
       gap: 16px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      transition: bottom 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
       max-width: 90vw;
+      pointer-events: none;
+      opacity: 0;
+      visibility: hidden;
     }
 
     .pwa-update-toast.show {
       bottom: 24px;
+      pointer-events: auto;
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .pwa-update-toast.hiding {
+      bottom: -300px;
+      pointer-events: none;
+      opacity: 0;
+      visibility: hidden;
     }
 
     .pwa-update-toast .toast-icon {
@@ -106,12 +119,25 @@
 
     .pwa-update-toast button {
       border: none;
-      padding: 8px 16px;
+      padding: 10px 20px;
       border-radius: 8px;
       font-weight: 600;
-      font-size: 13px;
+      font-size: 14px;
       cursor: pointer;
       transition: all 0.2s ease;
+      /* 모바일 터치 최적화 */
+      min-height: 44px;
+      min-width: 80px;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      position: relative;
+      z-index: 1;
+      /* 모바일에서 더 확실하게 보이도록 */
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
     }
 
     .pwa-update-toast .btn-refresh {
@@ -119,7 +145,8 @@
       color: #2E5940;
     }
 
-    .pwa-update-toast .btn-refresh:hover {
+    .pwa-update-toast .btn-refresh:hover,
+    .pwa-update-toast .btn-refresh:active {
       background: #f0f0f0;
       transform: scale(1.05);
     }
@@ -129,7 +156,8 @@
       color: white;
     }
 
-    .pwa-update-toast .btn-later:hover {
+    .pwa-update-toast .btn-later:hover,
+    .pwa-update-toast .btn-later:active {
       background: rgba(255, 255, 255, 0.3);
     }
   </style>
@@ -141,14 +169,14 @@
       <span class="toast-message" id="toast-version-msg">새 버전이 준비되었습니다.</span>
     </div>
     <div class="toast-actions">
-      <button class="btn-refresh" onclick="window.refreshForUpdate()">업데이트</button>
-      <button class="btn-later" onclick="window.dismissUpdateToast()">나중에</button>
+      <button id="btn-refresh" class="btn-refresh" type="button">업데이트</button>
+      <button id="btn-later" class="btn-later" type="button">나중에</button>
     </div>
   </div>
 
   <script>
     // Current SW Version
-    window.currentSWVersion = '2.2.1'; // Service Worker와 동일한 버전
+    window.currentSWVersion = '2.2.2'; // Service Worker와 동일한 버전
     
     // 토스트 자동 숨김 타이머
     let toastAutoHideTimer = null;
@@ -189,14 +217,14 @@
         toastAutoHideTimer = null;
       }
       
-      // hiding 애니메이션 시작
-      toast.classList.add('hiding');
+      // show 제거하고 hiding 추가
       toast.classList.remove('show');
+      toast.classList.add('hiding');
       
-      // 애니메이션 완료 후 완전히 숨김
+      // 애니메이션 완료 후 hiding도 제거 (초기 상태로)
       setTimeout(() => {
         toast.classList.remove('hiding');
-      }, 400);
+      }, 500);
     };
 
     window.refreshForUpdate = function () {
@@ -218,6 +246,31 @@
         window.location.reload();
       }, 500);
     };
+
+    // 모바일 터치 이벤트 리스너 추가 (DOM 로드 후)
+    document.addEventListener('DOMContentLoaded', function() {
+      const btnRefresh = document.getElementById('btn-refresh');
+      const btnLater = document.getElementById('btn-later');
+      
+      if (btnRefresh) {
+        // 클릭과 터치 이벤트 모두 처리
+        btnRefresh.addEventListener('click', window.refreshForUpdate, { passive: false });
+        btnRefresh.addEventListener('touchend', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          window.refreshForUpdate();
+        }, { passive: false });
+      }
+      
+      if (btnLater) {
+        btnLater.addEventListener('click', window.dismissUpdateToast, { passive: false });
+        btnLater.addEventListener('touchend', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          window.dismissUpdateToast();
+        }, { passive: false });
+      }
+    });
 
     // Register Service Worker for PWA with update detection
     if ('serviceWorker' in navigator) {
