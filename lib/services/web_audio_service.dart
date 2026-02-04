@@ -27,11 +27,14 @@ class WebAudioService {
       _isMusicEnabled = prefs.getBool(_musicEnabledKey) ?? true;
       _volume = prefs.getDouble(_musicVolumeKey) ?? 0.3;
 
-      // HTML5 Audio 요소 생성
+      // HTML5 Audio 요소 생성 - Flutter 웹 에셋 경로 (assets/assets/...)
       _audioElement = html.AudioElement()
         ..src = 'assets/assets/audio/mainLogo.mp3'
         ..loop = true
         ..volume = _volume;
+      
+      // preload 설정
+      _audioElement!.preload = 'auto';
 
       _isInitialized = true;
       print('Web audio service initialized');
@@ -56,11 +59,22 @@ class WebAudioService {
     if (!_isMusicEnabled || _isPlaying || _audioElement == null) return;
 
     try {
+      // 오디오 로드 확인
+      if (_audioElement!.readyState < 2) {
+        // HAVE_CURRENT_DATA 이상이어야 재생 가능
+        _audioElement!.load();
+        // 잠시 대기 후 재생 시도
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+      
       await _audioElement!.play();
       _isPlaying = true;
-      print('Web background music started');
+      print('Web background music started successfully');
     } catch (e) {
       print('Failed to play web background music: $e');
+      print('Audio src: ${_audioElement?.src}');
+      print('Audio readyState: ${_audioElement?.readyState}');
+      print('Audio error: ${_audioElement?.error?.code}');
       _isPlaying = false;
     }
   }
