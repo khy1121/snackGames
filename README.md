@@ -26,7 +26,7 @@
 
 ## ✨ 주요 기능
 
-### 🎵 음악 플레이어 시스템 (v2.5.1 NEW!)
+### 🎵 음악 플레이어 시스템 (v2.5.3 NEW!)
 - **멜론/플로 스타일 플레이어**: 우상단 🎵 버튼으로 접근
 - **플레이리스트 관리**: 원하는 곡 추가/제거
 - **재생 컨트롤**: 재생, 일시정지, 이전곡, 다음곡
@@ -97,7 +97,7 @@
 | **Storage** | SharedPreferences |
 | **Audio** | HTML5 Audio API (Web), audioplayers (Mobile) |
 | **Architecture** | Service Pattern |
-| **PWA** | Service Worker v2.5.1 |
+| **PWA** | Service Worker v2.5.3 |
 | **Deployment** | Vercel (Auto Deploy) |
 | **Version Control** | Git/GitHub |
 

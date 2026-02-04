@@ -739,255 +739,130 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildHeader(RankInfo rank, int level, double xpProgress) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
       child: Column(
         children: [
           Row(
             children: [
               // 브랜드 로고
-              const Text('🍿', style: TextStyle(fontSize: 28)),
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Text(
-                        '스낵게임즈',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF2E5940),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      const Text(
-                        'v2.5.0',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF00B894),
-                        ),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      AnimatedCounter(
-                        value: level,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF00B894),
-                          fontWeight: FontWeight.bold,
-                        ),
-                        prefix: 'Lv.',
-                      ),
-                      const SizedBox(width: 6),
-                      SizedBox(
-                        width: 60,
-                        height: 4,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(2),
-                          child: TweenAnimationBuilder<double>(
-                            tween: Tween(begin: 0, end: xpProgress),
-                            duration: const Duration(milliseconds: 800),
-                            curve: Curves.easeOutCubic,
-                            builder: (context, value, child) {
-                              return LinearProgressIndicator(
-                                value: value,
-                                backgroundColor: Colors.white.withValues(alpha: 0.2),
-                                valueColor: const AlwaysStoppedAnimation(Color(0xFF00B894)),
-                              );
-                            },
+              const Text('🍿', style: TextStyle(fontSize: 24)),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Text(
+                          '스낵게임즈',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2E5940),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const Spacer(),
-              // PWA 설치 버튼 또는 설치됨 표시
-              if (kIsWeb)
-                PWAInstallService.isRunningAsApp()
-                  ? Container(
-                      margin: const EdgeInsets.only(right: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.3),
-                          width: 1,
+                        const SizedBox(width: 4),
+                        const Text(
+                          'v2.5.3',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF00B894),
+                          ),
                         ),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.check_circle, color: Colors.white, size: 16),
-                          SizedBox(width: 4),
-                          Text(
-                            '앱 설치됨',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 12,
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        AnimatedCounter(
+                          value: level,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF00B894),
+                            fontWeight: FontWeight.bold,
+                          ),
+                          prefix: 'Lv.',
+                        ),
+                        const SizedBox(width: 4),
+                        SizedBox(
+                          width: 50,
+                          height: 3,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(2),
+                            child: TweenAnimationBuilder<double>(
+                              tween: Tween(begin: 0, end: xpProgress),
+                              duration: const Duration(milliseconds: 800),
+                              curve: Curves.easeOutCubic,
+                              builder: (context, value, child) {
+                                return LinearProgressIndicator(
+                                  value: value,
+                                  backgroundColor: Colors.white.withValues(alpha: 0.2),
+                                  valueColor: const AlwaysStoppedAnimation(Color(0xFF00B894)),
+                                );
+                              },
                             ),
                           ),
-                        ],
-                      ),
-                    )
-                  : _isPWAInstallable
-                    ? GestureDetector(
-                        onTap: _installPWA,
-                        child: Container(
-                          margin: const EdgeInsets.only(right: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF00B894), Color(0xFF00CEC9)],
-                            ),
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF00B894).withValues(alpha: 0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.download, color: Colors.white, size: 16),
-                              SizedBox(width: 4),
-                              Text(
-                                '앱 설치',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
                         ),
-                      )
-                    : const SizedBox.shrink(),
-              // 업그레이드 버튼 (New)
-              GestureDetector(
-                onTap: () {
-                  _showPopup(const UpgradePage());
-                },
-                child: Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.purple.withValues(alpha: 0.3),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.purple.withValues(alpha: 0.5)),
-                  ),
-                  child: const Icon(Icons.upgrade, color: Colors.purple, size: 20),
+                      ],
+                    ),
+                  ],
                 ),
+              ),
+              // 아이콘 버튼들 (작은 사이즈)
+              _buildHeaderIconButton(
+                icon: Icons.upgrade,
+                color: Colors.purple,
+                onTap: () => _showPopup(const UpgradePage()),
               ),
               // 음악 토글 버튼
               ListenableBuilder(
                 listenable: MusicPlayerService(),
                 builder: (context, child) {
                   final musicService = MusicPlayerService();
-                  return GestureDetector(
-                    onTap: () async {
-                      await musicService.toggleMusic();
-                    },
-                    child: Container(
-                      margin: const EdgeInsets.only(right: 8),
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: musicService.isMusicEnabled
-                            ? const Color(0xFF00B894).withValues(alpha: 0.2)
-                            : Colors.grey.withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: musicService.isMusicEnabled
-                              ? const Color(0xFF00B894).withValues(alpha: 0.5)
-                              : Colors.grey.withValues(alpha: 0.5),
-                        ),
-                      ),
-                      child: Icon(
-                        musicService.isMusicEnabled ? Icons.music_note : Icons.music_off,
-                        color: musicService.isMusicEnabled ? const Color(0xFF00B894) : Colors.grey,
-                        size: 20,
-                      ),
-                    ),
+                  return _buildHeaderIconButton(
+                    icon: musicService.isMusicEnabled ? Icons.music_note : Icons.music_off,
+                    color: musicService.isMusicEnabled ? const Color(0xFF00B894) : Colors.grey,
+                    onTap: () => musicService.toggleMusic(),
                   );
                 },
               ),
               // 플레이리스트 버튼
-              GestureDetector(
-                onTap: () {
-                  showMusicPlayerPopup(context);
-                },
-                child: Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF6C5CE7).withValues(alpha: 0.2),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xFF6C5CE7).withValues(alpha: 0.5)),
-                  ),
-                  child: const Icon(Icons.queue_music, color: Color(0xFF6C5CE7), size: 20),
-                ),
+              _buildHeaderIconButton(
+                icon: Icons.queue_music,
+                color: const Color(0xFF6C5CE7),
+                onTap: () => showMusicPlayerPopup(context),
               ),
               // 상점 버튼
-              GestureDetector(
-                onTap: () {
-                  _showPopup(const ShopPage());
-                },
-                child: Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFD700).withValues(alpha: 0.2),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xFFFFD700).withValues(alpha: 0.5)),
-                  ),
-                  child: const Icon(Icons.store, color: Color(0xFFFFD700), size: 20),
-                ),
+              _buildHeaderIconButton(
+                icon: Icons.store,
+                color: const Color(0xFFFFD700),
+                onTap: () => _showPopup(const ShopPage()),
               ),
-
               // 프로필 버튼
               GestureDetector(
                 onTap: () {
                   _showPopup(const ProfilePage());
                 },
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: const Color(0xFF2E5940).withValues(alpha: 0.1),
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(rank.icon, style: const TextStyle(fontSize: 16)),
-                      const SizedBox(width: 4),
+                      Text(rank.icon, style: const TextStyle(fontSize: 14)),
+                      const SizedBox(width: 2),
                       Text(
                         rank.name,
                         style: const TextStyle(
                           color: Color(0xFF2E5940),
                           fontWeight: FontWeight.bold,
-                          fontSize: 12,
+                          fontSize: 11,
                         ),
                       ),
                     ],
@@ -996,13 +871,13 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           // 모토 (Pill-shaped translucent container)
            Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(color: const Color(0xFF2E5940).withValues(alpha: 0.1)),
             ),
             child: const Row(
@@ -1011,7 +886,7 @@ class _HomePageState extends State<HomePage> {
                 Text(
                   '기다림을 게임으로 바꾸다 ✨',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     color: Color(0xFF2E5940),
                     fontWeight: FontWeight.w500,
                   ),
@@ -1392,6 +1267,26 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// 헤더 아이콘 버튼 빌더
+  Widget _buildHeaderIconButton({
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(left: 4),
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.15),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: color, size: 18),
       ),
     );
   }
