@@ -32,7 +32,29 @@
   - ❤️ 생존 능력
   - 🍀 행운 확률
 
-### 🏆 진행 시스템
+### � 애니메이션 시스템
+- **주사위 숫자별 고유 애니메이션**
+  - 1: 부드러운 페이드인 (easeOutQuad)
+  - 2: 좌우 흔들림 (wobble)
+  - 3: 180도 회전 + 탄력 효과
+  - 4: 바운스 효과
+  - 5: 파동 효과 + 발광
+  - 6: 540도 강력한 스핀 + 발광 (별 전조!)
+  - ⭐: 720도 회전 + 무지개 펄스
+- **병합 애니메이션**: 주사위가 목표 위치로 빨려들어가는 효과
+- **점수 팝업**: 획득 점수가 위로 떠오르며 커지는 효과
+- **콤보 표시**: 2개 이상 병합 시 "Nx COMBO!" 배지
+- **시각 효과**: 폭발 파티클, 충격파, 번개 (10콤보)
+
+### 📳 진동 피드백 시스템
+- **매직 폭발**: 강력한 explosion 패턴
+- **콤보 병합**: 리듬감 있는 combo 패턴
+- **별 생성**: 중간 강도의 heavy 패턴
+- **일반 병합**: 부드러운 medium 패턴
+- **빈 칸 탭**: 가벼운 light 패턴
+- **게임 오버**: 경고 error 패턴
+
+### �🏆 진행 시스템
 - **레벨 시스템**: 게임을 플레이하며 경험치 획득 및 레벨업
 - **랭크 시스템**: 누적 포인트에 따른 등급 상승
 - **데일리 미션**: 매일 새로운 미션 도전
@@ -41,19 +63,27 @@
 ### 🎨 UI/UX
 - **글래스모피즘 디자인**: 투명하고 모던한 카드 효과
 - **부드러운 애니메이션**: 
-  - 주사위 elasticOut 애니메이션
+  - 주사위 숫자별 고유 애니메이션 (800ms)
+  - 병합 애니메이션 (1000ms)
   - 페이지 전환 페이드 효과
   - 숫자 카운팅 애니메이션
 - **3색 그라데이션 배경**: 시각적 깊이감
 - **반응형 인터랙션**: 터치 피드백 및 스케일 애니메이션
+- **PWA 지원**: 모바일 앱처럼 설치 가능
+  - 오프라인 플레이 지원
+  - 자동 업데이트 알림
+  - 홈 화면 추가 기능
 
 ## 🛠️ 기술 스택
 
-- **Framework**: Flutter 3.x
-- **Language**: Dart
+- **Framework**: Flutter 3.38.8
+- **Language**: Dart 3.10.7
 - **State Management**: StatefulWidget
 - **Storage**: SharedPreferences
 - **Architecture**: Service Pattern
+- **PWA**: Service Worker v2.1.0
+- **Deployment**: Vercel
+- **Version Control**: Git/GitHub
 
 ## 📂 프로젝트 구조
 
@@ -61,9 +91,10 @@
 lib/
 ├── main.dart                 # 앱 진입점
 ├── home/                     # 홈 화면
-│   └── home_page.dart
-├── dice/                     # Dice Merge 게임
-│   ├── dice_game_page.dart
+│   └── home_page.dart       # 게임 로직 + 마지막 드롭 위치 병합
+│   ├── dice_widget.dart      # 숫자별 고유 애니메이션
+│   ├── dice_effects.dart     # VFX 시스템
+│   └── dice_themege.dart
 │   ├── dice_board.dart
 │   ├── dice_widget.dart
 │   └── dice_effects.dart
@@ -86,7 +117,9 @@ lib/
 │   ├── daily_attendance_service.dart
 │   ├── lucky_wheel_service.dart
 │   ├── upgrade_service.dart
-│   ├── achievement_service.dart
+│   ├── challenge_service.dart
+│   ├── vibration_service.dart   # 진동 피드백
+│   └── pwa_install_service.dart # PWA 설치rt
 │   └── challenge_service.dart
 └── widgets/                  # 공통 위젯
     ├── glassmorphism_card.dart
@@ -125,18 +158,51 @@ flutter run
 flutter build apk
 
 # iOS 빌드 (macOS only)
-flutter build ios
+fl웹 빌드 (PWA)
+flutter build web --release
 
+# 릴리즈 빌드
+flutter build apk --release
+```
+
+### 배포 (Vercel)**마지막 드롭 위치**에서 합쳐집니다
+2. ⭐(별) 3개를 합치면 3x3 영역이 폭발합니다
+3. 보드를 꽉 채우지 않도록 공간 관리가 중요합니다
+4. 높은 숫자일수록 더 많은 점수를 획득합니다
+5. **주사위 6**은 별이 될 수 있는 특별한 주사위입니다!
+6. 각 숫자마다 고유한 등장 애니메이션이 있습
+Root Directory: build/web
+Output Directory: (비워둠)
+
+# 자동 배포
+git push origin main
 # 릴리즈 빌드
 flutter build apk --release
 ```
 
 ## 🎯 게임 플레이 팁
 
-### Dice Merge
-1. 같은 숫자 3개를 모으면 다음 숫자로 합쳐집니다
-2. ⭐(별) 3개를 합치면 3x3 영역이 폭발합니다
-3. 보드를 꽉 채우지 않도록 공간 관리가 중요합니다
+### Dice Merge (주사위 위젯)
+- **Lazy Loading**: 필요할 때만 위젯 로드
+- **애니메이션 최적화**: 
+  - Canvas 기반 커스텀 애니메이션
+  - 30fps 제한으로 CPU 사용량 절감
+  - 이펙트 개수 제한 (최대 4개)
+- **Service Worker 캐싱**: 오프라인 지원 및 빠른 로딩
+
+## 📝 업데이트 내역
+
+### v2.1.0 (2026-02-04)
+- 🎨 주사위 숫자별 고유 애니메이션 추가
+- 🌀 병합 시 빨려들어가는 애니메이션
+- 💰 점수 팝업 효과 (위로 떠오름)
+- 🔥 콤보 표시 시스템
+- 📳 상황별 진동 피드백 (6가지 패턴)
+- 🎯 마지막 드롭 위치 기준 병합 로직
+- ⏱️ 애니메이션 지속 시간 증가 (800-1200ms)
+- ⚡ 폭발 파티클, 충격파, 번개 효과
+- 🌐 PWA 업데이트 알림 시스템
+- 🐛 Service Worker 캐시 버전 관리않도록 공간 관리가 중요합니다
 4. 높은 숫자일수록 더 많은 점수를 획득합니다
 
 ### 2048
@@ -186,7 +252,7 @@ This project is licensed under the MIT License.
 
 ## 📧 연락처
 
-프로젝트 링크: [GitHub Repository URL]
+프로젝트 링크: [https://github.com/khy1121]
 
 ---
 

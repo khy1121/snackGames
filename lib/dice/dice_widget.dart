@@ -129,16 +129,10 @@ class DiceWidget extends StatelessWidget {
       return RepaintBoundary(
         child: TweenAnimationBuilder<double>(
           tween: Tween(begin: 0.0, end: 1.0),
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.elasticOut,
+          duration: const Duration(milliseconds: 800), // 800ms로 증가
+          curve: _getAnimationCurve(),
           builder: (context, value, child) {
-            return Transform.scale(
-              scale: value,
-              child: Transform.rotate(
-                angle: (1 - value) * 0.5,
-                child: child,
-              ),
-            );
+            return _buildNewDiceAnimation(value, child!);
           },
           child: diceWidget,
         ),
@@ -149,7 +143,7 @@ class DiceWidget extends StatelessWidget {
       return RepaintBoundary(
         child: TweenAnimationBuilder<double>(
           tween: Tween(begin: 0.0, end: 1.0),
-          duration: const Duration(milliseconds: 600),
+          duration: const Duration(milliseconds: 1000), // 1000ms로 증가
           curve: Curves.easeOutBack,
           builder: (context, value, child) {
             // 펄스 효과: 작아졌다가 커지는 효과
@@ -192,6 +186,151 @@ class DiceWidget extends StatelessWidget {
     }
     
     return RepaintBoundary(child: diceWidget);
+  }
+  
+  // 주사위 숫자별 애니메이션 커브
+  Curve _getAnimationCurve() {
+    if (dice.isMagic) return Curves.elasticOut;
+    return switch (dice.value) {
+      1 => Curves.easeOutQuad,        // 부드럽게
+      2 => Curves.easeOutBack,        // 살짝 튕김
+      3 => Curves.elasticOut,         // 탄력적
+      4 => Curves.bounceOut,          // 바운스
+      5 => Curves.easeOutCubic,       // 강력한 감속
+      6 => Curves.easeOutExpo,        // 폭발적 감속
+      _ => Curves.easeOut,
+    };
+  }
+  
+  // 주사위 숫자별 고유 등장 애니메이션
+  Widget _buildNewDiceAnimation(double value, Widget child) {
+    if (dice.isMagic) {
+      // 매직 주사위: 무지개 펄스 + 회전
+      final pulseScale = 0.3 + (value * 0.7) * (1.0 + 0.2 * (value < 0.5 ? value * 2 : (1 - value) * 2));
+      final rotation = value * 3.14159 * 4; // 720도 회전
+      final hue = (value * 360) % 360; // 무지개 색상
+      
+      return Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: HSVColor.fromAHSV(value * 0.8, hue, 1, 1).toColor(),
+              blurRadius: 30 * value,
+              spreadRadius: 8 * value,
+            ),
+          ],
+        ),
+        child: Transform.scale(
+          scale: pulseScale,
+          child: Transform.rotate(
+            angle: rotation,
+            child: Opacity(opacity: value, child: child),
+          ),
+        ),
+      );
+    }
+    
+    return switch (dice.value) {
+      1 => _buildDice1Animation(value, child),  // 페이드인 + 작은 스케일
+      2 => _buildDice2Animation(value, child),  // 좌우 흔들림
+      3 => _buildDice3Animation(value, child),  // 회전 + 스케일
+      4 => _buildDice4Animation(value, child),  // 바운스 효과
+      5 => _buildDice5Animation(value, child),  // 파동 효과
+      6 => _buildDice6Animation(value, child),  // 강력한 스핀 + 발광
+      _ => Transform.scale(scale: value, child: child),
+    };
+  }
+  
+  // 1: 부드러운 페이드인 + 스케일
+  Widget _buildDice1Animation(double value, Widget child) {
+    return Transform.scale(
+      scale: 0.5 + (value * 0.5),
+      child: Opacity(
+        opacity: value,
+        child: child,
+      ),
+    );
+  }
+  
+  // 2: 좌우 흔들림
+  Widget _buildDice2Animation(double value, Widget child) {
+    final wobble = (1 - value) * 0.3 * (value * 10 % 1 > 0.5 ? 1 : -1);
+    return Transform.scale(
+      scale: value,
+      child: Transform.rotate(
+        angle: wobble,
+        child: Opacity(opacity: value, child: child),
+      ),
+    );
+  }
+  
+  // 3: 회전 + 스케일
+  Widget _buildDice3Animation(double value, Widget child) {
+    final rotation = (1 - value) * 3.14159; // 180도
+    return Transform.scale(
+      scale: value,
+      child: Transform.rotate(
+        angle: rotation,
+        child: Opacity(opacity: value, child: child),
+      ),
+    );
+  }
+  
+  // 4: 바운스 효과
+  Widget _buildDice4Animation(double value, Widget child) {
+    // Curves.bounceOut 효과가 적용되어 자연스러운 바운스
+    return Transform.scale(
+      scale: value,
+      child: Opacity(opacity: value, child: child),
+    );
+  }
+  
+  // 5: 파동 효과 (확대/축소 반복)
+  Widget _buildDice5Animation(double value, Widget child) {
+    final wave = value + (1 - value) * 0.3 * (value * 8 % 1 < 0.5 ? 1 : -1);
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: _getDiceColors().last.withValues(alpha: (1 - value) * 0.5),
+            blurRadius: 20 * (1 - value),
+            spreadRadius: 5 * (1 - value),
+          ),
+        ],
+      ),
+      child: Transform.scale(
+        scale: wave,
+        child: Opacity(opacity: value, child: child),
+      ),
+    );
+  }
+  
+  // 6: 강력한 스핀 + 발광 (별이 될 수 있는 주사위)
+  Widget _buildDice6Animation(double value, Widget child) {
+    final rotation = (1 - value) * 3.14159 * 3; // 540도 회전
+    final glowIntensity = (1 - value) * 1.2;
+    
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: _getDiceColors().last.withValues(alpha: glowIntensity * 0.8),
+            blurRadius: 30 * glowIntensity,
+            spreadRadius: 8 * glowIntensity,
+          ),
+        ],
+      ),
+      child: Transform.scale(
+        scale: 0.3 + value * 0.7,
+        child: Transform.rotate(
+          angle: rotation,
+          child: Opacity(opacity: value, child: child),
+        ),
+      ),
+    );
   }
   
   // ... _getDiceColors restored ...
