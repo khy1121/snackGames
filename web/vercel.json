@@ -5,17 +5,19 @@
     "framework": null,
     "headers": [
         {
-            "source": "/assets/assets/audio/(.*).mp3",
+            "source": "/assets/(.*).mp3",
             "headers": [
                 {
                     "key": "Content-Type",
                     "value": "audio/mpeg"
-                },
-                {
-                    "key": "Accept-Ranges",
-                    "value": "bytes"
                 }
             ]
+        }
+    ],
+    "rewrites": [
+        {
+            "source": "/((?!assets/).*)",
+            "destination": "/index.html"
         }
     ]
 }
