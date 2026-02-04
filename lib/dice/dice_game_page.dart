@@ -1,22 +1,18 @@
 import 'dart:convert'; // For JSON
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter/services.dart';
 import 'dice_board.dart';
 import 'dice_widget.dart';
 import 'dice_theme.dart';
 import 'dice_effects.dart'; // Import VFX
 import '../services/game_data_service.dart';
 import '../services/challenge_service.dart';
-import '../services/settings_service.dart';
 import '../services/upgrade_service.dart';
 import '../services/achievement_service.dart';
 import '../services/vibration_service.dart';
 import '../widgets/challenge_toast.dart';
 import '../widgets/theme_shop_dialog.dart';
 import '../widgets/animated_counter.dart';
-import '../widgets/particle_effect.dart';
 
 /// 주사위 머지 게임 페이지
 class DiceGamePage extends StatefulWidget {

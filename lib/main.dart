@@ -7,6 +7,7 @@ import 'services/daily_mission_service.dart';
 import 'services/achievement_service.dart';
 import 'services/challenge_service.dart';
 import 'services/settings_service.dart';
+import 'services/background_music_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,6 +19,9 @@ Future<void> main() async {
   await AchievementService.init(prefs);
   await ChallengeService.init(prefs);
   await SettingsService.init();
+  
+  // 배경음악 초기화 및 자동 재생
+  await BackgroundMusicService().initialize();
   
   // SystemChrome.setPreferredOrientations removed for Web compatibility
   runApp(const DiceMergeMasterApp());

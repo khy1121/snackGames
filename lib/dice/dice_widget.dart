@@ -90,7 +90,6 @@ class DiceWidget extends StatelessWidget {
         break;
         
       case DiceStyle.standard:
-      default:
         // Standard (Gradient + soft shadow)
         decoration = BoxDecoration(
           gradient: LinearGradient(

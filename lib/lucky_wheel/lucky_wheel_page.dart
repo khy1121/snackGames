@@ -67,8 +67,8 @@ class _LuckyWheelPageState extends State<LuckyWheelPage>
 
     // 애니메이션: 여러 바퀴 돌고 결과 슬롯에 정지
     final random = Random();
-    final extraSpins = 5 + random.nextInt(3); // 5~7바퀴 추가 회전
-    final targetRotation = extraSpins * 2 * pi + (_selectedSlot * 2 * pi / _slots.length);
+    // final extraSpins = 5 + random.nextInt(3); // 5~7바퀴 추가 회전 (현재 미사용)
+    // final targetRotation = extraSpins * 2 * pi + (_selectedSlot * 2 * pi / _slots.length); // Unused
 
     _controller.reset();
     await _controller.animateTo(

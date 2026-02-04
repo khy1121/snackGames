@@ -1,4 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 진동 권한 -->
+    <uses-permission android:name="android.permission.VIBRATE"/>
+    <!-- 인터넷 권한 (이미 기본적으로 포함되어 있을 수 있음) -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    
     <application
         android:label="Dice Merge Master"
         android:name="${applicationName}"

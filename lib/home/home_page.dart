@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../game/game_page.dart';
 import '../dice/dice_game_page.dart';
-import '../dice/dice_tutorial_page.dart';
 
 import '../profile/profile_page.dart';
 import '../shop/shop_page.dart';
@@ -17,6 +16,7 @@ import '../services/daily_attendance_service.dart';
 import '../services/lucky_wheel_service.dart';
 import '../services/pwa_install_service.dart';
 import '../services/vibration_service.dart';
+import '../services/background_music_service.dart';
 import '../challenge/challenge_page.dart';
 import '../settings/settings_page.dart';
 import '../widgets/glassmorphism_card.dart';
@@ -188,6 +188,10 @@ class _HomePageState extends State<HomePage> {
     await UpgradeService.init(GameDataService.prefs);
     await DailyAttendanceService.init();
     await LuckyWheelService.init();
+    
+    // 배경음악 초기화 (웹에서는 사용자 상호작용 후 재생)
+    await BackgroundMusicService().initialize();
+    
     if (mounted) {
       _loadCachedData();
       _checkDailyAttendance(); // 앱 시작 시 출석 체크
@@ -332,23 +336,33 @@ class _HomePageState extends State<HomePage> {
     }
 
     // Use cached data instead of calling services every build
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // 헤더 (홈, 게임 탭에서만 표시)
-            if (_rank != null && _currentNavIndex < 2) _buildHeader(_rank!, _level, _xpProgress),
+    return GestureDetector(
+      onTap: () async {
+        // 웹에서 사용자 상호작용 시 배경음악 재생 시작
+        if (kIsWeb) {
+          final musicService = BackgroundMusicService();
+          if (musicService.isMusicEnabled && !await musicService.isPlaying) {
+            await musicService.play();
+          }
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: SafeArea(
+          child: Column(
+            children: [
+              // 헤더 (홈, 게임 탭에서만 표시)
+              if (_rank != null && _currentNavIndex < 2) _buildHeader(_rank!, _level, _xpProgress),
 
-            // 메인 컨텐츠 (탭에 따라 변경)
-            Expanded(
-              child: _buildBody(),
-            ),
-          ],
+              // 메인 컨텐츠 (탭에 따라 변경)
+              Expanded(
+                child: _buildBody(),
+              ),
+            ],
+          ),
         ),
-      ),
-      // 하단 네비게이션 바
-      bottomNavigationBar: Container(
+        // 하단 네비게이션 바
+        bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
           boxShadow: [
@@ -374,6 +388,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
+    ),
     );
   }
 

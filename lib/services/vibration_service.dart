@@ -10,7 +10,12 @@ class VibrationService {
   /// 초기화 (진동 지원 여부 확인)
   static Future<void> init(SharedPreferences prefs) async {
     _prefs = prefs;
-    _hasVibrator = await Vibration.hasVibrator() ?? false;
+    try {
+      final hasVibrator = await Vibration.hasVibrator();
+      _hasVibrator = hasVibrator;
+    } catch (e) {
+      _hasVibrator = false;
+    }
     _isEnabled = _prefs?.getBool(_keyEnabled) ?? true;
   }
 

@@ -165,7 +165,7 @@ class DiceMergeBoard {
     final weights = List<int>.from(baseWeights);
     if (luckyBonus > 0) {
       // Transfer weight from lower to higher numbers
-      final shift = (luckyBonus * 100).toInt();
+      // final shift = (luckyBonus * 100).toInt(); // Unused
       for (int i = 0; i < 3; i++) {
         final transfer = (weights[i] * luckyBonus * 0.5).toInt();
         weights[i] -= transfer;

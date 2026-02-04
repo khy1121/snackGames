@@ -5,7 +5,6 @@ import 'game_theme.dart';
 import 'tile_widget.dart';
 import '../services/game_data_service.dart';
 import '../services/challenge_service.dart';
-import '../services/settings_service.dart';
 import '../services/upgrade_service.dart';
 import '../services/achievement_service.dart';
 import '../services/vibration_service.dart';

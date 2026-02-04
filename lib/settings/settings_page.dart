@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/settings_service.dart';
 import '../services/game_data_service.dart';
+import '../services/background_music_service.dart';
 import '../home/home_page.dart';
 
 /// 설정 페이지
@@ -189,6 +190,34 @@ class _SettingsPageState extends State<SettingsPage> {
                 activeTrackColor: const Color(0xFF10B981),
                 inactiveTrackColor: Colors.grey.withValues(alpha: 0.3),
                 onChanged: (value) => SettingsService.setSoundEnabled(value),
+              );
+            },
+          ),
+          Divider(color: Colors.white.withValues(alpha: 0.1), height: 1),
+          // Background Music Toggle
+          StatefulBuilder(
+            builder: (context, setState) {
+              final musicService = BackgroundMusicService();
+              return SwitchListTile(
+                title: Text(
+                  '배경음악',
+                  style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text(
+                  musicService.isMusicEnabled ? '켜짐' : '꺼짐',
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+                secondary: Icon(
+                  musicService.isMusicEnabled ? Icons.music_note : Icons.music_off,
+                  color: musicService.isMusicEnabled ? const Color(0xFF10B981) : Colors.grey,
+                ),
+                value: musicService.isMusicEnabled,
+                activeTrackColor: const Color(0xFF10B981),
+                inactiveTrackColor: Colors.grey.withValues(alpha: 0.3),
+                onChanged: (value) async {
+                  await musicService.toggleMusic();
+                  setState(() {}); // UI 업데이트
+                },
               );
             },
           ),
