@@ -307,14 +307,22 @@
               newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                   // New SW is installed and waiting
-                  console.log('New version available! Checking version difference...');
+                  console.log('New version available! Auto-activating...');
                   
-                  // 새 SW로부터 버전 정보 요청
-                  newWorker.postMessage({ type: 'GET_VERSION' });
-                  
-                  // 버전 비교를 위해 메시지 수신 대기 (아래 message 리스너에서 처리)
+                  // 자동으로 새 SW 활성화
+                  newWorker.postMessage({ type: 'SKIP_WAITING' });
                 }
               });
+            });
+            
+            // SW가 제어권을 넘겨받으면 자동 새로고침
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+              if (!refreshing) {
+                console.log('New Service Worker activated, reloading page...');
+                refreshing = true;
+                window.location.reload();
+              }
             });
           })
           .catch((error) => {
