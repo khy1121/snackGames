@@ -338,7 +338,10 @@ class _HomePageState extends State<HomePage> {
     // Use cached data instead of calling services every build
     return Listener(
       onPointerDown: (_) {
-        // 웹에서는 audioplayers가 작동하지 않으므로 비활성화
+        // 웹/PWA에서 사용자 상호작용 시 음악 재생 시작
+        if (kIsWeb) {
+          BackgroundMusicService().onUserInteraction();
+        }
       },
       child: Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -758,7 +761,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                       const SizedBox(width: 6),
                       const Text(
-                        'v2.3.6',
+                        'v2.3.7',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
@@ -886,39 +889,38 @@ class _HomePageState extends State<HomePage> {
                   child: const Icon(Icons.upgrade, color: Colors.purple, size: 20),
                 ),
               ),
-              // 음악 토글 버튼 (웹에서는 숨김)
-              if (!kIsWeb)
-                StatefulBuilder(
-                  builder: (context, setMusicState) {
-                    final musicService = BackgroundMusicService();
-                    return GestureDetector(
-                      onTap: () async {
-                        await musicService.toggleMusic();
-                        setMusicState(() {});
-                      },
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 8),
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
+              // 음악 토글 버튼
+              StatefulBuilder(
+                builder: (context, setMusicState) {
+                  final musicService = BackgroundMusicService();
+                  return GestureDetector(
+                    onTap: () async {
+                      await musicService.toggleMusic();
+                      setMusicState(() {});
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: musicService.isMusicEnabled
+                            ? const Color(0xFF00B894).withValues(alpha: 0.2)
+                            : Colors.grey.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                        border: Border.all(
                           color: musicService.isMusicEnabled
-                              ? const Color(0xFF00B894).withValues(alpha: 0.2)
-                              : Colors.grey.withValues(alpha: 0.2),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: musicService.isMusicEnabled
-                                ? const Color(0xFF00B894).withValues(alpha: 0.5)
-                                : Colors.grey.withValues(alpha: 0.5),
-                          ),
-                        ),
-                        child: Icon(
-                          musicService.isMusicEnabled ? Icons.music_note : Icons.music_off,
-                          color: musicService.isMusicEnabled ? const Color(0xFF00B894) : Colors.grey,
-                          size: 20,
+                              ? const Color(0xFF00B894).withValues(alpha: 0.5)
+                              : Colors.grey.withValues(alpha: 0.5),
                         ),
                       ),
-                    );
-                  },
-                ),
+                      child: Icon(
+                        musicService.isMusicEnabled ? Icons.music_note : Icons.music_off,
+                        color: musicService.isMusicEnabled ? const Color(0xFF00B894) : Colors.grey,
+                        size: 20,
+                      ),
+                    ),
+                  );
+                },
+              ),
               // 상점 버튼
               GestureDetector(
                 onTap: () {

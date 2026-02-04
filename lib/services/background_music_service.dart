@@ -1,6 +1,7 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'web_audio_service.dart' if (dart.library.io) 'web_audio_stub.dart';
 
 /// 배경음악 관리 서비스
 class BackgroundMusicService {
@@ -21,11 +22,12 @@ class BackgroundMusicService {
   Future<void> initialize() async {
     if (_isInitialized) return;
     
-    // 웹에서는 audioplayers가 제대로 작동하지 않음
+    // 웹에서는 WebAudioService 사용
     if (kIsWeb) {
+      await WebAudioService().initialize();
       _isInitialized = true;
-      _isMusicEnabled = false; // 웹에서는 비활성화
-      print('Background music disabled on web platform');
+      _isMusicEnabled = WebAudioService().isMusicEnabled;
+      print('Using WebAudioService for web platform');
       return;
     }
 
@@ -52,6 +54,11 @@ class BackgroundMusicService {
 
   /// 배경음악 재생
   Future<void> play() async {
+    if (kIsWeb) {
+      await WebAudioService().play();
+      return;
+    }
+    
     if (!_isMusicEnabled || _isPlaying) return;
     
     try {
@@ -66,12 +73,20 @@ class BackgroundMusicService {
 
   /// 배경음악 일시정지
   Future<void> pause() async {
+    if (kIsWeb) {
+      await WebAudioService().pause();
+      return;
+    }
     await _audioPlayer.pause();
     _isPlaying = false;
   }
 
   /// 배경음악 재개
   Future<void> resume() async {
+    if (kIsWeb) {
+      await WebAudioService().resume();
+      return;
+    }
     if (!_isMusicEnabled) return;
     await _audioPlayer.resume();
     _isPlaying = true;
@@ -79,12 +94,22 @@ class BackgroundMusicService {
 
   /// 배경음악 정지
   Future<void> stop() async {
+    if (kIsWeb) {
+      await WebAudioService().stop();
+      return;
+    }
     await _audioPlayer.stop();
     _isPlaying = false;
   }
 
   /// 음악 토글 (켜기/끄기)
   Future<void> toggleMusic() async {
+    if (kIsWeb) {
+      await WebAudioService().toggleMusic();
+      _isMusicEnabled = WebAudioService().isMusicEnabled;
+      return;
+    }
+    
     _isMusicEnabled = !_isMusicEnabled;
     
     final prefs = await SharedPreferences.getInstance();
@@ -97,8 +122,19 @@ class BackgroundMusicService {
     }
   }
 
+  /// 웹에서 사용자 상호작용 시 호출
+  Future<void> onUserInteraction() async {
+    if (kIsWeb) {
+      await WebAudioService().onUserInteraction();
+    }
+  }
+
   /// 볼륨 설정 (0.0 ~ 1.0)
   Future<void> setVolume(double volume) async {
+    if (kIsWeb) {
+      await WebAudioService().setVolume(volume);
+      return;
+    }
     _volume = volume.clamp(0.0, 1.0);
     await _audioPlayer.setVolume(_volume);
     
@@ -107,22 +143,32 @@ class BackgroundMusicService {
   }
 
   /// 현재 음악 활성화 상태
-  bool get isMusicEnabled => _isMusicEnabled;
-
-  /// 현재 볼륨
-  double get volume => _volume;
-  
-  /// 현재 재생 중인지 여부
-  Future<bool> get isPlaying async {
-    final state = await _audioPlayer.state;
-    return state == PlayerState.playing;
+  bool get isMusicEnabled {
+    if (kIsWeb) return WebAudioService().isMusicEnabled;
+    return _isMusicEnabled;
   }
 
-  /// 현재 재생 상태
+  /// 현재 볼륨
+  double get volume {
+    if (kIsWeb) return WebAudioService().volume;
+    return _volume;
+  }
+  
+  /// 현재 재생 중인지 여부
+  bool get isPlayingSync {
+    if (kIsWeb) return WebAudioService().isPlaying;
+    return _isPlaying;
+  }
+
+  /// 현재 재생 상태 (async)
   Future<PlayerState> get state async => _audioPlayer.state;
 
   /// 리소스 정리
   Future<void> dispose() async {
+    if (kIsWeb) {
+      WebAudioService().dispose();
+      return;
+    }
     await _audioPlayer.dispose();
     _isInitialized = false;
   }
