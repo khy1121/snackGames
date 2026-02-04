@@ -21,6 +21,7 @@ import '../challenge/challenge_page.dart';
 import '../settings/settings_page.dart';
 import '../widgets/glassmorphism_card.dart';
 import '../widgets/animated_counter.dart';
+import '../widgets/music_player_popup.dart';
 
 /// 게임 정보 데이터
 class GameInfo {
@@ -761,7 +762,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                       const SizedBox(width: 6),
                       const Text(
-                        'v2.4.2',
+                        'v2.5.0',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
@@ -920,6 +921,22 @@ class _HomePageState extends State<HomePage> {
                     ),
                   );
                 },
+              ),
+              // 플레이리스트 버튼
+              GestureDetector(
+                onTap: () {
+                  showMusicPlayerPopup(context);
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6C5CE7).withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFF6C5CE7).withValues(alpha: 0.5)),
+                  ),
+                  child: const Icon(Icons.queue_music, color: Color(0xFF6C5CE7), size: 20),
+                ),
               ),
               // 상점 버튼
               GestureDetector(

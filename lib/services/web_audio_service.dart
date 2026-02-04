@@ -17,6 +17,7 @@ class WebAudioService {
   double _volume = 0.3;
   bool _isPlaying = false;
   bool _userInteracted = false;
+  String _currentTrackPath = 'audio/mainLogo.mp3';
 
   /// 서비스 초기화
   Future<void> initialize() async {
@@ -29,18 +30,43 @@ class WebAudioService {
 
       // HTML5 Audio 요소 생성 - web 폴더의 정적 파일 사용
       _audioElement = html.AudioElement()
-        ..src = 'audio/mainLogo.mp3'
+        ..src = _currentTrackPath
         ..loop = true
         ..volume = _volume;
       
       // preload 설정
       _audioElement!.preload = 'auto';
+      
+      // 트랙 종료 시 이벤트
+      _audioElement!.onEnded.listen((_) {
+        _isPlaying = false;
+      });
 
       _isInitialized = true;
       print('Web audio service initialized');
     } catch (e) {
       print('Failed to initialize web audio service: $e');
       _isInitialized = true;
+    }
+  }
+
+  /// 트랙 변경
+  Future<void> changeTrack(String fileName) async {
+    final newPath = 'audio/$fileName';
+    if (_currentTrackPath == newPath) return;
+    
+    _currentTrackPath = newPath;
+    
+    if (_audioElement != null) {
+      final wasPlaying = _isPlaying;
+      await stop();
+      _audioElement!.src = newPath;
+      _audioElement!.load();
+      
+      if (wasPlaying && _isMusicEnabled) {
+        await Future.delayed(const Duration(milliseconds: 200));
+        await play();
+      }
     }
   }
 
