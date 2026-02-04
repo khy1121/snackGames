@@ -315,14 +315,10 @@
               });
             });
             
-            // SW가 제어권을 넘겨받으면 자동 새로고침
-            let refreshing = false;
+            // SW가 제어권을 넘겨받으면 버전 확인 (무한 새로고침 방지)
             navigator.serviceWorker.addEventListener('controllerchange', () => {
-              if (!refreshing) {
-                console.log('New Service Worker activated, reloading page...');
-                refreshing = true;
-                window.location.reload();
-              }
+              console.log('Controller changed - new SW is now active');
+              // 자동 새로고침 대신 로그만 출력 (무한 루프 방지)
             });
           })
           .catch((error) => {
