@@ -1,6 +1,6 @@
 // Service Worker for PWA
 // 버전 업데이트 시 이 숫자를 변경하세요!
-const SW_VERSION = '2.2.2';
+const SW_VERSION = '2.3.0';
 const CACHE_NAME = `snack-games-v${SW_VERSION}`;
 const urlsToCache = [
     '/',
@@ -43,8 +43,9 @@ self.addEventListener('activate', (event) => {
                 })
             );
 
-            // Notify all clients about the update
+            // Notify all clients about the update (activation only)
             const clients = await self.clients.matchAll({ type: 'window' });
+            console.log(`SW v${SW_VERSION} activated, notifying ${clients.length} clients`);
             clients.forEach((client) => {
                 client.postMessage({
                     type: 'SW_UPDATED',
