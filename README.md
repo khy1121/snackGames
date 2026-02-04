@@ -26,9 +26,10 @@
 
 ## ✨ 주요 기능
 
-### 🎵 음악 플레이어 시스템 (v2.5.3 NEW!)
+### 🎵 음악 플레이어 시스템 (v2.5.4 NEW!)
 - **멜론/플로 스타일 플레이어**: 우상단 🎵 버튼으로 접근
-- **플레이리스트 관리**: 원하는 곡 추가/제거
+- **프로그레스 바**: 재생 위치 표시 (00:00 ~ 03:30 형식)
+- **플레이리스트 관리**: 토글 스위치로 곡 추가/제거
 - **재생 컨트롤**: 재생, 일시정지, 이전곡, 다음곡
 - **반복 모드**: 전체 반복, 한곡 반복, 반복 없음
 - **셔플 모드**: 랜덤 재생
@@ -97,7 +98,7 @@
 | **Storage** | SharedPreferences |
 | **Audio** | HTML5 Audio API (Web), audioplayers (Mobile) |
 | **Architecture** | Service Pattern |
-| **PWA** | Service Worker v2.5.3 |
+| **PWA** | Service Worker v2.5.4 |
 | **Deployment** | Vercel (Auto Deploy) |
 | **Version Control** | Git/GitHub |
 
