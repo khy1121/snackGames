@@ -363,32 +363,32 @@ class _HomePageState extends State<HomePage> {
         ),
         // 하단 네비게이션 바
         bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 20,
-              offset: const Offset(0, -5),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem(0, Icons.home_rounded, '홈'),
-                _buildNavItem(1, Icons.games_rounded, '게임'),
-                _buildNavItem(2, Icons.emoji_events_rounded, '도전'),
-                _buildNavItem(3, Icons.settings_rounded, '설정'),
-              ],
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 20,
+                offset: const Offset(0, -5),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildNavItem(0, Icons.home_rounded, '홈'),
+                  _buildNavItem(1, Icons.games_rounded, '게임'),
+                  _buildNavItem(2, Icons.emoji_events_rounded, '도전'),
+                  _buildNavItem(3, Icons.settings_rounded, '설정'),
+                ],
+              ),
             ),
           ),
         ),
       ),
-    ),
     );
   }
 
