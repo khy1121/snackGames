@@ -832,6 +832,13 @@ class _HomePageState extends State<HomePage> {
                 color: const Color(0xFF6C5CE7),
                 onTap: () => showMusicPlayerPopup(context),
               ),
+              // PWA 설치 버튼 (설치 가능할 때만 표시)
+              if (_isPWAInstallable)
+                _buildHeaderIconButton(
+                  icon: Icons.download_rounded,
+                  color: const Color(0xFF00B894),
+                  onTap: _installPWA,
+                ),
               // 상점 버튼
               _buildHeaderIconButton(
                 icon: Icons.store,
