@@ -739,9 +739,10 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildHeader(RankInfo rank, int level, double xpProgress) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       child: Column(
         children: [
+          // 첫 번째 줄: 브랜드 + 레벨 + 프로필
           Row(
             children: [
               // 브랜드 로고
@@ -763,7 +764,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                         const SizedBox(width: 4),
                         const Text(
-                          'v2.5.4',
+                          'v2.5.5',
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w500,
@@ -772,6 +773,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 2),
                     Row(
                       children: [
                         AnimatedCounter(
@@ -785,8 +787,8 @@ class _HomePageState extends State<HomePage> {
                         ),
                         const SizedBox(width: 4),
                         SizedBox(
-                          width: 50,
-                          height: 3,
+                          width: 60,
+                          height: 4,
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(2),
                             child: TweenAnimationBuilder<double>(
@@ -808,68 +810,37 @@ class _HomePageState extends State<HomePage> {
                   ],
                 ),
               ),
-              // 아이콘 버튼들 (작은 사이즈)
-              _buildHeaderIconButton(
-                icon: Icons.upgrade,
-                color: Colors.purple,
-                onTap: () => _showPopup(const UpgradePage()),
-              ),
-              // 음악 토글 버튼
-              ListenableBuilder(
-                listenable: MusicPlayerService(),
-                builder: (context, child) {
-                  final musicService = MusicPlayerService();
-                  return _buildHeaderIconButton(
-                    icon: musicService.isMusicEnabled ? Icons.music_note : Icons.music_off,
-                    color: musicService.isMusicEnabled ? const Color(0xFF00B894) : Colors.grey,
-                    onTap: () => musicService.toggleMusic(),
-                  );
-                },
-              ),
-              // 플레이리스트 버튼
-              _buildHeaderIconButton(
-                icon: Icons.queue_music,
-                color: const Color(0xFF6C5CE7),
-                onTap: () => showMusicPlayerPopup(context),
-              ),
-              // PWA 설치 버튼 (설치 가능할 때만 표시)
-              if (_isPWAInstallable)
-                _buildHeaderIconButton(
-                  icon: Icons.download_rounded,
-                  color: const Color(0xFF00B894),
-                  onTap: _installPWA,
-                ),
-              // 상점 버튼
-              _buildHeaderIconButton(
-                icon: Icons.store,
-                color: const Color(0xFFFFD700),
-                onTap: () => _showPopup(const ShopPage()),
-              ),
               // 프로필 버튼
               GestureDetector(
-                onTap: () {
-                  _showPopup(const ProfilePage());
-                },
+                onTap: () => _showPopup(const ProfilePage()),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(18),
                     border: Border.all(
-                      color: const Color(0xFF2E5940).withValues(alpha: 0.1),
+                      color: const Color(0xFF2E5940).withValues(alpha: 0.15),
+                      width: 1.5,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(rank.icon, style: const TextStyle(fontSize: 14)),
-                      const SizedBox(width: 2),
+                      Text(rank.icon, style: const TextStyle(fontSize: 16)),
+                      const SizedBox(width: 4),
                       Text(
                         rank.name,
                         style: const TextStyle(
                           color: Color(0xFF2E5940),
                           fontWeight: FontWeight.bold,
-                          fontSize: 11,
+                          fontSize: 12,
                         ),
                       ),
                     ],
@@ -878,12 +849,69 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
+          
+          const SizedBox(height: 10),
+          
+          // 두 번째 줄: 기능 버튼들 (레이블 포함)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              // 업그레이드
+              _buildLabeledButton(
+                icon: Icons.upgrade_rounded,
+                label: '강화',
+                color: const Color(0xFF9B59B6),
+                onTap: () => _showPopup(const UpgradePage()),
+              ),
+              
+              // 음악 토글
+              ListenableBuilder(
+                listenable: MusicPlayerService(),
+                builder: (context, child) {
+                  final musicService = MusicPlayerService();
+                  return _buildLabeledButton(
+                    icon: musicService.isMusicEnabled ? Icons.music_note : Icons.music_off,
+                    label: '음악',
+                    color: musicService.isMusicEnabled ? const Color(0xFF00B894) : Colors.grey,
+                    onTap: () => musicService.toggleMusic(),
+                  );
+                },
+              ),
+              
+              // 플레이리스트
+              _buildLabeledButton(
+                icon: Icons.queue_music_rounded,
+                label: '목록',
+                color: const Color(0xFF6C5CE7),
+                onTap: () => showMusicPlayerPopup(context),
+              ),
+              
+              // PWA 설치 (조건부)
+              if (_isPWAInstallable)
+                _buildLabeledButton(
+                  icon: Icons.download_rounded,
+                  label: '설치',
+                  color: const Color(0xFF00B894),
+                  onTap: _installPWA,
+                ),
+              
+              // 상점
+              _buildLabeledButton(
+                icon: Icons.store_rounded,
+                label: '상점',
+                color: const Color(0xFFE67E22),
+                onTap: () => _showPopup(const ShopPage()),
+              ),
+            ],
+          ),
+          
           const SizedBox(height: 8),
-          // 모토 (Pill-shaped translucent container)
-           Container(
+          
+          // 모토
+          Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Colors.white.withValues(alpha: 0.8),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: const Color(0xFF2E5940).withValues(alpha: 0.1)),
             ),
@@ -1294,6 +1322,44 @@ class _HomePageState extends State<HomePage> {
           shape: BoxShape.circle,
         ),
         child: Icon(icon, color: color, size: 18),
+      ),
+    );
+  }
+
+  /// 레이블이 있는 버튼 빌더 (모바일 최적화)
+  Widget _buildLabeledButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: color.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
