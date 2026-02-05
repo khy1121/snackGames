@@ -47,18 +47,18 @@ class SfxService {
 
   /// 주사위 놓을 때 효과음
   Future<void> playDropDice() async {
-    await play('assets/sfx/dicemerge/dice_pop/dropdice.mp3');
+    await play('assets/assets/sfx/dicemerge/dice_pop/dropdice.mp3');
   }
 
   /// 주사위 합칠 때 효과음 (눈금별)
   Future<void> playPop(int diceValue) async {
     if (diceValue < 1 || diceValue > 6) return;
-    await play('assets/sfx/dicemerge/dice_pop/pop$diceValue.mp3');
+    await play('assets/assets/sfx/dicemerge/dice_pop/pop$diceValue.mp3');
   }
 
   /// 버튼 클릭 효과음 (dropdice 재사용)
   Future<void> playButtonClick() async {
-    await play('assets/sfx/dicemerge/dice_pop/dropdice.mp3');
+    await play('assets/assets/sfx/dicemerge/dice_pop/dropdice.mp3');
   }
 
   /// 모든 오디오 정리
