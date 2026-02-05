@@ -17,6 +17,8 @@ import '../services/lucky_wheel_service.dart';
 import '../services/pwa_install_service.dart';
 import '../services/vibration_service.dart';
 import '../services/music_player_service.dart';
+import '../services/sfx_service_stub.dart'
+    if (dart.library.html) '../services/sfx_service.dart';
 import '../challenge/challenge_page.dart';
 import '../settings/settings_page.dart';
 import '../widgets/glassmorphism_card.dart';
@@ -764,7 +766,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                         const SizedBox(width: 4),
                         const Text(
-                          'v2.5.5',
+                          'v2.5.6',
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w500,
@@ -1334,7 +1336,11 @@ class _HomePageState extends State<HomePage> {
     required VoidCallback onTap,
   }) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        VibrationService.light(); // 버튼 터치 진동
+        SfxService().playButtonClick(); // 버튼 클릭 효과음
+        onTap();
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(

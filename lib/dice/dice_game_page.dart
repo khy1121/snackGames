@@ -10,6 +10,8 @@ import '../services/challenge_service.dart';
 import '../services/upgrade_service.dart';
 import '../services/achievement_service.dart';
 import '../services/vibration_service.dart';
+import '../services/sfx_service_stub.dart'
+    if (dart.library.html) '../services/sfx_service.dart';
 import '../widgets/challenge_toast.dart';
 import '../widgets/theme_shop_dialog.dart';
 import '../widgets/animated_counter.dart';
@@ -189,6 +191,9 @@ class _DiceGamePageState extends State<DiceGamePage>
       return;
     }
 
+    // 주사위 놓을 때 효과음
+    SfxService().playDropDice();
+
     // Single setState with all state changes
     setState(() {
       _isProcessing = true;
@@ -261,6 +266,14 @@ class _DiceGamePageState extends State<DiceGamePage>
           VibrationService.light();    // 3-4: 약함
         } else {
           VibrationService.light();    // 1-2: 매우 약함
+        }
+      }
+      
+      // 효과음 재생 - 각 머지된 주사위 값에 따라
+      for (final merge in result.merges) {
+        if (merge.resultDice != null && merge.resultDice!.value <= 6) {
+          // 1~6까지만 효과음 재생 (별/매직 제외)
+          SfxService().playPop(merge.resultDice!.value);
         }
       }
       
