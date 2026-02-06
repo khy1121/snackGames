@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import '../services/settings_service.dart';
 import '../services/game_data_service.dart';
 import '../services/background_music_service.dart';
+import '../services/vibration_service.dart';
+import '../services/sfx_service_stub.dart'
+    if (dart.library.html) '../services/sfx_service.dart';
+import '../services/music_player_service.dart';
 import '../home/home_page.dart';
 
 /// 설정 페이지
@@ -161,7 +165,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Widget _buildSoundCard() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
         color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(20),
@@ -169,64 +173,133 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
       child: Column(
         children: [
-          // Sound Toggle
-          ValueListenableBuilder<bool>(
-            valueListenable: SettingsService.soundEnabled,
-            builder: (context, enabled, child) {
-              return SwitchListTile(
-                title: Text(
-                  '효과음',
-                  style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold),
-                ),
-                subtitle: Text(
-                  enabled ? '켜짐' : '꺼짐',
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-                secondary: Icon(
-                  enabled ? Icons.volume_up : Icons.volume_off,
-                  color: enabled ? const Color(0xFF10B981) : Colors.grey,
-                ),
-                value: enabled,
-                activeTrackColor: const Color(0xFF10B981),
-                inactiveTrackColor: Colors.grey.withValues(alpha: 0.3),
-                onChanged: (value) => SettingsService.setSoundEnabled(value),
+          // 효과음 볼륨 슬라이더
+          ValueListenableBuilder<double>(
+            valueListenable: SettingsService.sfxVolume,
+            builder: (context, volume, child) {
+              return Column(
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        volume > 0 ? Icons.volume_up : Icons.volume_off,
+                        color: volume > 0 ? const Color(0xFF10B981) : Colors.grey,
+                        size: 22,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          '효과음',
+                          style: TextStyle(
+                            color: Theme.of(context).primaryColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${(volume * 100).toInt()}%',
+                        style: TextStyle(
+                          color: Colors.grey[400],
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      activeTrackColor: const Color(0xFF10B981),
+                      inactiveTrackColor: Colors.grey.withValues(alpha: 0.3),
+                      thumbColor: const Color(0xFF10B981),
+                      trackHeight: 6,
+                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+                    ),
+                    child: Slider(
+                      value: volume,
+                      min: 0.0,
+                      max: 1.0,
+                      divisions: 10,
+                      onChanged: (value) {
+                        SettingsService.setSfxVolume(value);
+                        SfxService().setVolume(value);
+                        SfxService().setEnabled(value > 0);
+                        // 미리 듣기
+                        if (value > 0) SfxService().playButtonClick();
+                      },
+                    ),
+                  ),
+                ],
               );
             },
           ),
-          Divider(color: Colors.white.withValues(alpha: 0.1), height: 1),
-          // Background Music Toggle
-          StatefulBuilder(
-            builder: (context, setState) {
-              final musicService = BackgroundMusicService();
-              return SwitchListTile(
-                title: Text(
-                  '배경음악',
-                  style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold),
-                ),
-                subtitle: Text(
-                  musicService.isMusicEnabled ? '켜짐' : '꺼짐',
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-                secondary: Icon(
-                  musicService.isMusicEnabled ? Icons.music_note : Icons.music_off,
-                  color: musicService.isMusicEnabled ? const Color(0xFF10B981) : Colors.grey,
-                ),
-                value: musicService.isMusicEnabled,
-                activeTrackColor: const Color(0xFF10B981),
-                inactiveTrackColor: Colors.grey.withValues(alpha: 0.3),
-                onChanged: (value) async {
-                  await musicService.toggleMusic();
-                  setState(() {}); // UI 업데이트
-                },
+          
+          Divider(color: Colors.grey.withValues(alpha: 0.2), height: 16),
+          
+          // 배경음악 볼륨 슬라이더
+          ValueListenableBuilder<double>(
+            valueListenable: SettingsService.musicVolume,
+            builder: (context, volume, child) {
+              return Column(
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        volume > 0 ? Icons.music_note : Icons.music_off,
+                        color: volume > 0 ? const Color(0xFF667EEA) : Colors.grey,
+                        size: 22,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          '배경음악',
+                          style: TextStyle(
+                            color: Theme.of(context).primaryColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${(volume * 100).toInt()}%',
+                        style: TextStyle(
+                          color: Colors.grey[400],
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      activeTrackColor: const Color(0xFF667EEA),
+                      inactiveTrackColor: Colors.grey.withValues(alpha: 0.3),
+                      thumbColor: const Color(0xFF667EEA),
+                      trackHeight: 6,
+                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+                    ),
+                    child: Slider(
+                      value: volume,
+                      min: 0.0,
+                      max: 1.0,
+                      divisions: 10,
+                      onChanged: (value) {
+                        SettingsService.setMusicVolume(value);
+                        MusicPlayerService().setVolume(value);
+                      },
+                    ),
+                  ),
+                ],
               );
             },
           ),
-          Divider(color: Colors.white.withValues(alpha: 0.1), height: 1),
-          // Vibration Toggle
+          
+          Divider(color: Colors.grey.withValues(alpha: 0.2), height: 16),
+          
+          // 진동 토글
           ValueListenableBuilder<bool>(
             valueListenable: SettingsService.vibrationEnabled,
             builder: (context, enabled, child) {
               return SwitchListTile(
+                contentPadding: EdgeInsets.zero,
                 title: Text(
                   '진동',
                   style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold),
@@ -242,7 +315,10 @@ class _SettingsPageState extends State<SettingsPage> {
                 value: enabled,
                 activeTrackColor: const Color(0xFF10B981),
                 inactiveTrackColor: Colors.grey.withValues(alpha: 0.3),
-                onChanged: (value) => SettingsService.setVibrationEnabled(value),
+                onChanged: (value) {
+                  SettingsService.setVibrationEnabled(value);
+                  VibrationService.setEnabled(value);
+                },
               );
             },
           ),
@@ -261,7 +337,7 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
       child: Column(
         children: [
-          _buildInfoRow('현재 버전', '2.5.7'),
+          _buildInfoRow('현재 버전', '2.5.10'),
           const SizedBox(height: 20),
           InkWell(
             onTap: _showResetConfirmDialog,

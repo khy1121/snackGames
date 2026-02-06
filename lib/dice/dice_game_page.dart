@@ -10,6 +10,8 @@ import '../services/challenge_service.dart';
 import '../services/upgrade_service.dart';
 import '../services/achievement_service.dart';
 import '../services/vibration_service.dart';
+import '../services/settings_service.dart';
+import '../services/music_player_service.dart';
 import '../services/sfx_service_stub.dart'
     if (dart.library.html) '../services/sfx_service.dart';
 import '../widgets/challenge_toast.dart';
@@ -58,6 +60,7 @@ class _DiceGamePageState extends State<DiceGamePage>
   final GlobalKey<ScreenShakeState> _shakeKey = GlobalKey();
   
   int _comboStreak = 0; // Track consecutive merges for Lightning effect
+  bool _isPaused = false; // 일시정지 상태
 
   DateTime? _startTime;
 
@@ -180,7 +183,7 @@ class _DiceGamePageState extends State<DiceGamePage>
   }
 
   void _onColumnTap(int col) {
-    if (_isProcessing || _board.isGameOver) return;
+    if (_isProcessing || _board.isGameOver || _isPaused) return;
     _startTime ??= DateTime.now();
 
     // Pre-compute result before any setState
@@ -1029,7 +1032,10 @@ class _DiceGamePageState extends State<DiceGamePage>
         children: [
           // 뒤로가기
           IconButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              _saveGame();
+              Navigator.pop(context);
+            },
             icon: Icon(Icons.arrow_back_ios, color: _theme.textColor, size: 20),
           ),
 
@@ -1051,10 +1057,10 @@ class _DiceGamePageState extends State<DiceGamePage>
             icon: Icon(Icons.palette, color: _theme.textColor, size: 20),
           ),
 
-          // 새 게임
+          // 일시정지
           IconButton(
-            onPressed: _startNewGame,
-            icon: Icon(Icons.refresh, color: _theme.textColor, size: 20),
+            onPressed: _showPauseMenu,
+            icon: Icon(Icons.pause_circle_outline, color: _theme.textColor, size: 24),
           ),
         ],
       ),
@@ -1303,6 +1309,375 @@ class _DiceGamePageState extends State<DiceGamePage>
     // 하이라이트할 영역의 위치를 찾아서 그 부분만 밝게 표시
     // 실제 구현 시 GlobalKey를 사용하여 정확한 위치를 찾을 수 있습니다
     return Container(); // 간단한 구현
+  }
+  /// 일시정지 메뉴 표시
+  void _showPauseMenu() {
+    setState(() => _isPaused = true);
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isDismissible: false,
+      enableDrag: false,
+      isScrollControlled: true,
+      builder: (context) => _PauseMenuSheet(
+        theme: _theme,
+        score: _board.score,
+        bestScore: _board.bestScore,
+        onResume: () {
+          Navigator.pop(context);
+          setState(() => _isPaused = false);
+        },
+        onNewGame: () {
+          Navigator.pop(context);
+          setState(() => _isPaused = false);
+          _startNewGame();
+        },
+        onExit: () {
+          _saveGame();
+          Navigator.pop(context); // 메뉴 닫기
+          Navigator.pop(this.context); // 게임 나가기
+        },
+      ),
+    );
+  }
+}
+
+/// 일시정지 메뉴 시트
+class _PauseMenuSheet extends StatefulWidget {
+  final DiceThemeData theme;
+  final int score;
+  final int bestScore;
+  final VoidCallback onResume;
+  final VoidCallback onNewGame;
+  final VoidCallback onExit;
+
+  const _PauseMenuSheet({
+    required this.theme,
+    required this.score,
+    required this.bestScore,
+    required this.onResume,
+    required this.onNewGame,
+    required this.onExit,
+  });
+
+  @override
+  State<_PauseMenuSheet> createState() => _PauseMenuSheetState();
+}
+
+class _PauseMenuSheetState extends State<_PauseMenuSheet> {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.7,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            const Color(0xFF1A1A2E).withValues(alpha: 0.98),
+            const Color(0xFF16213E).withValues(alpha: 0.98),
+          ],
+        ),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: Column(
+        children: [
+          // 핸들 바
+          Container(
+            margin: const EdgeInsets.only(top: 10),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[600],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // 제목
+          const Text(
+            '⏸️ 일시정지',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          
+          const SizedBox(height: 8),
+          
+          // 점수 표시
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildScoreChip('🎯 점수', widget.score, const Color(0xFF00B894)),
+              const SizedBox(width: 16),
+              _buildScoreChip('🏆 최고', widget.bestScore, const Color(0xFFFD79A8)),
+            ],
+          ),
+          
+          const SizedBox(height: 20),
+          
+          // 설정 영역
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                children: [
+                  // 효과음 볼륨
+                  _buildVolumeControl(
+                    icon: Icons.volume_up,
+                    label: '효과음',
+                    color: const Color(0xFF10B981),
+                    valueListenable: SettingsService.sfxVolume,
+                    onChanged: (value) {
+                      SettingsService.setSfxVolume(value);
+                      SfxService().setVolume(value);
+                      SfxService().setEnabled(value > 0);
+                    },
+                  ),
+                  
+                  const SizedBox(height: 12),
+                  
+                  // 배경음악 볼륨
+                  _buildVolumeControl(
+                    icon: Icons.music_note,
+                    label: '배경음악',
+                    color: const Color(0xFF667EEA),
+                    valueListenable: SettingsService.musicVolume,
+                    onChanged: (value) {
+                      SettingsService.setMusicVolume(value);
+                      MusicPlayerService().setVolume(value);
+                    },
+                  ),
+                  
+                  const SizedBox(height: 12),
+                  
+                  // 진동 토글
+                  ValueListenableBuilder<bool>(
+                    valueListenable: SettingsService.vibrationEnabled,
+                    builder: (context, enabled, child) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              enabled ? Icons.vibration : Icons.smartphone,
+                              color: enabled ? const Color(0xFFFDAC42) : Colors.grey,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            const Expanded(
+                              child: Text(
+                                '진동',
+                                style: TextStyle(color: Colors.white, fontSize: 15),
+                              ),
+                            ),
+                            Switch(
+                              value: enabled,
+                              activeColor: const Color(0xFFFDAC42),
+                              onChanged: (value) {
+                                SettingsService.setVibrationEnabled(value);
+                                VibrationService.setEnabled(value);
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          // 버튼 영역
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            child: Column(
+              children: [
+                // 이어하기 버튼
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: FilledButton.icon(
+                    onPressed: widget.onResume,
+                    icon: const Icon(Icons.play_arrow, size: 24),
+                    label: const Text('이어하기', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF00B894),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(height: 10),
+                
+                // 새 게임 / 나가기
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 48,
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            _showNewGameConfirm(context);
+                          },
+                          icon: const Icon(Icons.refresh, size: 20),
+                          label: const Text('새 게임', style: TextStyle(fontSize: 14)),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white70,
+                            side: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: SizedBox(
+                        height: 48,
+                        child: OutlinedButton.icon(
+                          onPressed: widget.onExit,
+                          icon: const Icon(Icons.exit_to_app, size: 20),
+                          label: const Text('나가기', style: TextStyle(fontSize: 14)),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFFEF4444),
+                            side: const BorderSide(color: Color(0xFFEF4444)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScoreChip(String label, int value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        children: [
+          Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 2),
+          Text(
+            '$value',
+            style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVolumeControl({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required ValueNotifier<double> valueListenable,
+    required ValueChanged<double> onChanged,
+  }) {
+    return ValueListenableBuilder<double>(
+      valueListenable: valueListenable,
+      builder: (context, volume, child) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                volume > 0 ? icon : Icons.volume_off,
+                color: volume > 0 ? color : Colors.grey,
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Text(
+                label,
+                style: const TextStyle(color: Colors.white, fontSize: 15),
+              ),
+              Expanded(
+                child: SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    activeTrackColor: color,
+                    inactiveTrackColor: Colors.grey.withValues(alpha: 0.3),
+                    thumbColor: color,
+                    trackHeight: 4,
+                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+                  ),
+                  child: Slider(
+                    value: volume,
+                    min: 0.0,
+                    max: 1.0,
+                    divisions: 10,
+                    onChanged: (value) {
+                      onChanged(value);
+                      setState(() {});
+                    },
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 36,
+                child: Text(
+                  '${(volume * 100).toInt()}%',
+                  style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                  textAlign: TextAlign.right,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showNewGameConfirm(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E2E),
+        title: const Text('새 게임', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          '현재 진행 중인 게임을 초기화하고\n새로운 게임을 시작하시겠습니까?',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('취소', style: TextStyle(color: Colors.grey)),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(ctx); // 다이얼로그 닫기
+              widget.onNewGame();
+            },
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF00B894)),
+            child: const Text('새 게임'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
