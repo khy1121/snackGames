@@ -1,6 +1,8 @@
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
+import 'dart:js_util' as js_util;
 
+/// Web용 진동 서비스 (Vibration API 사용)
 class VibrationService {
   static const String _keyEnabled = 'vibration_enabled';
   static bool _isEnabled = true;
@@ -9,7 +11,9 @@ class VibrationService {
   /// 초기화 (웹 진동 API 지원 확인)
   static Future<void> init(dynamic prefs) async {
     _hasVibrator = _checkVibrationSupport();
-    // SharedPreferences 없이 localStorage 사용 가능
+    print('Web Vibration API supported: $_hasVibrator');
+    
+    // localStorage 사용
     final stored = html.window.localStorage[_keyEnabled];
     if (stored != null) {
       _isEnabled = stored == 'true';
@@ -18,8 +22,10 @@ class VibrationService {
 
   static bool _checkVibrationSupport() {
     try {
-      return html.window.navigator.vibrate != null;
+      // navigator.vibrate가 존재하는지 확인
+      return js_util.hasProperty(html.window.navigator, 'vibrate');
     } catch (e) {
+      print('Vibration check failed: $e');
       return false;
     }
   }
@@ -31,23 +37,34 @@ class VibrationService {
   static Future<void> setEnabled(bool enabled) async {
     _isEnabled = enabled;
     html.window.localStorage[_keyEnabled] = enabled.toString();
+    print('Vibration enabled: $enabled');
   }
 
   static void _vibrate(int duration) {
-    if (!isEnabled) return;
+    if (!_isEnabled) return;
+    if (!_hasVibrator) return;
+    
     try {
-      html.window.navigator.vibrate(duration);
+      // navigator.vibrate() 호출
+      js_util.callMethod(html.window.navigator, 'vibrate', [duration]);
+      print('Vibrate: ${duration}ms');
     } catch (e) {
-      // 지원하지 않는 브라우저
+      print('Vibration failed: $e');
     }
   }
 
   static void _vibratePattern(List<int> pattern) {
-    if (!isEnabled) return;
+    if (!_isEnabled) return;
+    if (!_hasVibrator) return;
+    
     try {
-      html.window.navigator.vibrate(pattern);
+      // navigator.vibrate() 호출 (패턴)
+      js_util.callMethod(html.window.navigator, 'vibrate', [
+        js_util.jsify(pattern)
+      ]);
+      print('Vibrate pattern: $pattern');
     } catch (e) {
-      // 지원하지 않는 브라우저
+      print('Vibration pattern failed: $e');
     }
   }
 
@@ -85,4 +102,15 @@ class VibrationService {
   static Future<void> explosion() async {
     _vibratePattern([0, 100, 50, 100, 50, 200]);
   }
+
+  /// 진동 취소
+  static Future<void> cancel() async {
+    if (!_hasVibrator) return;
+    try {
+      js_util.callMethod(html.window.navigator, 'vibrate', [0]);
+    } catch (e) {
+      // 무시
+    }
+  }
 }
+
