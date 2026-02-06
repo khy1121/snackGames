@@ -17,10 +17,18 @@ class WebAudioService {
   
   // 트랙 종료 콜백
   void Function()? _onTrackEnded;
+  
+  // 시간 업데이트 콜백
+  void Function(Duration currentTime, Duration duration)? _onTimeUpdate;
 
   /// 트랙 종료 콜백 설정
   void setOnTrackEnded(void Function() callback) {
     _onTrackEnded = callback;
+  }
+  
+  /// 시간 업데이트 콜백 설정
+  void setOnTimeUpdate(void Function(Duration currentTime, Duration duration) callback) {
+    _onTimeUpdate = callback;
   }
 
   /// 루프 모드 설정 (한 곡 반복)
@@ -63,6 +71,15 @@ class WebAudioService {
       // canplay 이벤트 핸들러
       _audioElement!.onCanPlay.listen((_) {
         print('Audio can play: $_currentTrackPath');
+      });
+      
+      // 시간 업데이트 이벤트 핸들러
+      _audioElement!.onTimeUpdate.listen((_) {
+        if (_onTimeUpdate != null && _audioElement != null) {
+          final currentTime = Duration(seconds: _audioElement!.currentTime.toInt());
+          final duration = Duration(seconds: _audioElement!.duration.isFinite ? _audioElement!.duration.toInt() : 0);
+          _onTimeUpdate!(currentTime, duration);
+        }
       });
 
       _isInitialized = true;
@@ -186,6 +203,27 @@ class WebAudioService {
 
   /// 현재 트랙 경로
   String get currentTrackPath => _currentTrackPath;
+  
+  /// 현재 재생 위치
+  Duration get currentTime {
+    if (_audioElement == null) return Duration.zero;
+    return Duration(seconds: _audioElement!.currentTime.toInt());
+  }
+  
+  /// 트랙 총 길이
+  Duration get duration {
+    if (_audioElement == null || !_audioElement!.duration.isFinite) {
+      return const Duration(minutes: 3, seconds: 30); // 기본값
+    }
+    return Duration(seconds: _audioElement!.duration.toInt());
+  }
+  
+  /// 재생 위치 변경 (시크)
+  void seek(Duration position) {
+    if (_audioElement != null) {
+      _audioElement!.currentTime = position.inSeconds.toDouble();
+    }
+  }
 
   /// 리소스 정리
   void dispose() {

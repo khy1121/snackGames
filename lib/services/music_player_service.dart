@@ -112,6 +112,14 @@ class MusicPlayerService extends ChangeNotifier {
   bool get shuffle => _shuffle;
   double get volume => _volume;
   bool get isInitialized => _isInitialized;
+  
+  /// 웹 오디오 서비스 접근 (UI에서 시간 정보 가져오기 위해)
+  WebAudioService? get webAudioService {
+    if (kIsWeb) {
+      return WebAudioService();
+    }
+    return null;
+  }
 
   /// 초기화
   Future<void> initialize() async {
@@ -159,6 +167,11 @@ class MusicPlayerService extends ChangeNotifier {
       
       // 트랙 종료 콜백 설정
       webAudio.setOnTrackEnded(_onTrackEnded);
+      
+      // 시간 업데이트 콜백 설정 (UI 업데이트용)
+      webAudio.setOnTimeUpdate((currentTime, duration) {
+        // 필요시 notifyListeners() 호출
+      });
     }
 
     _isInitialized = true;

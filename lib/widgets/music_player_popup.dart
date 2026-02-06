@@ -12,16 +12,16 @@ class MusicPlayerPopup extends StatefulWidget {
 class _MusicPlayerPopupState extends State<MusicPlayerPopup> {
   final MusicPlayerService _playerService = MusicPlayerService();
   
-  // 재생 진행률 (0.0 ~ 1.0) - 실제 오디오 시간이 없으므로 시뮬레이션
+  // 재생 진행률 (0.0 ~ 1.0)
   double _progress = 0.0;
   Duration _currentPosition = Duration.zero;
-  static const Duration _trackDuration = Duration(minutes: 3, seconds: 30); // 기본 3:30
+  Duration _trackDuration = const Duration(minutes: 3, seconds: 30); // 기본값
 
   @override
   void initState() {
     super.initState();
     _playerService.addListener(_onPlayerChanged);
-    _startProgressSimulation();
+    _updateAudioTime();
   }
 
   @override
@@ -31,24 +31,29 @@ class _MusicPlayerPopupState extends State<MusicPlayerPopup> {
   }
 
   void _onPlayerChanged() {
-    if (mounted) setState(() {});
+    if (mounted) {
+      _updateAudioTime();
+      setState(() {});
+    }
   }
 
-  // 재생 진행률 시뮬레이션 (실제로는 오디오 스트림에서 받아야 함)
-  void _startProgressSimulation() {
+  // 실제 오디오 시간 업데이트
+  void _updateAudioTime() {
     Future.doWhile(() async {
-      await Future.delayed(const Duration(seconds: 1));
+      await Future.delayed(const Duration(milliseconds: 500));
       if (!mounted) return false;
       
       if (_playerService.isPlaying) {
-        setState(() {
-          _currentPosition += const Duration(seconds: 1);
-          _progress = _currentPosition.inSeconds / _trackDuration.inSeconds;
-          if (_progress >= 1.0) {
-            _progress = 0.0;
-            _currentPosition = Duration.zero;
-          }
-        });
+        final webAudio = _playerService.webAudioService;
+        if (webAudio != null) {
+          setState(() {
+            _currentPosition = webAudio.currentTime;
+            _trackDuration = webAudio.duration;
+            if (_trackDuration.inSeconds > 0) {
+              _progress = _currentPosition.inSeconds / _trackDuration.inSeconds;
+            }
+          });
+        }
       }
       return true;
     });
@@ -251,11 +256,13 @@ class _MusicPlayerPopupState extends State<MusicPlayerPopup> {
             child: Slider(
               value: _progress.clamp(0.0, 1.0),
               onChanged: (value) {
+                final newPosition = Duration(
+                  seconds: (value * _trackDuration.inSeconds).round(),
+                );
+                _playerService.webAudioService?.seek(newPosition);
                 setState(() {
                   _progress = value;
-                  _currentPosition = Duration(
-                    seconds: (value * _trackDuration.inSeconds).round(),
-                  );
+                  _currentPosition = newPosition;
                 });
               },
             ),
