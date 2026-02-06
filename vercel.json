@@ -1,5 +1,5 @@
 {
-  "buildCommand": "echo 'Using pre-built files'",
+  "buildCommand": "echo 'Using pre-built files' && cp -r web/audio build/web/audio 2>/dev/null; cp -r web/sfx build/web/sfx 2>/dev/null; echo 'Audio/SFX copied'",
   "outputDirectory": "build/web",
   "installCommand": "echo 'No install needed'",
   "headers": [
