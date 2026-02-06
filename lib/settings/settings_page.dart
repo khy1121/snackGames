@@ -49,7 +49,7 @@ class _SettingsPageState extends State<SettingsPage> {
             // Footer
             const Center(
               child: Text(
-                'Snack Games v2.5.7',
+                'Snack Games v2.5.10',
                 style: TextStyle(
                   color: Colors.grey,
                   fontSize: 12,
