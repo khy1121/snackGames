@@ -60,31 +60,31 @@ class MusicPlayerService extends ChangeNotifier {
       id: 'breaktime_hush',
       title: 'Breaktime Hush Duo',
       artist: 'Snack Games',
-      fileName: 'Breaktime Hush Duo.mp3',
+      fileName: 'BreaktimeHushDuo.mp3',
     ),
     MusicTrack(
       id: 'pocket_groove',
       title: 'Pocket Groove Snack',
       artist: 'Snack Games',
-      fileName: 'Pocket Groove Snack.mp3',
+      fileName: 'PocketGrooveSnack.mp3',
     ),
     MusicTrack(
       id: 'soft_breaktime',
       title: 'Soft Breaktime Glow',
       artist: 'Snack Games',
-      fileName: 'Soft Breaktime Glow.mp3',
+      fileName: 'SoftBreaktimeGlow.mp3',
     ),
     MusicTrack(
       id: 'subway_home',
       title: 'Subway Home, One Breath',
       artist: 'Snack Games',
-      fileName: 'Subway Home, One Breath.mp3',
+      fileName: 'SubwayHomeOneBreath.mp3',
     ),
     MusicTrack(
       id: 'one_more_round',
       title: 'One More Round',
       artist: 'Snack Games',
-      fileName: 'One More Round.mp3',
+      fileName: 'OneMoreRound.mp3',
     ),
   ];
 
