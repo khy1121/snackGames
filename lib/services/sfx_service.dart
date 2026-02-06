@@ -31,34 +31,49 @@ class SfxService {
     try {
       // 기존 오디오가 있으면 재사용, 없으면 생성
       if (!_audioPool.containsKey(path)) {
-        _audioPool[path] = html.AudioElement()
-          ..src = path
-          ..preload = 'auto';
+        final audio = html.AudioElement();
+        audio.src = path;
+        audio.preload = 'auto';
+        audio.volume = _volume;
+        
+        // 로드 에러 핸들러
+        audio.onError.listen((event) {
+          print('SFX load error: $path');
+        });
+        
+        _audioPool[path] = audio;
       }
 
       final audio = _audioPool[path]!;
       audio.volume = _volume;
-      audio.currentTime = 0; // 처음부터 재생
-      await audio.play();
+      audio.currentTime = 0;
+      
+      // play() 호출 후 Promise 처리
+      try {
+        await audio.play();
+        print('SFX played: $path');
+      } catch (e) {
+        print('SFX play failed: $path - $e');
+      }
     } catch (e) {
-      print('Failed to play SFX: $path - $e');
+      print('SFX error: $path - $e');
     }
   }
 
   /// 주사위 놓을 때 효과음
   Future<void> playDropDice() async {
-    await play('assets/assets/sfx/dicemerge/dice_pop/dropdice.mp3');
+    await play('assets/sfx/dicemerge/dice_pop/dropdice.mp3');
   }
 
   /// 주사위 합칠 때 효과음 (눈금별)
   Future<void> playPop(int diceValue) async {
     if (diceValue < 1 || diceValue > 6) return;
-    await play('assets/assets/sfx/dicemerge/dice_pop/pop$diceValue.mp3');
+    await play('assets/sfx/dicemerge/dice_pop/pop$diceValue.mp3');
   }
 
   /// 버튼 클릭 효과음 (dropdice 재사용)
   Future<void> playButtonClick() async {
-    await play('assets/assets/sfx/dicemerge/dice_pop/dropdice.mp3');
+    await play('assets/sfx/dicemerge/dice_pop/dropdice.mp3');
   }
 
   /// 모든 오디오 정리

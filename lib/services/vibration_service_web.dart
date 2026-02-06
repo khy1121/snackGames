@@ -10,6 +10,7 @@ class VibrationService {
 
   /// 초기화 (웹 진동 API 지원 확인)
   static Future<void> init(dynamic prefs) async {
+    print('=== Web Vibration Service Init ===');
     _hasVibrator = _checkVibrationSupport();
     print('Web Vibration API supported: $_hasVibrator');
     
@@ -18,6 +19,8 @@ class VibrationService {
     if (stored != null) {
       _isEnabled = stored == 'true';
     }
+    print('Vibration enabled: $_isEnabled');
+    print('=================================');
   }
 
   static bool _checkVibrationSupport() {
