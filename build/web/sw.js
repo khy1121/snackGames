@@ -1,6 +1,6 @@
 // Service Worker for PWA
 // 버전 업데이트 시 이 숫자를 변경하세요!
-const SW_VERSION = '2.5.10';
+const SW_VERSION = '2.5.11';
 const CACHE_NAME = `snack-games-v${SW_VERSION}`;
 const urlsToCache = [
     '/',
