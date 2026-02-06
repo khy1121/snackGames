@@ -63,7 +63,16 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    - assets/audio/
+    # Audio files (explicitly listed to handle special characters)
+    - assets/audio/mainLogo.mp3
+    - assets/audio/Breaktime Hush Duo.mp3
+    - assets/audio/Breaktime Hush Duov2.mp3
+    - assets/audio/Pocket Groove Snack.mp3
+    - assets/audio/Soft Breaktime Glow.mp3
+    - assets/audio/Subway Home, One Breath.mp3
+    - assets/audio/One More Round.mp3
+    - assets/audio/One More Round (1).mp3
+    # SFX files
     - assets/sfx/dicemerge/dice_pop/
 
   # An image asset can refer to one or more resolution-specific "variants", see

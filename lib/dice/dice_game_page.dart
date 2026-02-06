@@ -192,6 +192,7 @@ class _DiceGamePageState extends State<DiceGamePage>
     }
 
     // 주사위 놓을 때 효과음
+    print('🔊 Playing drop dice SFX');
     SfxService().playDropDice();
 
     // Single setState with all state changes
@@ -273,6 +274,7 @@ class _DiceGamePageState extends State<DiceGamePage>
       for (final merge in result.merges) {
         if (merge.resultDice != null && merge.resultDice!.value <= 6) {
           // 1~6까지만 효과음 재생 (별/매직 제외)
+          print('🔊 Playing pop${merge.resultDice!.value} SFX');
           SfxService().playPop(merge.resultDice!.value);
         }
       }

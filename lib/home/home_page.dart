@@ -1337,7 +1337,9 @@ class _HomePageState extends State<HomePage> {
   }) {
     return GestureDetector(
       onTap: () {
+        print('🔔 Button tap - calling vibration');
         VibrationService.light(); // 버튼 터치 진동
+        print('🔊 Button tap - calling SFX');
         SfxService().playButtonClick(); // 버튼 클릭 효과음
         onTap();
       },

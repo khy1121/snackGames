@@ -10,17 +10,24 @@ class VibrationService {
 
   /// 초기화 (웹 진동 API 지원 확인)
   static Future<void> init(dynamic prefs) async {
-    print('=== Web Vibration Service Init ===');
+    print('\n========================================');
+    print('🔔 Web Vibration Service Init');
+    print('----------------------------------------');
+    print('URL: ${html.window.location.href}');
+    print('Protocol: ${html.window.location.protocol}');
+    print('Is HTTPS: ${html.window.location.protocol == "https:"}');
+    
     _hasVibrator = _checkVibrationSupport();
-    print('Web Vibration API supported: $_hasVibrator');
+    print('Vibration API exists: $_hasVibrator');
     
     // localStorage 사용
     final stored = html.window.localStorage[_keyEnabled];
     if (stored != null) {
       _isEnabled = stored == 'true';
     }
-    print('Vibration enabled: $_isEnabled');
-    print('=================================');
+    print('Vibration enabled in settings: $_isEnabled');
+    print('Final vibration available: ${_isEnabled && _hasVibrator}');
+    print('========================================\n');
   }
 
   static bool _checkVibrationSupport() {
@@ -44,15 +51,25 @@ class VibrationService {
   }
 
   static void _vibrate(int duration) {
-    if (!_isEnabled) return;
-    if (!_hasVibrator) return;
+    print('🔔 Vibrate called: ${duration}ms');
+    print('  - Enabled: $_isEnabled');
+    print('  - Has vibrator: $_hasVibrator');
+    
+    if (!_isEnabled) {
+      print('  ❌ Vibration disabled in settings');
+      return;
+    }
+    if (!_hasVibrator) {
+      print('  ❌ No vibrator support');
+      return;
+    }
     
     try {
       // navigator.vibrate() 호출
-      js_util.callMethod(html.window.navigator, 'vibrate', [duration]);
-      print('Vibrate: ${duration}ms');
+      final result = js_util.callMethod(html.window.navigator, 'vibrate', [duration]);
+      print('  ✅ Vibrate success: $result');
     } catch (e) {
-      print('Vibration failed: $e');
+      print('  ❌ Vibration error: $e');
     }
   }
 
