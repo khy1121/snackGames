@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../game/game_page.dart';
 import '../dice/dice_game_page.dart';
+import '../slot_ball/slot_ball_game_page.dart';
 
 import '../profile/profile_page.dart';
 import '../shop/shop_page.dart';
@@ -80,6 +81,22 @@ final List<GameInfo> gameList = [
 • 점수↑ → 빈 공간↓
 • 전략적 배치 필수''',
     pageBuilder: (_) => const GamePage(),
+  ),
+
+  GameInfo(
+    id: 'slotball',
+    title: '슬롯 볼',
+    subtitle: '공을 밀어 점수 구역에 넣기',
+    icon: '🎱',
+    colors: const [Color(0xFF6C5CE7), Color(0xFFA29BFE)],
+    rules: '''📖 게임 규칙
+• 아래에서 위로 드래그하여 발사
+• 점수 구역에 공을 멈춰라
+• 10개의 공으로 최고 점수 도전!''',
+    difficulty: '''📈 난이도
+• 너무 약하면 0점, 너무 강하면 튜겨나감
+• 공끼리 충돌로 전략적 배치''',
+    pageBuilder: (_) => const SlotBallGamePage(),
   ),
 ];
 
@@ -766,7 +783,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                         const SizedBox(width: 4),
                         const Text(
-                          'v2.5.11',
+                          'v2.5.12',
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w500,

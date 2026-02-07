@@ -85,7 +85,7 @@ class GameDataService {
     if (savedDate != today) {
       // 새로운 날 - 일일 점수 리셋
       prefs.setString(_keyTodayDate, today);
-      for (final gameId in ['2048', 'dice']) {
+      for (final gameId in ['2048', 'dice', 'slotball']) {
         prefs.remove('$_keyTodayScore$gameId');
       }
     }
@@ -193,7 +193,8 @@ class GameDataService {
         return '2048';
       case 'dice':
         return 'Dice Merge';
-
+      case 'slotball':
+        return 'Slot Ball';
       default:
         return gameId;
     }
@@ -205,7 +206,8 @@ class GameDataService {
         return '🔢';
       case 'dice':
         return '🎲';
-
+      case 'slotball':
+        return '🎱';
       default:
         return '🎮';
     }
