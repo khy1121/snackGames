@@ -48,7 +48,7 @@ const RESOURCES = {"assets/AssetManifest.bin": "708ddc90ea9ed7212650f40718ef8cb9
 "canvaskit/skwasm_heavy.wasm": "b0be7910760d205ea4e011458df6ee01",
 "favicon.png": "5dcef449791fa27946b3d35ad8803796",
 "flutter.js": "24bc71911b75b5f8135c949e27a2984e",
-"flutter_bootstrap.js": "37ab587ec8c32f39d0e3a8707a29f22f",
+"flutter_bootstrap.js": "57c1eca9d03e76386be455a71e020502",
 "icons/Icon-192.png": "ac9a721a12bbc803b44f645561ecb1e1",
 "icons/Icon-512.png": "96e752610906ba2a93c65f8abe1645f1",
 "icons/Icon-maskable-192.png": "c457ef57daa1d16f64b27b786ec2ea3c",
@@ -64,7 +64,7 @@ const RESOURCES = {"assets/AssetManifest.bin": "708ddc90ea9ed7212650f40718ef8cb9
 "sfx/dicemerge/dice_pop/pop4.mp3": "64e5ef9e755ecf0d786f7c885c6982ba",
 "sfx/dicemerge/dice_pop/pop5.mp3": "b64ee6ace8923f61e944b428f702bee9",
 "sfx/dicemerge/dice_pop/pop6.mp3": "122017742a8877c51fbd9386bb16b9bb",
-"sw.js": "935c203814c3ee0cc432ff0a409b34d6",
+"sw.js": "2608aed7028d1040963f140b2d6734c9",
 "vercel.json": "ed0d9b6f87e8d5484a23c0484b78f6e8",
 "version.json": "2242f3bbeeb9d91ffae5d0c922496302"};
 // The application shell files that are downloaded before a service worker can

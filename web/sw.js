@@ -58,38 +58,40 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
-// Fetch event - serve from cache, fallback to network
+// Fetch event - Network First 전략 (항상 최신 버전 우선)
 self.addEventListener('fetch', (event) => {
-    event.respondWith(
-        caches.match(event.request)
-            .then((response) => {
-                // Cache hit - return response
-                if (response) {
-                    return response;
-                }
-
-                // Clone the request
-                const fetchRequest = event.request.clone();
-
-                return fetch(fetchRequest).then((response) => {
-                    // Check if valid response
-                    if (!response || response.status !== 200 || response.type !== 'basic') {
-                        return response;
+    const url = new URL(event.request.url);
+    
+    // 오디오/SFX 파일은 Cache First (큰 파일, 변경 거의 없음)
+    if (url.pathname.startsWith('/audio/') || url.pathname.startsWith('/sfx/')) {
+        event.respondWith(
+            caches.match(event.request).then((cached) => {
+                if (cached) return cached;
+                return fetch(event.request).then((response) => {
+                    if (response && response.status === 200) {
+                        const clone = response.clone();
+                        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
                     }
-
-                    // Clone the response
-                    const responseToCache = response.clone();
-
-                    caches.open(CACHE_NAME)
-                        .then((cache) => {
-                            cache.put(event.request, responseToCache);
-                        });
-
                     return response;
-                }).catch((error) => {
-                    console.log('Fetch failed:', error);
-                    // Return offline page or fallback
-                    return caches.match('/index.html');
+                });
+            })
+        );
+        return;
+    }
+    
+    // 그 외 모든 리소스: Network First (최신 버전 우선, 오프라인 시 캐시)
+    event.respondWith(
+        fetch(event.request)
+            .then((response) => {
+                if (response && response.status === 200) {
+                    const clone = response.clone();
+                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+                }
+                return response;
+            })
+            .catch(() => {
+                return caches.match(event.request).then((cached) => {
+                    return cached || caches.match('/index.html');
                 });
             })
     );
