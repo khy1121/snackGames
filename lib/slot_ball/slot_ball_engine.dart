@@ -58,8 +58,8 @@ class SlotBallEngine {
   static const double wallRestitution = 0.4;     // 벽 반발 계수
   static const double ballRestitution = 0.7;     // 공-공 반발 계수
   static const double minVelocity = 0.3;         // 정지 판정 속도
-  static const double maxLaunchPower = 25.0;     // 최대 발사 힘
-  static const double launchMultiplier = 0.035;  // 드래그→속도 변환 계수
+  static const double maxLaunchPower = 45.0;     // 최대 발사 힘
+  static const double launchMultiplier = 0.12;   // 드래그→속도 변환 계수
   
   // 점수 구역 정의 (보드 상단에서부터)
   static const List<ScoreZone> scoreZones = [
@@ -109,11 +109,11 @@ class SlotBallEngine {
   /// 남은 공 수
   int get remainingBalls => totalBalls - currentBallIndex;
   
-  /// 공 발사
+  /// 공 발사 (새총 방식: 아래로 당기면 위로 발사)
   void launchBall(double startX, double dragDx, double dragDy) {
     if (!canLaunch) return;
     
-    // 속도 계산 (드래그 반대 방향으로 발사)
+    // 새총: 드래그 반대 방향으로 발사 (아래로 당기면 vy 음수 = 위로)
     double vx = -dragDx * launchMultiplier;
     double vy = -dragDy * launchMultiplier;
     
@@ -124,8 +124,8 @@ class SlotBallEngine {
       vy = vy / speed * maxLaunchPower;
     }
     
-    // 위쪽으로만 발사 가능
-    if (vy > -2) vy = -2;
+    // 최소 위쪽 발사력 보장
+    if (vy > -5) vy = -5;
     
     final ball = SlotBall(
       x: startX.clamp(30, boardWidth - 30),

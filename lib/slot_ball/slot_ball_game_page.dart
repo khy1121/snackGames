@@ -256,8 +256,8 @@ class _SlotBallGamePageState extends State<SlotBallGamePage>
     final dy = _dragCurrent!.dy - _dragStart!.dy;
     final distance = sqrt(dx * dx + dy * dy);
     
-    // 최소 드래그 거리
-    if (distance > 20 && dy < -10) {
+    // 새총: 아래로 당겼다 놓으면 발사 (dy > 10 = 아래로 당김)
+    if (distance > 20) {
       _engine.launchBall(_dragStart!.dx, dx, dy);
       VibrationService.light();
       SfxService().playDropDice();
@@ -523,7 +523,7 @@ class _SlotBallGamePageState extends State<SlotBallGamePage>
         ? '게임 종료!'
         : _engine.isLaunching
             ? '공이 움직이는 중...'
-            : '⬆️ 아래에서 위로 드래그하여 발사!';
+            : '🎱 아래로 당겼다 놓으면 발사!';
     
     return Padding(
       padding: const EdgeInsets.only(bottom: 8, top: 4),
@@ -760,7 +760,7 @@ class SlotBallPainter extends CustomPainter {
     if (engine.canLaunch && !isDragging) {
       final tp = TextPainter(
         text: TextSpan(
-          text: '여기서 위로 드래그',
+          text: '⬇️ 아래로 당겼다 놓기',
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.3),
             fontSize: 13,
@@ -782,8 +782,8 @@ class SlotBallPainter extends CustomPainter {
     
     if (distance < 10) return;
     
-    // 파워 인디케이터 (발사 방향 반대로 화살표)
-    final power = (distance / 300).clamp(0.0, 1.0);
+    // 파워 (당긴 거리 기준)
+    final power = (distance / 250).clamp(0.0, 1.0);
     
     // 파워에 따른 색상
     final Color arrowColor;
@@ -795,36 +795,41 @@ class SlotBallPainter extends CustomPainter {
       arrowColor = const Color(0xFFFF6B6B);
     }
     
-    // 드래그 줄
+    // 새총 줄 (시작점 → 드래그 현재 위치)
     final linePaint = Paint()
       ..color = arrowColor.withValues(alpha: 0.6)
       ..strokeWidth = 3
       ..strokeCap = StrokeCap.round;
     canvas.drawLine(dragStart!, dragCurrent!, linePaint);
     
-    // 발사 방향 점선 (예측)
-    final dirX = -dx / distance;
-    final dirY = -dy / distance;
-    final predictLength = power * 200;
+    // 발사 예측 방향 (당긴 반대쪽으로 점선)
+    final launchDirX = -dx / distance;
+    final launchDirY = -dy / distance;
+    final predictLength = power * 250;
     
     final predPaint = Paint()
-      ..color = arrowColor.withValues(alpha: 0.3)
+      ..color = arrowColor.withValues(alpha: 0.4)
       ..strokeWidth = 2;
     
     const dotSpacing = 12.0;
-    for (double d = 0; d < predictLength; d += dotSpacing) {
-      final px = dragStart!.dx + dirX * d;
-      final py = dragStart!.dy + dirY * d;
-      canvas.drawCircle(Offset(px, py), 2, predPaint);
+    for (double d = 20; d < predictLength; d += dotSpacing) {
+      final px = dragStart!.dx + launchDirX * d;
+      final py = dragStart!.dy + launchDirY * d;
+      if (py < 0 || py > size.height) break;
+      canvas.drawCircle(Offset(px, py), 2.5, predPaint);
     }
     
-    // 파워 바
+    // 공 위치 (발사 시작점)
+    final previewPaint = Paint()
+      ..color = arrowColor.withValues(alpha: 0.5);
+    canvas.drawCircle(dragStart!, 14, previewPaint);
+    
+    // 파워 바 (드래그 현재 위치 아래)
     final barWidth = 60.0;
     final barHeight = 8.0;
-    final barX = dragStart!.dx - barWidth / 2;
-    final barY = dragStart!.dy + 25;
+    final barX = dragCurrent!.dx - barWidth / 2;
+    final barY = dragCurrent!.dy + 20;
     
-    // 배경
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromLTWH(barX, barY, barWidth, barHeight),
@@ -832,8 +837,6 @@ class SlotBallPainter extends CustomPainter {
       ),
       Paint()..color = Colors.black.withValues(alpha: 0.5),
     );
-    
-    // 파워 게이지
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromLTWH(barX, barY, barWidth * power, barHeight),
@@ -842,10 +845,16 @@ class SlotBallPainter extends CustomPainter {
       Paint()..color = arrowColor,
     );
     
-    // 공 미리보기
-    final previewPaint = Paint()
-      ..color = arrowColor.withValues(alpha: 0.5);
-    canvas.drawCircle(dragStart!, 14, previewPaint);
+    // 파워 % 텍스트
+    final tp = TextPainter(
+      text: TextSpan(
+        text: '${(power * 100).toInt()}%',
+        style: TextStyle(color: arrowColor, fontSize: 11, fontWeight: FontWeight.bold),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    tp.layout();
+    tp.paint(canvas, Offset(barX + barWidth + 6, barY - 2));
   }
   
   @override
