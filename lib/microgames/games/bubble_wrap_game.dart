@@ -155,11 +155,11 @@ class _BubbleWrapGameState extends MicroGameState<BubbleWrapGame> {
                 ),
           boxShadow: isPopped
               ? []
-              : [
+              : const [
                   BoxShadow(
-                    color: Colors.blue.withOpacity(0.3),
+                    color: Color(0x4D2196F3),
                     blurRadius: 8,
-                    offset: const Offset(0, 4),
+                    offset: Offset(0, 4),
                   ),
                 ],
         ),

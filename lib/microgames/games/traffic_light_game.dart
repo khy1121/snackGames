@@ -32,7 +32,6 @@ class _TrafficLightGameState extends MicroGameState<TrafficLightGame> {
   LightColor _currentLight = LightColor.red;
   Timer? _lightTimer;
   Timer? _gameTimer;
-  int _cycleCount = 0;
 
   @override
   void initState() {
@@ -54,7 +53,6 @@ class _TrafficLightGameState extends MicroGameState<TrafficLightGame> {
               break;
             case LightColor.green:
               _currentLight = LightColor.red;
-              _cycleCount++;
               break;
           }
         });
@@ -139,11 +137,11 @@ class _TrafficLightGameState extends MicroGameState<TrafficLightGame> {
                 decoration: BoxDecoration(
                   color: Colors.black87,
                   borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
+                  boxShadow: const [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.5),
+                      color: Color(0x80000000),
                       blurRadius: 20,
-                      offset: const Offset(0, 10),
+                      offset: Offset(0, 10),
                     ),
                   ],
                 ),
@@ -180,13 +178,13 @@ class _TrafficLightGameState extends MicroGameState<TrafficLightGame> {
 
     switch (color) {
       case LightColor.red:
-        lightColor = isActive ? Colors.red : Colors.red.withOpacity(0.2);
+        lightColor = isActive ? Colors.red : const Color(0x33F44336);
         break;
       case LightColor.yellow:
-        lightColor = isActive ? Colors.yellow : Colors.yellow.withOpacity(0.2);
+        lightColor = isActive ? Colors.yellow : const Color(0x33FFEB3B);
         break;
       case LightColor.green:
-        lightColor = isActive ? Colors.green : Colors.green.withOpacity(0.2);
+        lightColor = isActive ? Colors.green : const Color(0x334CAF50);
         break;
     }
 
@@ -200,7 +198,7 @@ class _TrafficLightGameState extends MicroGameState<TrafficLightGame> {
         boxShadow: isActive
             ? [
                 BoxShadow(
-                  color: lightColor.withOpacity(0.8),
+                  color: lightColor.withValues(alpha: 0.8),
                   blurRadius: 20,
                   spreadRadius: 5,
                 ),

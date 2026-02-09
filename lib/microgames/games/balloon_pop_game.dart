@@ -32,7 +32,6 @@ class _BalloonPopGameState extends MicroGameState<BalloonPopGame> {
   Timer? _gameTimer;
   bool _isPopped = false;
 
-  final double _minScale = 0.5;
   final double _maxScale = 2.5;
   final double _goodMinScale = 1.5;
   final double _goodMaxScale = 2.0;
@@ -152,7 +151,7 @@ class _BalloonPopGameState extends MicroGameState<BalloonPopGame> {
                   height: 120,
                   decoration: BoxDecoration(
                     color: isGoodSize
-                        ? Colors.greenAccent.withOpacity(0.3)
+                        ? const Color(0x4D69F0AE)
                         : Colors.transparent,
                     shape: BoxShape.circle,
                   ),

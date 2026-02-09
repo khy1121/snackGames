@@ -163,9 +163,9 @@ class _FlyCatcherGameState extends MicroGameState<FlyCatcherGame> {
               child: Container(
                 width: 60,
                 height: 60,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.black.withOpacity(0.1),
+                  color: Color(0x1A000000),
                 ),
                 child: const Center(
                   child: Text(

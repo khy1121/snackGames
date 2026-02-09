@@ -121,9 +121,9 @@ class _BallRollGameState extends MicroGameState<BallRollGame> {
               width: size.width * 0.9,
               height: size.height * 0.6,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
+                color: const Color(0x1AFFFFFF),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white30, width: 3),
+                border: Border.all(color: const Color(0x4DFFFFFF), width: 3),
               ),
               child: Stack(
                 children: [
@@ -139,9 +139,9 @@ class _BallRollGameState extends MicroGameState<BallRollGame> {
                         gradient: const RadialGradient(
                           colors: [Colors.greenAccent, Colors.green],
                         ),
-                        boxShadow: [
+                        boxShadow: const [
                           BoxShadow(
-                            color: Colors.green.withOpacity(0.6),
+                            color: Color(0x994CAF50),
                             blurRadius: 20,
                             spreadRadius: 5,
                           ),
@@ -168,11 +168,11 @@ class _BallRollGameState extends MicroGameState<BallRollGame> {
                         gradient: const RadialGradient(
                           colors: [Colors.white, Colors.blueGrey],
                         ),
-                        boxShadow: [
+                        boxShadow: const [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.3),
+                            color: Color(0x4D000000),
                             blurRadius: 10,
-                            offset: const Offset(2, 2),
+                            offset: Offset(2, 2),
                           ),
                         ],
                       ),

@@ -175,8 +175,8 @@ class _DiceShakeGameState extends MicroGameState<DiceShakeGame> {
                     boxShadow: [
                       BoxShadow(
                         color: isWinning 
-                            ? Colors.yellow.withOpacity(0.6)
-                            : Colors.black.withOpacity(0.3),
+                            ? const Color(0x99FFEB3B)
+                            : const Color(0x4D000000),
                         blurRadius: isWinning ? 30 : 20,
                         spreadRadius: isWinning ? 10 : 0,
                       ),

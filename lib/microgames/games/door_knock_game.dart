@@ -130,7 +130,7 @@ class _DoorKnockGameState extends MicroGameState<DoorKnockGame> {
                         fontSize: 40,
                         color: index < _knockCount
                             ? Colors.yellow
-                            : Colors.white.withOpacity(0.3),
+                            : const Color(0x4DFFFFFF),
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -157,11 +157,11 @@ class _DoorKnockGameState extends MicroGameState<DoorKnockGame> {
                       color: const Color(0xFF4E342E),
                       width: 8,
                     ),
-                    boxShadow: [
+                    boxShadow: const [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.5),
+                        color: Color(0x80000000),
                         blurRadius: 20,
-                        offset: const Offset(0, 10),
+                        offset: Offset(0, 10),
                       ),
                     ],
                   ),
