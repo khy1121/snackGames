@@ -501,9 +501,18 @@ class _MusicPlayerPopupState extends State<MusicPlayerPopup> {
               }
             },
             activeColor: const Color(0xFF00B894),
-            activeTrackColor: const Color(0xFF00B894).withValues(alpha: 0.5),
-            inactiveThumbColor: Colors.grey[600],
-            inactiveTrackColor: Colors.grey[800],
+            thumbColor: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.selected)) {
+                return const Color(0xFF00B894);
+              }
+              return Colors.grey[600];
+            }),
+            trackColor: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.selected)) {
+                return const Color(0xFF00B894).withValues(alpha: 0.5);
+              }
+              return Colors.grey[800];
+            }),
           ),
         ),
       ),

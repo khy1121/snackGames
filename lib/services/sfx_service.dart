@@ -38,7 +38,7 @@ class SfxService {
         
         // 로드 에러 핸들러
         audio.onError.listen((event) {
-          print('SFX load error: $path');
+          // 무시
         });
         
         _audioPool[path] = audio;
@@ -51,12 +51,11 @@ class SfxService {
       // play() 호출 후 Promise 처리
       try {
         await audio.play();
-        print('SFX played: $path');
       } catch (e) {
-        print('SFX play failed: $path - $e');
+        // 무시
       }
     } catch (e) {
-      print('SFX error: $path - $e');
+      // 무시
     }
   }
 

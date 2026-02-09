@@ -10,14 +10,12 @@ class PWAInstallService {
     // Listen for PWA installable event
     html.window.addEventListener('pwa-installable', (event) {
       _isInstallable = true;
-      print('PWA is installable');
     });
 
     // Listen for PWA installed event
     html.window.addEventListener('pwa-installed', (event) {
       _isInstalled = true;
       _isInstallable = false;
-      print('PWA was installed');
     });
 
     // Check initial state
@@ -30,7 +28,6 @@ class PWAInstallService {
       final result = js.context.callMethod('isPWAInstallable');
       return result == true;
     } catch (e) {
-      print('Error checking PWA installability: $e');
       return false;
     }
   }
@@ -45,7 +42,6 @@ class PWAInstallService {
       ]);
       return result == true;
     } catch (e) {
-      print('Error installing PWA: $e');
       return false;
     }
   }

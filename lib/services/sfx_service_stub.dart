@@ -17,7 +17,7 @@ class SfxService {
 
   Future<void> play(String path) async {
     // Native 플랫폼은 audioplayers 패키지 필요
-    print('SFX play (stub): $path');
+    // Stub: 아무 작업도 하지 않음
   }
 
   Future<void> playDropDice() async {

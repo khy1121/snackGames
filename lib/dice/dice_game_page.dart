@@ -1481,7 +1481,12 @@ class _PauseMenuSheetState extends State<_PauseMenuSheet> {
                             ),
                             Switch(
                               value: enabled,
-                              activeColor: const Color(0xFFFDAC42),
+                              thumbColor: WidgetStateProperty.resolveWith((states) {
+                                if (states.contains(WidgetState.selected)) {
+                                  return const Color(0xFFFDAC42);
+                                }
+                                return null;
+                              }),
                               onChanged: (value) {
                                 SettingsService.setVibrationEnabled(value);
                                 VibrationService.setEnabled(value);

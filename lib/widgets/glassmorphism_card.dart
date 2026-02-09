@@ -36,17 +36,17 @@ class GlassmorphismCard extends StatelessWidget {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: gradientColors!
-                        .map((c) => c.withOpacity(opacity))
+                        .map((c) => c.withValues(alpha: opacity))
                         .toList(),
                   )
                 : null,
             color: gradientColors == null
-                ? Colors.white.withOpacity(opacity)
+                ? Colors.white.withValues(alpha: opacity)
                 : null,
             borderRadius: borderRadius ?? BorderRadius.circular(16),
             border: border ??
                 Border.all(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   width: 1.5,
                 ),
           ),

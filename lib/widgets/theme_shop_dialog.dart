@@ -78,7 +78,7 @@ class _ThemeShopDialogState extends State<ThemeShopDialog> {
           border: Border.all(color: Colors.white24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.5),
+              color: Colors.black.withValues(alpha: 0.5),
               blurRadius: 20,
               spreadRadius: 5,
             )
@@ -105,7 +105,7 @@ class _ThemeShopDialogState extends State<ThemeShopDialog> {
                     decoration: BoxDecoration(
                       color: Colors.black45,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFFFD700).withOpacity(0.5)),
+                      border: Border.all(color: const Color(0xFFFFD700).withValues(alpha: 0.5)),
                     ),
                     child: Row(
                       children: [
@@ -179,7 +179,7 @@ class _ThemeShopDialogState extends State<ThemeShopDialog> {
             : Border.all(color: Colors.white12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             blurRadius: 8,
             offset: const Offset(0, 4),
           )

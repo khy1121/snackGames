@@ -10,24 +10,13 @@ class VibrationService {
 
   /// 초기화 (웹 진동 API 지원 확인)
   static Future<void> init(dynamic prefs) async {
-    print('\n========================================');
-    print('🔔 Web Vibration Service Init');
-    print('----------------------------------------');
-    print('URL: ${html.window.location.href}');
-    print('Protocol: ${html.window.location.protocol}');
-    print('Is HTTPS: ${html.window.location.protocol == "https:"}');
-    
     _hasVibrator = _checkVibrationSupport();
-    print('Vibration API exists: $_hasVibrator');
     
     // localStorage 사용
     final stored = html.window.localStorage[_keyEnabled];
     if (stored != null) {
       _isEnabled = stored == 'true';
     }
-    print('Vibration enabled in settings: $_isEnabled');
-    print('Final vibration available: ${_isEnabled && _hasVibrator}');
-    print('========================================\n');
   }
 
   static bool _checkVibrationSupport() {
@@ -35,7 +24,6 @@ class VibrationService {
       // navigator.vibrate가 존재하는지 확인
       return js_util.hasProperty(html.window.navigator, 'vibrate');
     } catch (e) {
-      print('Vibration check failed: $e');
       return false;
     }
   }
@@ -47,29 +35,17 @@ class VibrationService {
   static Future<void> setEnabled(bool enabled) async {
     _isEnabled = enabled;
     html.window.localStorage[_keyEnabled] = enabled.toString();
-    print('Vibration enabled: $enabled');
   }
 
   static void _vibrate(int duration) {
-    print('🔔 Vibrate called: ${duration}ms');
-    print('  - Enabled: $_isEnabled');
-    print('  - Has vibrator: $_hasVibrator');
-    
-    if (!_isEnabled) {
-      print('  ❌ Vibration disabled in settings');
-      return;
-    }
-    if (!_hasVibrator) {
-      print('  ❌ No vibrator support');
-      return;
-    }
+    if (!_isEnabled) return;
+    if (!_hasVibrator) return;
     
     try {
       // navigator.vibrate() 호출
-      final result = js_util.callMethod(html.window.navigator, 'vibrate', [duration]);
-      print('  ✅ Vibrate success: $result');
+      js_util.callMethod(html.window.navigator, 'vibrate', [duration]);
     } catch (e) {
-      print('  ❌ Vibration error: $e');
+      // 무시
     }
   }
 
@@ -82,9 +58,8 @@ class VibrationService {
       js_util.callMethod(html.window.navigator, 'vibrate', [
         js_util.jsify(pattern)
       ]);
-      print('Vibrate pattern: $pattern');
     } catch (e) {
-      print('Vibration pattern failed: $e');
+      // 무시
     }
   }
 
@@ -133,4 +108,3 @@ class VibrationService {
     }
   }
 }
-

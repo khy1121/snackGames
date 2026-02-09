@@ -64,13 +64,12 @@ class WebAudioService {
 
       // 에러 이벤트 핸들러
       _audioElement!.onError.listen((event) {
-        print('Audio error: ${_audioElement?.error?.code}');
         _isPlaying = false;
       });
 
       // canplay 이벤트 핸들러
       _audioElement!.onCanPlay.listen((_) {
-        print('Audio can play: $_currentTrackPath');
+        // 준비 완료
       });
       
       // 시간 업데이트 이벤트 핸들러
@@ -83,9 +82,7 @@ class WebAudioService {
       });
 
       _isInitialized = true;
-      print('Web audio service initialized');
     } catch (e) {
-      print('Failed to initialize web audio service: $e');
       _isInitialized = true;
     }
   }
@@ -96,11 +93,9 @@ class WebAudioService {
     
     // 같은 트랙이면 무시
     if (_currentTrackPath == newPath && _audioElement != null) {
-      print('Same track, skipping change: $newPath');
       return;
     }
     
-    print('Changing track to: $newPath');
     _currentTrackPath = newPath;
     
     if (_audioElement != null) {
@@ -125,20 +120,10 @@ class WebAudioService {
 
   /// 배경음악 재생
   Future<void> play() async {
-    if (_audioElement == null) {
-      print('Audio element is null');
-      return;
-    }
-    
-    if (_isPlaying) {
-      print('Already playing');
-      return;
-    }
+    if (_audioElement == null) return;
+    if (_isPlaying) return;
 
     try {
-      print('Attempting to play: $_currentTrackPath');
-      print('Audio readyState: ${_audioElement!.readyState}');
-      
       // 오디오 로드 확인
       if (_audioElement!.readyState < 2) {
         _audioElement!.load();
@@ -147,12 +132,7 @@ class WebAudioService {
       
       await _audioElement!.play();
       _isPlaying = true;
-      print('Web background music started successfully');
     } catch (e) {
-      print('Failed to play web background music: $e');
-      print('Audio src: ${_audioElement?.src}');
-      print('Audio readyState: ${_audioElement?.readyState}');
-      print('Audio error: ${_audioElement?.error?.code}');
       _isPlaying = false;
     }
   }
@@ -161,7 +141,6 @@ class WebAudioService {
   Future<void> pause() async {
     _audioElement?.pause();
     _isPlaying = false;
-    print('Audio paused');
   }
 
   /// 배경음악 재개
@@ -170,9 +149,8 @@ class WebAudioService {
     try {
       await _audioElement!.play();
       _isPlaying = true;
-      print('Audio resumed');
     } catch (e) {
-      print('Failed to resume: $e');
+      // 무시
     }
   }
 
@@ -183,7 +161,6 @@ class WebAudioService {
       _audioElement!.currentTime = 0;
     }
     _isPlaying = false;
-    print('Audio stopped');
   }
 
   /// 볼륨 설정 (0.0 ~ 1.0)
@@ -192,7 +169,6 @@ class WebAudioService {
     if (_audioElement != null) {
       _audioElement!.volume = _volume;
     }
-    print('Volume set to: $_volume');
   }
 
   /// 현재 볼륨
