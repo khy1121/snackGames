@@ -142,19 +142,19 @@ class _MicroGameRushPageState extends State<MicroGameRushPage> {
   }
 
   void _onGameSuccess() {
-    VibrationService.mediumImpact();
+    VibrationService.medium();
     _controller.recordSuccess();
     _showResult(MicroGameResult.success);
   }
 
   void _onGameFailure() {
-    VibrationService.heavyImpact();
+    VibrationService.heavy();
     _controller.recordFailure();
     _showResult(MicroGameResult.failure);
   }
 
   void _onGameTimeout() {
-    VibrationService.heavyImpact();
+    VibrationService.heavy();
     _controller.recordFailure();
     _showResult(MicroGameResult.timeout);
   }

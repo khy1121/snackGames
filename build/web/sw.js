@@ -1,6 +1,6 @@
 // Service Worker for PWA
 // 버전 업데이트 시 이 숫자를 변경하세요!
-const SW_VERSION = '2.5.13';
+const SW_VERSION = '2.5.14';
 const CACHE_NAME = `snack-games-v${SW_VERSION}`;
 const urlsToCache = [
     '/',
@@ -61,7 +61,7 @@ self.addEventListener('activate', (event) => {
 // Fetch event - Network First 전략 (항상 최신 버전 우선)
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
-    
+
     // 오디오/SFX 파일은 Cache First (큰 파일, 변경 거의 없음)
     if (url.pathname.startsWith('/audio/') || url.pathname.startsWith('/sfx/')) {
         event.respondWith(
@@ -78,7 +78,7 @@ self.addEventListener('fetch', (event) => {
         );
         return;
     }
-    
+
     // 그 외 모든 리소스: Network First (최신 버전 우선, 오프라인 시 캐시)
     event.respondWith(
         fetch(event.request)

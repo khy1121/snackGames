@@ -131,7 +131,7 @@ class _FlyCatcherGameState extends MicroGameState<FlyCatcherGame> {
           ),
 
           // 파리들
-          ...flies.map((fly) => _buildFly(fly, size)),
+          ..._flies.map((fly) => _buildFly(fly, size)),
 
           // 완료 메시지
           if (isCompleted)
