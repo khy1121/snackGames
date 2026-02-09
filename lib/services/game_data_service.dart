@@ -85,7 +85,7 @@ class GameDataService {
     if (savedDate != today) {
       // 새로운 날 - 일일 점수 리셋
       prefs.setString(_keyTodayDate, today);
-      for (final gameId in ['2048', 'dice', 'slotball', 'blockpuzzle']) {
+      for (final gameId in ['2048', 'dice', 'slotball', 'blockpuzzle', 'microgame_rush']) {
         prefs.remove('$_keyTodayScore$gameId');
       }
     }
@@ -180,9 +180,22 @@ class GameDataService {
   }
 
   /// 게임 플레이 횟수 증가 (non-blocking)
-  static void incrementGamesPlayed() {
+  static void incrementGamesPlayed([String? gameId]) {
     final current = getTotalGamesPlayed();
     prefs.setInt(_keyTotalGamesPlayed, current + 1);
+    
+    // 특정 게임 플레이 횟수도 추적
+    if (gameId != null) {
+      final gameCount = prefs.getInt('game_count_$gameId') ?? 0;
+      prefs.setInt('game_count_$gameId', gameCount + 1);
+    }
+  }
+  
+  /// 미니게임 러시 점수 저장 (최고 점수만)
+  static void setMicroGameRushScore(int score) {
+    const gameId = 'microgame_rush';
+    setBestScore(gameId, score);
+    setTodayScore(gameId, score);
   }
 
   // ========== 게임 정보 ==========
@@ -197,6 +210,8 @@ class GameDataService {
         return 'Slot Ball';
       case 'blockpuzzle':
         return 'Block Blitz';
+      case 'microgame_rush':
+        return 'MicroGame Rush';
       default:
         return gameId;
     }
@@ -212,6 +227,8 @@ class GameDataService {
         return '🎱';
       case 'blockpuzzle':
         return '🧩';
+      case 'microgame_rush':
+        return '⚡';
       default:
         return '🎮';
     }

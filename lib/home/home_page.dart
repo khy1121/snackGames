@@ -4,6 +4,7 @@ import '../game/game_page.dart';
 import '../dice/dice_game_page.dart';
 import '../slot_ball/slot_ball_game_page.dart';
 import '../block_puzzle/block_puzzle_game_page.dart';
+import '../microgames/microgame_rush_page.dart';
 
 import '../profile/profile_page.dart';
 import '../shop/shop_page.dart';
@@ -114,6 +115,22 @@ final List<GameInfo> gameList = [
 • 공간 관리가 핵심 전략
 • 블록을 놓을 수 없으면 게임 오버''',
     pageBuilder: (_) => const BlockPuzzleGamePage(),
+  ),
+
+  GameInfo(
+    id: 'microgame_rush',
+    title: '미니게임 러시',
+    subtitle: '초단위 미션! 반응속도 테스트',
+    icon: '⚡',
+    colors: const [Color(0xFFFF6B6B), Color(0xFFFFE66D)],
+    rules: '''📖 게임 규칙
+• 랜덤 미니게임 연속 플레이
+• 제한시간 내 미션 완수
+• 실패하면 체력 -1, 0되면 게임오버''',
+    difficulty: '''📈 난이도
+• 점점 짧아지는 제한시간 (10초→3초)
+• 다양한 조작 방식 (터치/센서)''',
+    pageBuilder: (_) => const MicroGameRushPage(),
   ),
 ];
 
