@@ -72,11 +72,12 @@ class _SlotBallGamePageState extends State<SlotBallGamePage>
   }
   
   void _onGameOver() {
-    final finalScore = _engine.getFinalScore();
-    GameDataService.recordScore('slotball', finalScore);
+    final totalScore = _engine.getFinalScore();
+    final roundScore = totalScore - _engine.bankedScore;
+    GameDataService.recordScore('slotball', totalScore);
     
-    // 포인트 보상 (점수의 2배)
-    final points = finalScore * 2;
+    // 포인트 보상 (이번 라운드 점수의 2배)
+    final points = roundScore * 2;
     GameDataService.addPoints(points);
     
     VibrationService.success();
@@ -84,20 +85,20 @@ class _SlotBallGamePageState extends State<SlotBallGamePage>
     
     Future.delayed(const Duration(milliseconds: 500), () {
       if (!mounted) return;
-      _showGameOverDialog(finalScore, points);
+      _showGameOverDialog(totalScore, roundScore, points);
     });
   }
   
-  void _showGameOverDialog(int finalScore, int points) {
+  void _showGameOverDialog(int totalScore, int roundScore, int points) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E1E2E),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          '🎱 라운드 종료!',
-          style: TextStyle(color: Colors.white, fontSize: 22),
+        title: Text(
+          '🎱 라운드 ${_engine.round} 종료!',
+          style: const TextStyle(color: Colors.white, fontSize: 22),
           textAlign: TextAlign.center,
         ),
         content: Column(
@@ -114,14 +115,18 @@ class _SlotBallGamePageState extends State<SlotBallGamePage>
               ),
               child: Column(
                 children: [
-                  const Text('최종 점수', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                  const Text('이번 라운드', style: TextStyle(color: Colors.white70, fontSize: 14)),
                   Text(
-                    '$finalScore',
+                    '$roundScore',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 42,
                       fontWeight: FontWeight.bold,
                     ),
+                  ),
+                  if (_engine.round > 1) Text(
+                    '누적 총점: $totalScore',
+                    style: const TextStyle(color: Colors.white60, fontSize: 14),
                   ),
                 ],
               ),
@@ -164,7 +169,7 @@ class _SlotBallGamePageState extends State<SlotBallGamePage>
             },
             child: const Text('나가기', style: TextStyle(color: Colors.grey)),
           ),
-          FilledButton(
+          TextButton(
             onPressed: () {
               Navigator.pop(ctx);
               setState(() {
@@ -172,11 +177,20 @@ class _SlotBallGamePageState extends State<SlotBallGamePage>
                 _startTime = DateTime.now();
               });
             },
+            child: const Text('처음부터', style: TextStyle(color: Colors.white70)),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              setState(() {
+                _engine.nextRound();
+              });
+            },
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFF00B894),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('다시 하기', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text('다음 라운드 →', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -422,10 +436,10 @@ class _SlotBallGamePageState extends State<SlotBallGamePage>
             onPressed: () => Navigator.pop(context),
             icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
           ),
-          const Expanded(
+          Expanded(
             child: Text(
-              '🎱 슬롯 볼',
-              style: TextStyle(
+              '🎱 슬롯 볼  R${_engine.round}',
+              style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
@@ -560,7 +574,9 @@ class SlotBallPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     _drawBoard(canvas, size);
     _drawScoreZones(canvas, size);
+    _drawPegs(canvas, size);
     _drawBalls(canvas, size);
+    _drawPopups(canvas, size);
     _drawLaunchArea(canvas, size);
     if (isDragging && dragStart != null && dragCurrent != null) {
       _drawAimIndicator(canvas, size);
@@ -666,6 +682,98 @@ class SlotBallPainter extends CustomPainter {
       ..color = Colors.white.withValues(alpha: 0.15)
       ..strokeWidth = 1;
     canvas.drawLine(Offset(10, noScoreY), Offset(size.width - 10, noScoreY), dashPaint);
+  }
+  
+  void _drawPegs(Canvas canvas, Size size) {
+    for (final peg in engine.pegs) {
+      final px = peg.getX(size.width);
+      final py = peg.getY(size.height);
+      final r = peg.radius * peg.hitScale;
+      
+      // 핀 그림자
+      canvas.drawCircle(
+        Offset(px + 1, py + 1), r,
+        Paint()..color = Colors.black.withValues(alpha: 0.3),
+      );
+      
+      // 핀 색상
+      final Color pegColor;
+      switch (peg.type) {
+        case PegType.bonus:
+          pegColor = const Color(0xFFFECA57);
+        case PegType.bumper:
+          pegColor = const Color(0xFFFF6B6B);
+        default:
+          pegColor = const Color(0xFFDFE6E9);
+      }
+      
+      // 핀 본체
+      final pegPaint = Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(-0.3, -0.3),
+          radius: 1.0,
+          colors: [pegColor, pegColor.withValues(alpha: 0.6)],
+        ).createShader(Rect.fromCircle(center: Offset(px, py), radius: r));
+      canvas.drawCircle(Offset(px, py), r, pegPaint);
+      
+      // 핀 테두리
+      canvas.drawCircle(
+        Offset(px, py), r,
+        Paint()
+          ..color = pegColor.withValues(alpha: 0.8)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5,
+      );
+      
+      // 핀 하이라이트
+      canvas.drawCircle(
+        Offset(px - r * 0.2, py - r * 0.2), r * 0.3,
+        Paint()..color = Colors.white.withValues(alpha: 0.5),
+      );
+      
+      // 보너스 핀 별 표시
+      if (peg.type == PegType.bonus) {
+        final tp = TextPainter(
+          text: const TextSpan(
+            text: '★',
+            style: TextStyle(color: Color(0xFFE17055), fontSize: 10, fontWeight: FontWeight.bold),
+          ),
+          textDirection: TextDirection.ltr,
+        );
+        tp.layout();
+        tp.paint(canvas, Offset(px - tp.width / 2, py - tp.height / 2));
+      }
+      
+      // 범퍼 외곽 글로우
+      if (peg.type == PegType.bumper) {
+        canvas.drawCircle(
+          Offset(px, py), r + 3,
+          Paint()
+            ..color = const Color(0xFFFF6B6B).withValues(alpha: 0.3)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2,
+        );
+      }
+    }
+  }
+  
+  void _drawPopups(Canvas canvas, Size size) {
+    for (final popup in engine.popups) {
+      final alpha = popup.life.clamp(0.0, 1.0);
+      final tp = TextPainter(
+        text: TextSpan(
+          text: popup.text.isNotEmpty ? popup.text : '+${popup.points}',
+          style: TextStyle(
+            color: const Color(0xFFFECA57).withValues(alpha: alpha),
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      tp.layout();
+      tp.paint(canvas, Offset(popup.x - tp.width / 2, popup.y - tp.height / 2));
+    }
   }
   
   void _drawBalls(Canvas canvas, Size size) {
