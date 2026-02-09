@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import '../game/game_page.dart';
 import '../dice/dice_game_page.dart';
 import '../slot_ball/slot_ball_game_page.dart';
+import '../block_puzzle/block_puzzle_game_page.dart';
 
 import '../profile/profile_page.dart';
 import '../shop/shop_page.dart';
@@ -97,6 +98,22 @@ final List<GameInfo> gameList = [
 • 너무 약하면 0점, 너무 강하면 튜겨나감
 • 공끼리 충돌로 전략적 배치''',
     pageBuilder: (_) => const SlotBallGamePage(),
+  ),
+
+  GameInfo(
+    id: 'blockpuzzle',
+    title: '블록 블리츠',
+    subtitle: '블록을 놓아 줄을 완성하라!',
+    icon: '🧩',
+    colors: const [Color(0xFFE17055), Color(0xFFFF7675)],
+    rules: '''📖 게임 규칙
+• 3개의 블록을 그리드에 배치
+• 가로/세로 줄 완성 시 클리어
+• 연속 클리어로 콤보 점수 폭발!''',
+    difficulty: '''📈 난이도
+• 공간 관리가 핵심 전략
+• 블록을 놓을 수 없으면 게임 오버''',
+    pageBuilder: (_) => const BlockPuzzleGamePage(),
   ),
 ];
 
