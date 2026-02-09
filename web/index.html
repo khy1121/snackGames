@@ -176,34 +176,34 @@
 
   <script>
     // Current SW Version
-    window.currentSWVersion = '2.3.5'; // Service Worker와 동일한 버전
-    
+    window.currentSWVersion = '2.5.14'; // Service Worker와 동일한 버전
+
     // 현재 활성화된 SW의 실제 버전 (초기화 시 null)
     window.activeSWVersion = null;
-    
+
     // 토스트 자동 숨김 타이머
     let toastAutoHideTimer = null;
-    
+
     // PWA Update Toast Functions
     window.showUpdateToast = function (version) {
       const toast = document.getElementById('pwa-update-toast');
       const versionMsg = document.getElementById('toast-version-msg');
-      
+
       // 이미 표시 중이면 타이머만 리셋
       if (toast.classList.contains('show')) {
         if (toastAutoHideTimer) clearTimeout(toastAutoHideTimer);
         toastAutoHideTimer = setTimeout(() => window.dismissUpdateToast(), 15000);
         return;
       }
-      
+
       if (version) {
         versionMsg.textContent = `버전 ${version}이(가) 준비되었습니다.`;
       }
-      
+
       // hiding 클래스 제거 후 show 추가
       toast.classList.remove('hiding');
       toast.classList.add('show');
-      
+
       // 15초 후 자동 숨김
       if (toastAutoHideTimer) clearTimeout(toastAutoHideTimer);
       toastAutoHideTimer = setTimeout(() => {
@@ -213,17 +213,17 @@
 
     window.dismissUpdateToast = function () {
       const toast = document.getElementById('pwa-update-toast');
-      
+
       // 타이머 정리
       if (toastAutoHideTimer) {
         clearTimeout(toastAutoHideTimer);
         toastAutoHideTimer = null;
       }
-      
+
       // show 제거하고 hiding 추가
       toast.classList.remove('show');
       toast.classList.add('hiding');
-      
+
       // 애니메이션 완료 후 hiding도 제거 (초기 상태로)
       setTimeout(() => {
         toast.classList.remove('hiding');
@@ -238,12 +238,12 @@
         toastAutoHideTimer = null;
       }
       toast.classList.remove('show', 'hiding');
-      
+
       // 서비스 워커에게 skipWaiting 메시지 전송
       if (navigator.serviceWorker.controller) {
         navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
       }
-      
+
       // 짧은 지연 후 새로고침 (서비스 워커 활성화 대기)
       setTimeout(() => {
         window.location.reload();
@@ -251,23 +251,23 @@
     };
 
     // 모바일 터치 이벤트 리스너 추가 (DOM 로드 후)
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
       const btnRefresh = document.getElementById('btn-refresh');
       const btnLater = document.getElementById('btn-later');
-      
+
       if (btnRefresh) {
         // 클릭과 터치 이벤트 모두 처리
         btnRefresh.addEventListener('click', window.refreshForUpdate, { passive: false });
-        btnRefresh.addEventListener('touchend', function(e) {
+        btnRefresh.addEventListener('touchend', function (e) {
           e.preventDefault();
           e.stopPropagation();
           window.refreshForUpdate();
         }, { passive: false });
       }
-      
+
       if (btnLater) {
         btnLater.addEventListener('click', window.dismissUpdateToast, { passive: false });
-        btnLater.addEventListener('touchend', function(e) {
+        btnLater.addEventListener('touchend', function (e) {
           e.preventDefault();
           e.stopPropagation();
           window.dismissUpdateToast();
@@ -281,7 +281,7 @@
         navigator.serviceWorker.register('/sw.js?v=' + window.currentSWVersion)
           .then((registration) => {
             console.log('ServiceWorker registration successful:', registration.scope);
-            
+
             // 페이지 로드 시 현재 활성 SW 버전 가져오기
             if (navigator.serviceWorker.controller) {
               console.log('Requesting version from active SW...');
@@ -308,13 +308,13 @@
                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                   // New SW is installed and waiting
                   console.log('New version available! Auto-activating...');
-                  
+
                   // 자동으로 새 SW 활성화
                   newWorker.postMessage({ type: 'SKIP_WAITING' });
                 }
               });
             });
-            
+
             // SW가 제어권을 넘겨받으면 버전 확인 (무한 새로고침 방지)
             navigator.serviceWorker.addEventListener('controllerchange', () => {
               console.log('Controller changed - new SW is now active');
@@ -328,7 +328,7 @@
         // Listen for messages from Service Worker
         navigator.serviceWorker.addEventListener('message', (event) => {
           console.log('Received message from SW:', event.data);
-          
+
           if (event.data.type === 'SW_UPDATED') {
             console.log('SW Updated to version:', event.data.version);
             // 버전 비교: 현재 버전과 다를 때만 토스트 표시
@@ -344,11 +344,11 @@
               console.log('Same version, no update needed');
             }
           }
-          
+
           if (event.data.type === 'SW_VERSION') {
             const newVersion = event.data.version;
             console.log('Received SW Version:', newVersion);
-            
+
             // 현재 활성화된 버전 저장
             if (!window.activeSWVersion) {
               window.activeSWVersion = newVersion;
@@ -361,7 +361,7 @@
             } else {
               console.log('Version unchanged:', newVersion);
             }
-            
+
             // 토스트 메시지 업데이트
             const versionMsg = document.getElementById('toast-version-msg');
             if (versionMsg) {
@@ -376,7 +376,7 @@
           if (refreshing) return;
           refreshing = true;
           console.log('Service Worker controller changed - updating complete');
-          
+
           // 업데이트 완료 - 새 버전으로 갱신
           if (navigator.serviceWorker.controller) {
             navigator.serviceWorker.controller.postMessage({ type: 'GET_VERSION' });
