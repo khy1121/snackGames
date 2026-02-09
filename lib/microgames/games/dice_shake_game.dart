@@ -19,7 +19,7 @@ class DiceShakeGame extends MicroGame {
   String get title => '주사위 흔들기!';
 
   @override
-  String get description => '흔들어서 6을 만들어!';
+  String get instruction => '흔들어!';
 
   @override
   String get emoji => '🎲';

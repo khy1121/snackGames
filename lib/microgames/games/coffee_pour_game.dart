@@ -18,7 +18,7 @@ class CoffeePourGame extends MicroGame {
   String get title => '커피 따르기!';
 
   @override
-  String get description => '기울여서 따라라!';
+  String get instruction => '기울여!';
 
   @override
   String get emoji => '☕';

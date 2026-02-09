@@ -18,7 +18,7 @@ class FlyCatcherGame extends MicroGame {
   String get title => '날아오는 파리!';
 
   @override
-  String get description => '파리를 잡아라!';
+  String get instruction => '잡아!';
 
   @override
   String get emoji => '🪰';

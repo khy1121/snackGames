@@ -17,7 +17,7 @@ class BubbleWrapGame extends MicroGame {
   String get title => '뽁뽁이!';
 
   @override
-  String get description => '모두 터뜨려라!';
+  String get instruction => '전부 터뜨려!';
 
   @override
   String get emoji => '⚪';

@@ -2,7 +2,13 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'microgame_base.dart';
 
-/// 미니게임 컨트롤러 - 게임 흐름 제어 (개선: 보너스, 속도 보너스, 퍼펙트 판정)
+/// 속도 업 이벤트 콜백
+typedef SpeedUpCallback = void Function(MicroGameDifficulty newDifficulty);
+
+/// 보스 스테이지 콜백
+typedef BossStageCallback = void Function(int bossNumber);
+
+/// 미니게임 컨트롤러 — WarioWare 스타일 게임 흐름 (4라이프, 보스, 속도업)
 class MicroGameController {
   // 사용 가능한 모든 미니게임 생성자 목록
   final List<MicroGame Function(MicroGameConfig config, VoidCallback onSuccess, VoidCallback onFailure, VoidCallback onTimeout)> _gameFactories = [];
@@ -17,10 +23,23 @@ class MicroGameController {
   int _comboCount = 0;
   int _maxCombo = 0;
   int _score = 0;
-  int _lives = 3;
-  int _lastScoreGain = 0; // 마지막 획득 점수 (팝업용)
-  int _perfectCount = 0; // 빠르게 클리어한 횟수
+  int _lives = 4;             // WarioWare: 4 라이프
+  int _lastScoreGain = 0;
+  int _perfectCount = 0;
+  int _bossesCleared = 0;     // 클리어한 보스 수
   
+  // 속도 배율 (점진적으로 빨라짐, WarioWare 핵심 메카닉)
+  double _speedMultiplier = 1.0;
+  static const double _speedDecayPerRound = 0.012; // 라운드마다 1.2% 빨라짐
+  static const double _minSpeedMultiplier = 0.55;   // 최소 55% (최대 속도)
+  
+  // 보스 스테이지 간격
+  static const int _bossInterval = 10;
+  
+  // 이벤트 콜백
+  SpeedUpCallback? onSpeedUp;
+  BossStageCallback? onBossStage;
+
   // 게임 시작 시각 (속도 보너스 계산용)
   DateTime? _gameStartTime;
 
@@ -28,6 +47,9 @@ class MicroGameController {
 
   // 난이도 증가 설정
   MicroGameDifficulty _currentDifficulty = MicroGameDifficulty.easy;
+  
+  // 현재 보스 스테이지 여부
+  bool _isCurrentBoss = false;
 
   MicroGameController();
 
@@ -41,12 +63,19 @@ class MicroGameController {
     _gameFactories.add(factory);
   }
 
-  /// 모든 게임 등록
-  void registerAllGames(List<MicroGame Function(MicroGameConfig, VoidCallback, VoidCallback, VoidCallback)> factories) {
-    _gameFactories.addAll(factories);
+  /// 보스 스테이지인지 확인
+  bool get isCurrentBoss => _isCurrentBoss;
+  
+  /// 다음 라운드가 보스인지 미리 확인
+  bool get isNextRoundBoss {
+    final nextRound = _currentRound + 1;
+    return nextRound > 0 && nextRound % _bossInterval == 0;
   }
+  
+  /// 현재 보스 번호 (1부터)
+  int get currentBossNumber => (_currentRound ~/ _bossInterval) + 1;
 
-  /// 랜덤 게임 선택 (연속 중복 방지)
+  /// 랜덤 게임 선택 (연속 중복 방지, 보스/속도 배율 적용)
   MicroGame getRandomGame({
     required VoidCallback onSuccess,
     required VoidCallback onFailure,
@@ -55,6 +84,9 @@ class MicroGameController {
     if (_gameFactories.isEmpty) {
       throw Exception('No games registered!');
     }
+
+    // 보스 스테이지 체크
+    _isCurrentBoss = _currentRound > 0 && _currentRound % _bossInterval == 0;
 
     int index;
     if (_gameFactories.length == 1) {
@@ -67,13 +99,18 @@ class MicroGameController {
     _lastGameIndex = index;
 
     final factory = _gameFactories[index];
-    final config = MicroGameConfig.fromDifficulty(_currentDifficulty, '빨리!');
+    final config = MicroGameConfig.fromDifficulty(
+      _currentDifficulty,
+      '빨리!',
+      speedMultiplier: _speedMultiplier,
+      isBoss: _isCurrentBoss,
+    );
 
     markGameStart();
     return factory(config, onSuccess, onFailure, onTimeout);
   }
 
-  /// 게임 성공 처리 (속도 보너스 + 콤보 보너스)
+  /// 게임 성공 처리 (속도 보너스 + 콤보 보너스 + 보스 보너스)
   void recordSuccess() {
     _successCount++;
     _comboCount++;
@@ -89,7 +126,10 @@ class MicroGameController {
     // 속도 보너스: 제한시간의 50% 이내에 클리어하면 추가 점수
     if (_gameStartTime != null) {
       final elapsed = DateTime.now().difference(_gameStartTime!);
-      final timeLimitMs = MicroGameConfig.fromDifficulty(_currentDifficulty, '').timeLimit.inMilliseconds;
+      final timeLimitMs = MicroGameConfig.fromDifficulty(
+        _currentDifficulty, '',
+        speedMultiplier: _speedMultiplier,
+      ).timeLimit.inMilliseconds;
       final ratio = elapsed.inMilliseconds / timeLimitMs;
       if (ratio < 0.3) {
         baseScore += 80; // 초고속 보너스
@@ -114,6 +154,13 @@ class MicroGameController {
         break;
     }
 
+    // 보스 클리어 보너스
+    if (_isCurrentBoss) {
+      baseScore += 300;
+      _bossesCleared++;
+      onBossStage?.call(_bossesCleared);
+    }
+
     _lastScoreGain = baseScore;
     _score += baseScore;
 
@@ -121,9 +168,17 @@ class MicroGameController {
       _maxCombo = _comboCount;
     }
 
-    // 난이도 증가 (5판마다)
+    // 점진적 속도 증가 (매 라운드)
+    _speedMultiplier = (_speedMultiplier - _speedDecayPerRound)
+        .clamp(_minSpeedMultiplier, 1.0);
+
+    // 난이도 증가 (5판마다) + SPEED UP 이벤트
     if (_currentRound % 5 == 0) {
+      final oldDiff = _currentDifficulty;
       _increaseDifficulty();
+      if (_currentDifficulty != oldDiff) {
+        onSpeedUp?.call(_currentDifficulty);
+      }
     }
   }
 
@@ -134,6 +189,10 @@ class MicroGameController {
     _comboCount = 0;
     _lives--;
     _lastScoreGain = 0;
+    
+    // 점진적 속도 증가는 실패해도 적용
+    _speedMultiplier = (_speedMultiplier - _speedDecayPerRound * 0.5)
+        .clamp(_minSpeedMultiplier, 1.0);
   }
 
   /// 게임 오버 확인
@@ -164,12 +223,15 @@ class MicroGameController {
     _comboCount = 0;
     _maxCombo = 0;
     _score = 0;
-    _lives = 3;
+    _lives = 4;
     _lastScoreGain = 0;
     _perfectCount = 0;
+    _bossesCleared = 0;
     _lastGameIndex = -1;
     _gameStartTime = null;
     _currentDifficulty = MicroGameDifficulty.easy;
+    _speedMultiplier = 1.0;
+    _isCurrentBoss = false;
   }
 
   // Getters
@@ -182,5 +244,7 @@ class MicroGameController {
   int get lives => _lives;
   int get lastScoreGain => _lastScoreGain;
   int get perfectCount => _perfectCount;
+  int get bossesCleared => _bossesCleared;
+  double get speedMultiplier => _speedMultiplier;
   MicroGameDifficulty get currentDifficulty => _currentDifficulty;
 }

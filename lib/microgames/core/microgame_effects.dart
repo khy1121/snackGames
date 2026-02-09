@@ -638,3 +638,538 @@ class _PulseGlowState extends State<PulseGlow>
     );
   }
 }
+
+/// "SPEED UP!" 아나운스 (와리오 스타일)
+class SpeedUpAnnounce extends StatefulWidget {
+  final VoidCallback? onComplete;
+  
+  const SpeedUpAnnounce({super.key, this.onComplete});
+  
+  @override
+  State<SpeedUpAnnounce> createState() => _SpeedUpAnnounceState();
+}
+
+class _SpeedUpAnnounceState extends State<SpeedUpAnnounce>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scaleAnim;
+  late final Animation<double> _shakeAnim;
+  
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    
+    _scaleAnim = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.5), weight: 20),
+      TweenSequenceItem(tween: Tween(begin: 1.5, end: 1.0), weight: 15),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.0), weight: 45),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 20),
+    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+    
+    _shakeAnim = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0, end: -5), weight: 10),
+      TweenSequenceItem(tween: Tween(begin: -5, end: 5), weight: 10),
+      TweenSequenceItem(tween: Tween(begin: 5, end: -3), weight: 10),
+      TweenSequenceItem(tween: Tween(begin: -3, end: 3), weight: 10),
+      TweenSequenceItem(tween: Tween(begin: 3, end: 0), weight: 60),
+    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+    
+    _controller.forward().then((_) => widget.onComplete?.call());
+  }
+  
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(_shakeAnim.value, 0),
+          child: Transform.scale(
+            scale: _scaleAnim.value,
+            child: child,
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFFF0000), Color(0xFFFF6B00), Color(0xFFFFD700)],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x99FF0000),
+              blurRadius: 30,
+              spreadRadius: 5,
+            ),
+          ],
+        ),
+        child: const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '⚡ SPEED UP! ⚡',
+              style: TextStyle(
+                fontSize: 36,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+                letterSpacing: 3,
+                shadows: [
+                  Shadow(color: Colors.black54, offset: Offset(3, 3), blurRadius: 6),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 보스 스테이지 도입 화면
+class BossStageIntro extends StatefulWidget {
+  final int bossNumber;
+  final String gameEmoji;
+  final String gameTitle;
+  final VoidCallback? onComplete;
+  
+  const BossStageIntro({
+    super.key,
+    required this.bossNumber,
+    required this.gameEmoji,
+    required this.gameTitle,
+    this.onComplete,
+  });
+  
+  @override
+  State<BossStageIntro> createState() => _BossStageIntroState();
+}
+
+class _BossStageIntroState extends State<BossStageIntro>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _pulseAnim;
+  late final Animation<double> _fadeAnim;
+  
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    );
+    
+    _pulseAnim = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.3), weight: 15),
+      TweenSequenceItem(tween: Tween(begin: 1.3, end: 0.95), weight: 10),
+      TweenSequenceItem(tween: Tween(begin: 0.95, end: 1.05), weight: 10),
+      TweenSequenceItem(tween: Tween(begin: 1.05, end: 1.0), weight: 10),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.0), weight: 40),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 15),
+    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+    
+    _fadeAnim = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.0), weight: 20),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.0), weight: 60),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 20),
+    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+    
+    _controller.forward().then((_) => widget.onComplete?.call());
+  }
+  
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        return Opacity(
+          opacity: _fadeAnim.value.clamp(0.0, 1.0),
+          child: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFF1A0033), Color(0xFF4A0080), Color(0xFF1A0033)],
+              ),
+            ),
+            child: Center(
+              child: Transform.scale(
+                scale: _pulseAnim.value.clamp(0.0, 2.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // 경고 아이콘
+                    const Text('⚠️', style: TextStyle(fontSize: 50)),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFF0000), Color(0xFFCC0000)],
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'BOSS STAGE ${widget.bossNumber}',
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: 4,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      widget.gameEmoji,
+                      style: const TextStyle(fontSize: 90),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      widget.gameTitle,
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        shadows: [
+                          Shadow(color: Colors.purpleAccent, offset: Offset(0, 0), blurRadius: 20),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// 화면 플래시 (성공=초록, 실패=빨강)
+class ScreenFlash extends StatefulWidget {
+  final bool trigger;
+  final Color color;
+  
+  const ScreenFlash({
+    super.key,
+    required this.trigger,
+    this.color = Colors.white,
+  });
+  
+  @override
+  State<ScreenFlash> createState() => _ScreenFlashState();
+}
+
+class _ScreenFlashState extends State<ScreenFlash>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    );
+  }
+  
+  @override
+  void didUpdateWidget(ScreenFlash oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.trigger && !oldWidget.trigger) {
+      _controller.forward(from: 0);
+    }
+  }
+  
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        if (!_controller.isAnimating) return const SizedBox.shrink();
+        final opacity = (1.0 - _controller.value) * 0.4;
+        return IgnorePointer(
+          child: Container(
+            color: widget.color.withValues(alpha: opacity.clamp(0.0, 1.0)),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// WarioWare 스타일 게임 전환 (더 빠르고 임팩트)
+class WarioTransition extends StatefulWidget {
+  final Widget child;
+  final String gameEmoji;
+  final String instruction; // 한마디 명령어
+  final bool isBoss;
+  final int bossNumber;
+
+  const WarioTransition({
+    super.key,
+    required this.child,
+    required this.gameEmoji,
+    required this.instruction,
+    this.isBoss = false,
+    this.bossNumber = 0,
+  });
+
+  @override
+  State<WarioTransition> createState() => _WarioTransitionState();
+}
+
+class _WarioTransitionState extends State<WarioTransition>
+    with TickerProviderStateMixin {
+  late final AnimationController _introController;
+  late final AnimationController _gameController;
+  late final Animation<double> _introScale;
+  late final Animation<double> _introFade;
+  late final Animation<double> _gameSlide;
+  bool _showGame = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final introDuration = widget.isBoss ? 1200 : 450;
+    
+    _introController = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: introDuration),
+    );
+    _introScale = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.4), weight: 40),
+      TweenSequenceItem(tween: Tween(begin: 1.4, end: 1.0), weight: 60),
+    ]).animate(CurvedAnimation(parent: _introController, curve: Curves.easeOut));
+
+    _introFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _introController, curve: Curves.easeIn),
+    );
+
+    _gameController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _gameSlide = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(parent: _gameController, curve: Curves.easeOutCubic),
+    );
+
+    final delayMs = widget.isBoss ? 600 : 150;
+    _introController.forward().then((_) {
+      Future.delayed(Duration(milliseconds: delayMs), () {
+        if (mounted) {
+          setState(() => _showGame = true);
+          _gameController.forward();
+        }
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _introController.dispose();
+    _gameController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_showGame) {
+      return AnimatedBuilder(
+        animation: _gameController,
+        builder: (context, child) {
+          return Transform.translate(
+            offset: Offset(
+              MediaQuery.of(context).size.width * _gameSlide.value,
+              0,
+            ),
+            child: child,
+          );
+        },
+        child: widget.child,
+      );
+    }
+
+    // 인트로 화면 — WarioWare 스타일 (지시문 + 이모지)
+    return Container(
+      decoration: BoxDecoration(
+        gradient: widget.isBoss
+            ? const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFF1A0033), Color(0xFF4A0080), Color(0xFF1A0033)],
+              )
+            : const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+              ),
+      ),
+      child: Center(
+        child: AnimatedBuilder(
+          animation: _introController,
+          builder: (context, child) {
+            return Opacity(
+              opacity: _introFade.value,
+              child: Transform.scale(
+                scale: _introScale.value,
+                child: child,
+              ),
+            );
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (widget.isBoss) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFF0000), Color(0xFFCC0000)],
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'BOSS ${widget.bossNumber}',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: 3,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+              Text(
+                widget.gameEmoji,
+                style: const TextStyle(fontSize: 80),
+              ),
+              const SizedBox(height: 12),
+              // WarioWare 핵심: 크고 굵은 지시문
+              Text(
+                widget.instruction,
+                style: TextStyle(
+                  fontSize: widget.isBoss ? 32 : 36,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                  letterSpacing: 2,
+                  shadows: const [
+                    Shadow(
+                      color: Colors.black54,
+                      offset: Offset(2, 2),
+                      blurRadius: 8,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 라이프 표시 위젯 (4개, 애니메이션)
+class LivesDisplay extends StatelessWidget {
+  final int lives;
+  final int maxLives;
+  
+  const LivesDisplay({
+    super.key,
+    required this.lives,
+    this.maxLives = 4,
+  });
+  
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(
+        maxLives,
+        (index) => Padding(
+          padding: const EdgeInsets.only(right: 3),
+          child: AnimatedScale(
+            scale: index < lives ? 1.0 : 0.6,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.elasticOut,
+            child: Text(
+              index < lives ? '❤️' : '🖤',
+              style: const TextStyle(fontSize: 22),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 스피드 메터 (현재 속도 표시)
+class SpeedMeter extends StatelessWidget {
+  final double speedMultiplier;
+  
+  const SpeedMeter({super.key, required this.speedMultiplier});
+  
+  @override
+  Widget build(BuildContext context) {
+    final speedPercent = ((1.0 - speedMultiplier) * 200).toInt(); // 0~100%
+    final barColor = speedPercent > 60
+        ? const Color(0xFFFF0000)
+        : speedPercent > 30
+            ? const Color(0xFFFF9800)
+            : const Color(0xFF4CAF50);
+    
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text('⚡', style: TextStyle(fontSize: 14)),
+        const SizedBox(width: 4),
+        Container(
+          width: 50,
+          height: 6,
+          decoration: BoxDecoration(
+            color: const Color(0x33FFFFFF),
+            borderRadius: BorderRadius.circular(3),
+          ),
+          child: FractionallySizedBox(
+            widthFactor: (speedPercent / 100).clamp(0.0, 1.0),
+            alignment: Alignment.centerLeft,
+            child: Container(
+              decoration: BoxDecoration(
+                color: barColor,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}

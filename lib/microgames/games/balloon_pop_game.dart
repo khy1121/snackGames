@@ -17,7 +17,7 @@ class BalloonPopGame extends MicroGame {
   String get title => '풍선 터뜨리기!';
 
   @override
-  String get description => '적당한 크기에 터뜨려라!';
+  String get instruction => '타이밍!';
 
   @override
   String get emoji => '🎈';

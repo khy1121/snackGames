@@ -18,7 +18,7 @@ class BallRollGame extends MicroGame {
   String get title => '공 굴리기!';
 
   @override
-  String get description => '골인 지점까지!';
+  String get instruction => '굴려!';
 
   @override
   String get emoji => '⚽';

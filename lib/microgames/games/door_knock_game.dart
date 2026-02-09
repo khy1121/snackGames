@@ -17,7 +17,7 @@ class DoorKnockGame extends MicroGame {
   String get title => '문 두드리기!';
 
   @override
-  String get description => '리듬에 맞춰 두드려!';
+  String get instruction => '똑똑똑!';
 
   @override
   String get emoji => '🚪';

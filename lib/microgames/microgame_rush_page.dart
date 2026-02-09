@@ -13,10 +13,14 @@ import 'games/door_knock_game.dart';
 import 'games/coffee_pour_game.dart';
 import 'games/ball_roll_game.dart';
 import 'games/dice_shake_game.dart';
+import 'games/color_match_game.dart';
+import 'games/countdown_tap_game.dart';
+import 'games/odd_one_out_game.dart';
+import 'games/dont_touch_game.dart';
 import '../services/game_data_service.dart';
 import '../services/vibration_service.dart';
 
-/// 미니게임 러시 메인 페이지
+/// 미니게임 러시 — WarioWare: Touched! 오마주
 class MicroGameRushPage extends StatefulWidget {
   const MicroGameRushPage({super.key});
 
@@ -27,7 +31,8 @@ class MicroGameRushPage extends StatefulWidget {
 enum GameState {
   intro,
   countdown,
-  transition, // 게임 전환 애니메이션 (NEW)
+  speedUp,      // "SPEED UP!" 연출
+  transition,   // 게임 전환 (WarioWare 스타일 지시문)
   playing,
   result,
   gameOver,
@@ -45,6 +50,8 @@ class _MicroGameRushPageState extends State<MicroGameRushPage>
   bool _showConfetti = false;
   bool _triggerShake = false;
   bool _showScorePopup = false;
+  bool _triggerSuccessFlash = false;
+  bool _triggerFailFlash = false;
 
   // 게임 내 타이머 바
   Timer? _timerBarTimer;
@@ -54,6 +61,12 @@ class _MicroGameRushPageState extends State<MicroGameRushPage>
   late final AnimationController _introAnimController;
   late final Animation<double> _introFadeIn;
   late final Animation<double> _introBounce;
+
+  // 결과 표시용
+  MicroGameResult? _lastResult;
+  
+  // SPEED UP 표시 예약
+  bool _pendingSpeedUp = false;
 
   @override
   void initState() {
@@ -82,62 +95,34 @@ class _MicroGameRushPageState extends State<MicroGameRushPage>
   }
 
   void _registerGames() {
-    _controller.registerGame((config, onSuccess, onFailure, onTimeout) =>
-        FlyCatcherGame(
-            config: config,
-            onSuccess: onSuccess,
-            onFailure: onFailure,
-            onTimeout: onTimeout));
+    // 터치 게임 (웹+모바일 — 9개)
+    _controller.registerGame((config, s, f, t) =>
+        FlyCatcherGame(config: config, onSuccess: s, onFailure: f, onTimeout: t));
+    _controller.registerGame((config, s, f, t) =>
+        BalloonPopGame(config: config, onSuccess: s, onFailure: f, onTimeout: t));
+    _controller.registerGame((config, s, f, t) =>
+        BubbleWrapGame(config: config, onSuccess: s, onFailure: f, onTimeout: t));
+    _controller.registerGame((config, s, f, t) =>
+        TrafficLightGame(config: config, onSuccess: s, onFailure: f, onTimeout: t));
+    _controller.registerGame((config, s, f, t) =>
+        DoorKnockGame(config: config, onSuccess: s, onFailure: f, onTimeout: t));
+    _controller.registerGame((config, s, f, t) =>
+        ColorMatchGame(config: config, onSuccess: s, onFailure: f, onTimeout: t));
+    _controller.registerGame((config, s, f, t) =>
+        CountdownTapGame(config: config, onSuccess: s, onFailure: f, onTimeout: t));
+    _controller.registerGame((config, s, f, t) =>
+        OddOneOutGame(config: config, onSuccess: s, onFailure: f, onTimeout: t));
+    _controller.registerGame((config, s, f, t) =>
+        DontTouchGame(config: config, onSuccess: s, onFailure: f, onTimeout: t));
 
-    _controller.registerGame((config, onSuccess, onFailure, onTimeout) =>
-        BalloonPopGame(
-            config: config,
-            onSuccess: onSuccess,
-            onFailure: onFailure,
-            onTimeout: onTimeout));
-
-    _controller.registerGame((config, onSuccess, onFailure, onTimeout) =>
-        BubbleWrapGame(
-            config: config,
-            onSuccess: onSuccess,
-            onFailure: onFailure,
-            onTimeout: onTimeout));
-
-    _controller.registerGame((config, onSuccess, onFailure, onTimeout) =>
-        TrafficLightGame(
-            config: config,
-            onSuccess: onSuccess,
-            onFailure: onFailure,
-            onTimeout: onTimeout));
-
-    _controller.registerGame((config, onSuccess, onFailure, onTimeout) =>
-        DoorKnockGame(
-            config: config,
-            onSuccess: onSuccess,
-            onFailure: onFailure,
-            onTimeout: onTimeout));
-
+    // 센서 게임 (모바일만 — 3개)
     if (!kIsWeb) {
-      _controller.registerGame((config, onSuccess, onFailure, onTimeout) =>
-          CoffeePourGame(
-              config: config,
-              onSuccess: onSuccess,
-              onFailure: onFailure,
-              onTimeout: onTimeout));
-
-      _controller.registerGame((config, onSuccess, onFailure, onTimeout) =>
-          BallRollGame(
-              config: config,
-              onSuccess: onSuccess,
-              onFailure: onFailure,
-              onTimeout: onTimeout));
-
-      _controller.registerGame((config, onSuccess, onFailure, onTimeout) =>
-          DiceShakeGame(
-              config: config,
-              onSuccess: onSuccess,
-              onFailure: onFailure,
-              onTimeout: onTimeout));
+      _controller.registerGame((config, s, f, t) =>
+          CoffeePourGame(config: config, onSuccess: s, onFailure: f, onTimeout: t));
+      _controller.registerGame((config, s, f, t) =>
+          BallRollGame(config: config, onSuccess: s, onFailure: f, onTimeout: t));
+      _controller.registerGame((config, s, f, t) =>
+          DiceShakeGame(config: config, onSuccess: s, onFailure: f, onTimeout: t));
     }
   }
 
@@ -147,6 +132,8 @@ class _MicroGameRushPageState extends State<MicroGameRushPage>
       _gameState = GameState.countdown;
       _countdown = 3;
       _showConfetti = false;
+      _lastResult = null;
+      _pendingSpeedUp = false;
     });
     _startCountdown();
   }
@@ -156,7 +143,6 @@ class _MicroGameRushPageState extends State<MicroGameRushPage>
       setState(() {
         _countdown--;
       });
-
       if (_countdown <= 0) {
         timer.cancel();
         _showTransitionThenGame();
@@ -164,7 +150,18 @@ class _MicroGameRushPageState extends State<MicroGameRushPage>
     });
   }
 
-  /// 게임 전환 애니메이션 후 게임 시작
+  /// SPEED UP! 화면 → 다음 게임
+  void _showSpeedUpThenGame() {
+    setState(() {
+      _gameState = GameState.speedUp;
+      _pendingSpeedUp = false;
+    });
+    Future.delayed(const Duration(milliseconds: 1300), () {
+      if (mounted) _showTransitionThenGame();
+    });
+  }
+
+  /// WarioWare 스타일 게임 전환 (지시문 → 게임)
   void _showTransitionThenGame() {
     final game = _controller.getRandomGame(
       onSuccess: _onGameSuccess,
@@ -177,11 +174,10 @@ class _MicroGameRushPageState extends State<MicroGameRushPage>
       _gameState = GameState.transition;
     });
 
-    // 전환 애니메이션 후 플레이 시작 (1초)
-    Future.delayed(const Duration(milliseconds: 1000), () {
-      if (mounted) {
-        _startPlaying();
-      }
+    // 보스=1.8초, 일반=0.7초  (WarioWare 스냅 전환)
+    final ms = _controller.isCurrentBoss ? 1800 : 700;
+    Future.delayed(Duration(milliseconds: ms), () {
+      if (mounted) _startPlaying();
     });
   }
 
@@ -193,10 +189,9 @@ class _MicroGameRushPageState extends State<MicroGameRushPage>
     _startTimerBar();
   }
 
-  /// 타이머 바 업데이트
   void _startTimerBar() {
     _timerBarTimer?.cancel();
-    final totalMs = _currentGame?.config.timeLimit.inMilliseconds ?? 10000;
+    final totalMs = _currentGame?.config.timeLimit.inMilliseconds ?? 5000;
     const tickMs = 50;
     _timerBarTimer = Timer.periodic(const Duration(milliseconds: tickMs), (timer) {
       if (!mounted || _gameState != GameState.playing) {
@@ -213,10 +208,22 @@ class _MicroGameRushPageState extends State<MicroGameRushPage>
   void _onGameSuccess() {
     _timerBarTimer?.cancel();
     VibrationService.medium();
+
+    final oldDiff = _controller.currentDifficulty;
     _controller.recordSuccess();
+    final diffChanged = _controller.currentDifficulty != oldDiff;
+
     setState(() {
+      _lastResult = MicroGameResult.success;
       _showConfetti = true;
       _showScorePopup = true;
+      _triggerSuccessFlash = true;
+      _pendingSpeedUp = diffChanged;
+    });
+    Future.delayed(const Duration(milliseconds: 200), () {
+      if (mounted) {
+        setState(() => _triggerSuccessFlash = false);
+      }
     });
     _showResult(MicroGameResult.success);
   }
@@ -226,11 +233,18 @@ class _MicroGameRushPageState extends State<MicroGameRushPage>
     VibrationService.heavy();
     _controller.recordFailure();
     setState(() {
+      _lastResult = MicroGameResult.failure;
       _triggerShake = true;
+      _triggerFailFlash = true;
       _showScorePopup = false;
     });
     Future.delayed(const Duration(milliseconds: 350), () {
-      if (mounted) setState(() => _triggerShake = false);
+      if (mounted) {
+        setState(() {
+          _triggerShake = false;
+          _triggerFailFlash = false;
+        });
+      }
     });
     _showResult(MicroGameResult.failure);
   }
@@ -240,31 +254,41 @@ class _MicroGameRushPageState extends State<MicroGameRushPage>
     VibrationService.heavy();
     _controller.recordFailure();
     setState(() {
+      _lastResult = MicroGameResult.timeout;
       _triggerShake = true;
+      _triggerFailFlash = true;
     });
     Future.delayed(const Duration(milliseconds: 350), () {
-      if (mounted) setState(() => _triggerShake = false);
+      if (mounted) {
+        setState(() {
+          _triggerShake = false;
+          _triggerFailFlash = false;
+        });
+      }
     });
     _showResult(MicroGameResult.timeout);
   }
 
   void _showResult(MicroGameResult result) {
-    setState(() {
-      _gameState = GameState.result;
-    });
+    setState(() => _gameState = GameState.result);
 
     if (_controller.isGameOver) {
-      Future.delayed(const Duration(seconds: 2), () {
+      Future.delayed(const Duration(milliseconds: 1500), () {
         if (mounted) _showGameOver();
       });
     } else {
-      Future.delayed(const Duration(milliseconds: 1200), () {
+      // WarioWare 템포: 결과 800ms
+      Future.delayed(const Duration(milliseconds: 800), () {
         if (mounted) {
           setState(() {
             _showConfetti = false;
             _showScorePopup = false;
           });
-          _showTransitionThenGame();
+          if (_pendingSpeedUp) {
+            _showSpeedUpThenGame();
+          } else {
+            _showTransitionThenGame();
+          }
         }
       });
     }
@@ -273,10 +297,7 @@ class _MicroGameRushPageState extends State<MicroGameRushPage>
   void _showGameOver() {
     GameDataService.setMicroGameRushScore(_controller.score);
     GameDataService.incrementGamesPlayed('microgame_rush');
-
-    setState(() {
-      _gameState = GameState.gameOver;
-    });
+    setState(() => _gameState = GameState.gameOver);
   }
 
   @override
@@ -287,22 +308,23 @@ class _MicroGameRushPageState extends State<MicroGameRushPage>
     super.dispose();
   }
 
+  // ───── BUILD ─────
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         child: ScreenShake(
           trigger: _triggerShake,
-          intensity: 10.0,
+          intensity: 12.0,
           child: Stack(
             children: [
-              // 게임 화면
               _buildGameScreen(),
 
-              // 상단 HUD
+              // HUD
               if (_gameState == GameState.playing) _buildHUD(),
 
-              // 타이머 바 (게임중에만)
+              // 타이머 바
               if (_gameState == GameState.playing)
                 Positioned(
                   top: 70,
@@ -327,10 +349,18 @@ class _MicroGameRushPageState extends State<MicroGameRushPage>
                   ),
                 ),
 
-              // 컨페티 이펙트
+              // 컨페티
               ConfettiEffect(trigger: _showConfetti),
 
-              // 뒤로가기 버튼
+              // 화면 플래시
+              Positioned.fill(
+                child: ScreenFlash(trigger: _triggerSuccessFlash, color: const Color(0xFF00FF00)),
+              ),
+              Positioned.fill(
+                child: ScreenFlash(trigger: _triggerFailFlash, color: const Color(0xFFFF0000)),
+              ),
+
+              // 뒤로가기
               if (_gameState == GameState.intro || _gameState == GameState.gameOver)
                 Positioned(
                   top: 16,
@@ -353,6 +383,8 @@ class _MicroGameRushPageState extends State<MicroGameRushPage>
         return _buildIntro();
       case GameState.countdown:
         return _buildCountdown();
+      case GameState.speedUp:
+        return _buildSpeedUp();
       case GameState.transition:
         return _buildTransition();
       case GameState.playing:
@@ -361,6 +393,7 @@ class _MicroGameRushPageState extends State<MicroGameRushPage>
         return Stack(
           children: [
             _currentGame ?? const SizedBox.shrink(),
+            _buildResultOverlay(),
           ],
         );
       case GameState.gameOver:
@@ -368,33 +401,81 @@ class _MicroGameRushPageState extends State<MicroGameRushPage>
     }
   }
 
+  // ───── SUB WIDGETS ─────
+
+  Widget _buildResultOverlay() {
+    if (_lastResult == null) return const SizedBox.shrink();
+    final isSuccess = _lastResult == MicroGameResult.success;
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: Center(
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: 1.0),
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.elasticOut,
+            builder: (context, v, child) => Transform.scale(scale: v, child: child),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+              decoration: BoxDecoration(
+                gradient: isSuccess ? MicroGameTheme.successGradient : MicroGameTheme.failureGradient,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: isSuccess ? MicroGameTheme.successHalf : MicroGameTheme.failureHalf,
+                    blurRadius: 20,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Text(
+                isSuccess ? '👍' : _lastResult == MicroGameResult.timeout ? '⏰' : '💥',
+                style: const TextStyle(fontSize: 48),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSpeedUp() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFFF0000), Color(0xFF990000)],
+        ),
+      ),
+      child: Center(
+        child: SpeedUpAnnounce(key: ValueKey(_controller.currentDifficulty)),
+      ),
+    );
+  }
+
   Widget _buildTransition() {
     final game = _currentGame;
     if (game == null) return const SizedBox.shrink();
-
-    return GameTransition(
+    return WarioTransition(
       key: ValueKey(_controller.currentRound),
       gameEmoji: game.emoji,
-      gameTitle: game.title,
+      instruction: game.instruction,
+      isBoss: _controller.isCurrentBoss,
+      bossNumber: _controller.currentBossNumber,
       child: game,
     );
   }
 
   Widget _buildIntro() {
     return Container(
-      decoration: const BoxDecoration(
-        gradient: MicroGameTheme.backgroundGradient,
-      ),
+      decoration: const BoxDecoration(gradient: MicroGameTheme.backgroundGradient),
       child: Center(
         child: AnimatedBuilder(
           animation: _introAnimController,
           builder: (context, child) {
             return Opacity(
               opacity: _introFadeIn.value,
-              child: Transform.scale(
-                scale: _introBounce.value,
-                child: child,
-              ),
+              child: Transform.scale(scale: _introBounce.value, child: child),
             );
           },
           child: Column(
@@ -406,20 +487,32 @@ class _MicroGameRushPageState extends State<MicroGameRushPage>
                 child: Text('⚡', style: TextStyle(fontSize: 100)),
               ),
               const SizedBox(height: 20),
-              const Text(
-                '미니게임 러시!',
-                style: MicroGameTheme.titleStyle,
+              const Text('마이크로 러시!', style: MicroGameTheme.titleStyle),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0x33000000),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'WarioWare Style',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600,
+                      color: Color(0xCCFFFFFF), letterSpacing: 2),
+                ),
               ),
-              const SizedBox(height: 12),
-              const Text(
-                '초단위 미션을 빠르게 클리어하세요!\n콤보와 속도 보너스로 고득점을 노려보세요 🔥',
-                style: TextStyle(fontSize: 16, color: Colors.white),
-                textAlign: TextAlign.center,
+              const SizedBox(height: 16),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 40),
+                child: Text(
+                  '초고속 미니게임을 연속 클리어!\n❤️×4 · 콤보 보너스 · BOSS 스테이지',
+                  style: TextStyle(fontSize: 15, color: Colors.white, height: 1.5),
+                  textAlign: TextAlign.center,
+                ),
               ),
-              const SizedBox(height: 50),
+              const SizedBox(height: 40),
               _buildStartButton(),
               const SizedBox(height: 24),
-              // 최고 기록 표시
               Builder(
                 builder: (context) {
                   final best = GameDataService.getBestScore('microgame_rush');
@@ -438,9 +531,7 @@ class _MicroGameRushPageState extends State<MicroGameRushPage>
                         Text(
                           '최고 기록: $best',
                           style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white,
                           ),
                         ),
                       ],
@@ -449,18 +540,18 @@ class _MicroGameRushPageState extends State<MicroGameRushPage>
                 },
               ),
               if (kIsWeb) ...[
-                const SizedBox(height: 30),
+                const SizedBox(height: 24),
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(12),
                   margin: const EdgeInsets.symmetric(horizontal: 32),
                   decoration: BoxDecoration(
                     color: const Color(0x33FF9800),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.orange, width: 2),
+                    border: Border.all(color: Colors.orange, width: 1.5),
                   ),
                   child: const Text(
-                    '💡 센서 게임은 모바일 앱에서만 플레이할 수 있습니다',
-                    style: TextStyle(color: Colors.white),
+                    '💡 센서 게임은 모바일 앱에서만 플레이 가능',
+                    style: TextStyle(color: Colors.white, fontSize: 13),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -477,18 +568,14 @@ class _MicroGameRushPageState extends State<MicroGameRushPage>
       tween: Tween(begin: 1.0, end: 1.05),
       duration: const Duration(milliseconds: 1000),
       curve: Curves.easeInOut,
-      builder: (context, value, child) {
-        return Transform.scale(scale: value, child: child);
-      },
+      builder: (context, value, child) => Transform.scale(scale: value, child: child),
       child: ElevatedButton(
         onPressed: _startGame,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.white,
           foregroundColor: MicroGameTheme.primaryColor,
           padding: const EdgeInsets.symmetric(horizontal: 52, vertical: 22),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
           elevation: 12,
           shadowColor: const Color(0x60000000),
         ),
@@ -497,10 +584,7 @@ class _MicroGameRushPageState extends State<MicroGameRushPage>
           children: [
             Icon(Icons.play_arrow_rounded, size: 32),
             SizedBox(width: 8),
-            Text(
-              '시작하기',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
+            Text('START!', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
@@ -509,9 +593,7 @@ class _MicroGameRushPageState extends State<MicroGameRushPage>
 
   Widget _buildCountdown() {
     return Container(
-      decoration: const BoxDecoration(
-        gradient: MicroGameTheme.backgroundGradient,
-      ),
+      decoration: const BoxDecoration(gradient: MicroGameTheme.backgroundGradient),
       child: Center(
         child: TweenAnimationBuilder<double>(
           key: ValueKey(_countdown),
@@ -524,7 +606,7 @@ class _MicroGameRushPageState extends State<MicroGameRushPage>
               child: Opacity(
                 opacity: value.clamp(0.0, 1.0),
                 child: Text(
-                  _countdown > 0 ? '$_countdown' : '시작!',
+                  _countdown > 0 ? '$_countdown' : 'GO!',
                   style: MicroGameTheme.countdownStyle,
                 ),
               ),
@@ -542,65 +624,45 @@ class _MicroGameRushPageState extends State<MicroGameRushPage>
       right: 0,
       child: RepaintBoundary(
         child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          padding: const EdgeInsets.fromLTRB(12, 6, 12, 14),
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [
-                Color(0xCC000000),
-                Color(0x00000000),
-              ],
+              colors: [Color(0xCC000000), Color(0x00000000)],
             ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // 체력 (하트 + 흔들림 효과)
-              Row(
-                children: List.generate(
-                  3,
-                  (index) => Padding(
-                    padding: const EdgeInsets.only(right: 4),
-                    child: AnimatedScale(
-                      scale: index < _controller.lives ? 1.0 : 0.6,
-                      duration: const Duration(milliseconds: 300),
-                      child: Text(
-                        index < _controller.lives ? '❤️' : '🖤',
-                        style: const TextStyle(fontSize: 24),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+              // 4 라이프
+              LivesDisplay(lives: _controller.lives, maxLives: 4),
 
-              // 점수 + 라운드
+              // 점수 + 스테이지 + 스피드미터
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     '${_controller.score}',
                     style: const TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      shadows: [
-                        Shadow(
-                          color: MicroGameTheme.black54,
-                          offset: Offset(2, 2),
-                          blurRadius: 4,
-                        ),
-                      ],
+                      fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white,
+                      shadows: [Shadow(color: MicroGameTheme.black54, offset: Offset(2, 2), blurRadius: 4)],
                     ),
                   ),
-                  Text(
-                    'ROUND ${_controller.currentRound + 1}',
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: MicroGameTheme.white70,
-                      letterSpacing: 2,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _controller.isCurrentBoss ? '🔴 BOSS' : 'STAGE ${_controller.currentRound + 1}',
+                        style: TextStyle(
+                          fontSize: 10, fontWeight: FontWeight.w600,
+                          color: _controller.isCurrentBoss ? const Color(0xFFFF4444) : MicroGameTheme.white70,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      SpeedMeter(speedMultiplier: _controller.speedMultiplier),
+                    ],
                   ),
                 ],
               ),
@@ -626,48 +688,38 @@ class _MicroGameRushPageState extends State<MicroGameRushPage>
   }
 
   Widget _buildGameOver() {
-    final bestScore = GameDataService.getBestScore('microgame_rush');
-    final isNewRecord = _controller.score >= bestScore && _controller.score > 0;
+    final best = GameDataService.getBestScore('microgame_rush');
+    final isNew = _controller.score >= best && _controller.score > 0;
 
     return Container(
-      decoration: const BoxDecoration(
-        gradient: MicroGameTheme.backgroundGradient,
-      ),
+      decoration: const BoxDecoration(gradient: MicroGameTheme.backgroundGradient),
       child: Stack(
         children: [
-          // 신기록이면 컨페티
-          if (isNewRecord) const ConfettiEffect(trigger: true, particleCount: 50),
-
+          if (isNew) const ConfettiEffect(trigger: true, particleCount: 50),
           Center(
             child: SingleChildScrollView(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    isNewRecord ? '🎉 신기록! 🎉' : '게임 오버!',
+                    isNew ? '🎉 NEW RECORD! 🎉' : 'GAME OVER',
                     style: MicroGameTheme.titleStyle.copyWith(
-                      fontSize: isNewRecord ? 36 : 32,
-                      color: isNewRecord ? const Color(0xFFFFD700) : Colors.white,
+                      fontSize: isNew ? 34 : 32,
+                      color: isNew ? const Color(0xFFFFD700) : Colors.white,
+                      letterSpacing: isNew ? 2 : 4,
                     ),
                   ),
-                  const SizedBox(height: 32),
-
-                  // 큰 점수 표시
+                  const SizedBox(height: 28),
                   TweenAnimationBuilder<double>(
                     tween: Tween(begin: 0, end: _controller.score.toDouble()),
                     duration: const Duration(milliseconds: 1500),
                     curve: Curves.easeOut,
-                    builder: (context, value, _) {
+                    builder: (context, v, _) {
                       return Text(
-                        '${value.toInt()}',
+                        '${v.toInt()}',
                         style: const TextStyle(
-                          fontSize: 64,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                          shadows: [
-                            Shadow(color: MicroGameTheme.black38,
-                                offset: Offset(3, 3), blurRadius: 8),
-                          ],
+                          fontSize: 64, fontWeight: FontWeight.w900, color: Colors.white,
+                          shadows: [Shadow(color: MicroGameTheme.black38, offset: Offset(3, 3), blurRadius: 8)],
                         ),
                       );
                     },
@@ -675,15 +727,11 @@ class _MicroGameRushPageState extends State<MicroGameRushPage>
                   const Text(
                     'SCORE',
                     style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: MicroGameTheme.white70,
-                      letterSpacing: 4,
+                      fontSize: 14, fontWeight: FontWeight.w600,
+                      color: MicroGameTheme.white70, letterSpacing: 4,
                     ),
                   ),
-                  const SizedBox(height: 32),
-
-                  // 통계 카드
+                  const SizedBox(height: 28),
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 32),
                     padding: const EdgeInsets.all(20),
@@ -694,26 +742,23 @@ class _MicroGameRushPageState extends State<MicroGameRushPage>
                     ),
                     child: Column(
                       children: [
-                        _buildStatRow('✅ 성공', '${_controller.successCount}'),
-                        _buildStatRow('❌ 실패', '${_controller.failureCount}'),
-                        _buildStatRow('🔥 최대 콤보', '×${_controller.maxCombo}'),
-                        _buildStatRow('⚡ 퍼펙트', '${_controller.perfectCount}'),
-                        _buildStatRow('📊 라운드', '${_controller.currentRound}'),
+                        _stat('✅ 성공', '${_controller.successCount}'),
+                        _stat('❌ 실패', '${_controller.failureCount}'),
+                        _stat('🔥 최대 콤보', '×${_controller.maxCombo}'),
+                        _stat('⚡ 퍼펙트', '${_controller.perfectCount}'),
+                        _stat('👑 보스 클리어', '${_controller.bossesCleared}'),
+                        _stat('📊 스테이지', '${_controller.currentRound}'),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 48),
-
-                  // 다시 도전 버튼
+                  const SizedBox(height: 40),
                   ElevatedButton(
                     onPressed: _startGame,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: MicroGameTheme.primaryColor,
                       padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 20),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                       elevation: 8,
                     ),
                     child: const Row(
@@ -721,20 +766,14 @@ class _MicroGameRushPageState extends State<MicroGameRushPage>
                       children: [
                         Icon(Icons.refresh_rounded, size: 24),
                         SizedBox(width: 8),
-                        Text(
-                          '다시 도전',
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                        ),
+                        Text('RETRY', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ),
                   const SizedBox(height: 16),
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text(
-                      '홈으로',
-                      style: TextStyle(fontSize: 18, color: Colors.white),
-                    ),
+                    child: const Text('홈으로', style: TextStyle(fontSize: 18, color: Colors.white)),
                   ),
                 ],
               ),
@@ -745,24 +784,14 @@ class _MicroGameRushPageState extends State<MicroGameRushPage>
     );
   }
 
-  Widget _buildStatRow(String label, String value) {
+  Widget _stat(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: const TextStyle(fontSize: 18, color: MicroGameTheme.white70),
-          ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
+          Text(label, style: const TextStyle(fontSize: 16, color: MicroGameTheme.white70)),
+          Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
         ],
       ),
     );

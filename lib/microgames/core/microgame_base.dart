@@ -7,49 +7,76 @@ enum MicroGameResult {
   timeout,
 }
 
-/// 미니게임 난이도
+/// 미니게임 난이도 (WarioWare 스타일: 빠른 템포)
 enum MicroGameDifficulty {
-  easy,   // 10초
-  medium, // 7초
-  hard,   // 5초
-  extreme, // 3초
+  easy,    // 5초 (입문)
+  medium,  // 4초 (보통)
+  hard,    // 3초 (빠름)
+  extreme, // 2.5초 (초고속)
 }
 
 /// 미니게임 설정
 class MicroGameConfig {
   final MicroGameDifficulty difficulty;
   final Duration timeLimit;
-  final String instruction; // "터치하세요!", "기울이세요!" 등
+  final String instruction;
+  final double speedMultiplier; // 속도 배율 (낮을수록 빠름)
+  final bool isBoss; // 보스 스테이지 여부
   
   const MicroGameConfig({
     required this.difficulty,
     required this.timeLimit,
     required this.instruction,
+    this.speedMultiplier = 1.0,
+    this.isBoss = false,
   });
   
-  /// 난이도에 따른 기본 설정
-  factory MicroGameConfig.fromDifficulty(MicroGameDifficulty difficulty, String instruction) {
-    Duration timeLimit;
+  /// 난이도에 따른 기본 설정 (WarioWare 스타일 타이밍)
+  factory MicroGameConfig.fromDifficulty(
+    MicroGameDifficulty difficulty,
+    String instruction, {
+    double speedMultiplier = 1.0,
+    bool isBoss = false,
+  }) {
+    int baseMs;
     switch (difficulty) {
       case MicroGameDifficulty.easy:
-        timeLimit = const Duration(seconds: 10);
+        baseMs = 5000;
         break;
       case MicroGameDifficulty.medium:
-        timeLimit = const Duration(seconds: 7);
+        baseMs = 4000;
         break;
       case MicroGameDifficulty.hard:
-        timeLimit = const Duration(seconds: 5);
+        baseMs = 3000;
         break;
       case MicroGameDifficulty.extreme:
-        timeLimit = const Duration(seconds: 3);
+        baseMs = 2500;
         break;
     }
     
+    // 보스 스테이지는 시간 2배
+    if (isBoss) baseMs = (baseMs * 2.5).toInt();
+    
+    // 속도 배율 적용 (점진적으로 빨라짐)
+    final adjustedMs = (baseMs * speedMultiplier).toInt().clamp(1500, 15000);
+    
     return MicroGameConfig(
       difficulty: difficulty,
-      timeLimit: timeLimit,
+      timeLimit: Duration(milliseconds: adjustedMs),
       instruction: instruction,
+      speedMultiplier: speedMultiplier,
+      isBoss: isBoss,
     );
+  }
+
+  /// 난이도 레벨 (0~3)
+  int get difficultyLevel {
+    switch (difficulty) {
+      case MicroGameDifficulty.easy: return 0;
+      case MicroGameDifficulty.medium: return 1;
+      case MicroGameDifficulty.hard: return 2;
+      case MicroGameDifficulty.extreme: return 3;
+    }
   }
 }
 
@@ -71,8 +98,8 @@ abstract class MicroGame extends StatefulWidget {
   /// 게임 제목 (예: "날아오는 파리!")
   String get title;
   
-  /// 게임 설명 (예: "파리를 잡아라!")
-  String get description;
+  /// 게임 지시문 — WarioWare 스타일 한마디 명령 (예: "잡아!", "터뜨려!")
+  String get instruction;
   
   /// 게임 아이콘 이모지
   String get emoji;

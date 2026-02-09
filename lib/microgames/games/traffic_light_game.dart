@@ -17,7 +17,7 @@ class TrafficLightGame extends MicroGame {
   String get title => '신호등 건너기!';
 
   @override
-  String get description => '초록불에만 터치!';
+  String get instruction => '초록불에 터치!';
 
   @override
   String get emoji => '🚦';
