@@ -9,6 +9,10 @@ class GameBoard {
   int bestScore;
   bool isGameOver;
   bool hasWon;
+  int moveCount;
+  bool canUndo;
+  List<List<int>>? _undoTiles;
+  int _undoScore = 0;
   
   GameBoard({
     List<List<int>>? tiles,
@@ -16,6 +20,8 @@ class GameBoard {
     this.bestScore = 0,
     this.isGameOver = false,
     this.hasWon = false,
+    this.moveCount = 0,
+    this.canUndo = false,
   }) : tiles = tiles ?? List.generate(size, (_) => List.filled(size, 0));
   
   /// 새 게임 시작
@@ -34,6 +40,8 @@ class GameBoard {
       bestScore: bestScore,
       isGameOver: isGameOver,
       hasWon: hasWon,
+      moveCount: moveCount,
+      canUndo: canUndo,
     );
   }
   
@@ -88,6 +96,18 @@ class GameBoard {
     return false;
   }
   
+  /// 되돌리기 (직전 1회)
+  bool undo() {
+    if (!canUndo || _undoTiles == null) return false;
+    tiles = _undoTiles!;
+    score = _undoScore;
+    isGameOver = false;
+    canUndo = false;
+    _undoTiles = null;
+    if (moveCount > 0) moveCount--;
+    return true;
+  }
+  
   /// 한 줄 압축 (왼쪽으로)
   (List<int>, int, List<MergeInfo>) _compressLine(List<int> line) {
     // 0이 아닌 숫자만 추출
@@ -118,7 +138,11 @@ class GameBoard {
   
   /// 이동 수행
   MoveResult move(Direction direction) {
-    final oldTiles = tiles.map((row) => List<int>.from(row)).toList();
+    // 되돌리기를 위한 상태 저장
+    _undoTiles = tiles.map((row) => List<int>.from(row)).toList();
+    _undoScore = score;
+    
+    final oldTiles = _undoTiles!;
     int addedScore = 0;
     final allMerges = <(int, int, int)>[]; // row, col, value
     
@@ -181,6 +205,8 @@ class GameBoard {
       score += addedScore;
       if (score > bestScore) bestScore = score;
       _addRandomTile();
+      moveCount++;
+      canUndo = true;
       
       // 2048 도달 확인
       for (int r = 0; r < size; r++) {

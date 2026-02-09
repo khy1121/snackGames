@@ -35,6 +35,12 @@ class TileWidget extends StatelessWidget {
                   blurRadius: 8,
                   offset: const Offset(0, 4),
                 ),
+                if (value >= 128)
+                  BoxShadow(
+                    color: color.withValues(alpha: value >= 1024 ? 0.7 : value >= 512 ? 0.55 : value >= 256 ? 0.45 : 0.35),
+                    blurRadius: value >= 1024 ? 24 : value >= 512 ? 18 : value >= 256 ? 14 : 10,
+                    spreadRadius: value >= 1024 ? 5 : value >= 512 ? 3 : value >= 256 ? 2 : 1,
+                  ),
               ]
             : null,
       ),
