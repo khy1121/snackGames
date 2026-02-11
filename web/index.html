@@ -277,6 +277,9 @@
 
     // Register Service Worker for PWA with update detection
     if ('serviceWorker' in navigator) {
+      // 페이지 로드 시점에 이미 SW가 있었는지 기록 (최초 설치 vs 업데이트 구분)
+      const hadController = !!navigator.serviceWorker.controller;
+
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js?v=' + window.currentSWVersion)
           .then((registration) => {
@@ -371,12 +374,16 @@
         });
 
         // Handle controller change (when skipWaiting is called)
-        // 새 SW가 활성화되면 강제로 페이지를 새로고침하여 최신 버전 적용
+        // 기존 SW가 있었을 때만 강제 새로고침 (최초 설치 시에는 새로고침 안 함)
         let refreshing = false;
         navigator.serviceWorker.addEventListener('controllerchange', () => {
           if (refreshing) return;
+          if (!hadController) {
+            console.log('First install - skipping reload');
+            return;
+          }
           refreshing = true;
-          console.log('Service Worker controller changed - forcing reload for update');
+          console.log('Service Worker updated - forcing reload');
           window.location.reload();
         });
       });
