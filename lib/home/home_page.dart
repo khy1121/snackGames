@@ -17,6 +17,9 @@ import '../services/challenge_service.dart';
 import '../services/upgrade_service.dart';
 import '../services/daily_attendance_service.dart';
 import '../services/lucky_wheel_service.dart';
+import '../services/mascot_service.dart';
+import '../services/session_combo_service.dart';
+import '../services/reward_drop_service.dart';
 import '../services/pwa_install_service.dart';
 import '../services/vibration_service.dart';
 import '../services/music_player_service.dart';
@@ -242,6 +245,9 @@ class _HomePageState extends State<HomePage> {
     await UpgradeService.init(GameDataService.prefs);
     await DailyAttendanceService.init();
     await LuckyWheelService.init();
+    await MascotService.init(GameDataService.prefs);
+    await SessionComboService.init(GameDataService.prefs);
+    await RewardDropService.init(GameDataService.prefs);
     
     // 통합 음악 플레이어 초기화 (웹에서는 사용자 상호작용 후 재생)
     await MusicPlayerService().initialize();
@@ -276,6 +282,91 @@ class _HomePageState extends State<HomePage> {
     _level = ChallengeService.getCurrentLevel();
     _levelData = ChallengeService.getCurrentLevelData();
     _xpProgress = ChallengeService.getXPProgress();
+
+    // Check for session combo rewards
+    _checkComboReward();
+
+    // Check for random drop rewards (only if returning from game)
+    // _lastPlayed check ensures we don't drop on app launch
+    // simple check: if we just loaded data and have a last played game, try drop
+    // but better to call tryDrop explicitely when game ends.
+    // However, since games navigate back with pop(), we use RouteAware or check here.
+    // For now, let's check drop when data reloads (often after game).
+    _checkRewardDrop();
+  }
+
+  void _checkComboReward() {
+    if (SessionComboService.hasUnclaimedReward()) {
+      final reward = SessionComboService.claimReward();
+      if (reward != null && mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('${reward.emoji} ${reward.title} 달성!'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('다양한 게임을 플레이하셨군요!'),
+                const SizedBox(height: 10),
+                Text('+${reward.points}P', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('확인')),
+            ],
+          ),
+        );
+      }
+    }
+  }
+
+  void _checkRewardDrop() {
+    final reward = RewardDropService.tryDrop();
+    if (reward != null && mounted) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              Text(MascotService.getStageEmoji()),
+              const SizedBox(width: 8),
+              const Text('스내키의 선물!'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(MascotService.getGreeting(), textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.amber),
+                ),
+                child: Column(
+                  children: [
+                    Text(reward.emoji, style: const TextStyle(fontSize: 40)),
+                    const SizedBox(height: 8),
+                    Text(reward.description, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                setState(() {}); // Refresh UI
+              },
+              child: const Text('고마워!'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   // 일일 출석 체크
@@ -462,6 +553,10 @@ class _HomePageState extends State<HomePage> {
         // 레벨 정보 카드 (Hub Only)
         if (levelData != null) _buildLevelCard(levelData),
         const SizedBox(height: 16),
+
+        // 마스코트 & 콤보 카드
+        _buildMascotCard(),
+        const SizedBox(height: 24),
 
         // 이어하기 버튼
         if (lastPlayed != null) ...[
@@ -1210,6 +1305,11 @@ class _HomePageState extends State<HomePage> {
 
   void _navigateToGame(GameInfo game) {
     GameDataService.setLastPlayedGame(game.id);
+    
+    // 세션 콤보 및 마스코트 기록
+    SessionComboService.recordGamePlayed(game.id);
+    MascotService.recordGamePlayed();
+    
     if (mounted) {
       Navigator.push(
         context,
@@ -1365,6 +1465,113 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
+  }
+
+  // --- Mascot Card ---
+
+  Widget _buildMascotCard() {
+    final stageEmoji = MascotService.getStageEmoji();
+    final greeting = MascotService.getGreeting();
+    final playedCount = SessionComboService.getPlayedCount();
+    final maxCombo = SessionComboService.comboRewards.last.gamesNeeded;
+    final progress = (playedCount / maxCombo).clamp(0.0, 1.0);
+
+    return GestureDetector(
+      onTap: _checkMascotTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // 마스코트 (바운스 애니메이션 효과를 위해 추후 AnimatedContainer 등 적용 가능)
+            Text(stageEmoji, style: TextStyle(fontSize: MascotService.getStageSize())),
+            const SizedBox(width: 16),
+            
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 말풍선
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2E5940),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(16),
+                        topRight: Radius.circular(16),
+                        bottomRight: Radius.circular(16),
+                        bottomLeft: Radius.circular(4),
+                      ),
+                    ),
+                    child: Text(
+                      greeting,
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  
+                  // 콤보 진행도
+                  Row(
+                    children: [
+                      Text(
+                        '오늘의 콤보',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).primaryColor.withValues(alpha: 0.7),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '$playedCount/$maxCombo 게임',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFE17055),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      backgroundColor: Colors.grey.shade200,
+                      valueColor: const AlwaysStoppedAnimation(Color(0xFFE17055)),
+                      minHeight: 6,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _checkMascotTap() {
+    // 마스코트 터치 시 반응 (간단한 토스트 또는 대사 변경)
+    // 추후 애니메이션이나 보이스 추가 가능
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${MascotService.getStageName()}: "화이팅이야!"'),
+        duration: const Duration(seconds: 1),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+    setState(() {}); // 대사 랜덤 변경
   }
 
   /// 헤더 아이콘 버튼 빌더
