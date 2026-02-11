@@ -4,7 +4,7 @@ import '../game/game_page.dart';
 import '../dice/dice_game_page.dart';
 import '../slot_ball/slot_ball_game_page.dart';
 import '../block_puzzle/block_puzzle_game_page.dart';
-import '../microgames/microgame_rush_page.dart';
+import '../microgames/microgame_entry_page.dart';
 
 import '../profile/profile_page.dart';
 import '../shop/shop_page.dart';
@@ -130,7 +130,7 @@ final List<GameInfo> gameList = [
     difficulty: '''📈 난이도
 • 점점 짧아지는 제한시간 (10초→3초)
 • 다양한 조작 방식 (터치/센서)''',
-    pageBuilder: (_) => const MicroGameRushPage(),
+    pageBuilder: (_) => const MicroGameEntryPage(),
   ),
 ];
 
@@ -259,8 +259,15 @@ class _HomePageState extends State<HomePage> {
     final totalGames = GameDataService.getTotalGamesPlayed();
     final bestScore2048 = GameDataService.getBestScore('2048');
     final bestScoreDice = GameDataService.getBestScore('dice');
+    final bestScoreSlotBall = GameDataService.getBestScore('slotball');
+    final bestScoreBlockPuzzle = GameDataService.getBestScore('blockpuzzle');
+    final bestScoreMicroGame = GameDataService.getBestScore('microgame_rush');
     
-    AchievementService.syncFromGameData(totalGames);
+    AchievementService.syncFromGameData(totalGames,
+      bestScoreSlotBall: bestScoreSlotBall,
+      bestScoreBlockPuzzle: bestScoreBlockPuzzle,
+      bestScoreMicroGame: bestScoreMicroGame,
+    );
     ChallengeService.syncFromGameData(totalGames, bestScore2048, bestScoreDice);
 
     _lastPlayed = GameDataService.getLastPlayedGame();
@@ -678,6 +685,7 @@ class _HomePageState extends State<HomePage> {
                 game: game,
                 bestScore: GameDataService.getBestScore(game.id),
                 todayScore: GameDataService.getTodayScore(game.id),
+                playCount: GameDataService.prefs.getInt('game_count_${game.id}') ?? 0,
                 onTap: () => _navigateToGame(game),
                 onInfoTap: () => _showGameInfo(game),
               ),
@@ -1458,6 +1466,7 @@ class _GameCard extends StatefulWidget {
   final GameInfo game;
   final int bestScore;
   final int todayScore;
+  final int playCount;
   final VoidCallback onTap;
   final VoidCallback onInfoTap;
 
@@ -1465,6 +1474,7 @@ class _GameCard extends StatefulWidget {
     required this.game,
     required this.bestScore,
     required this.todayScore,
+    this.playCount = 0,
     required this.onTap,
     required this.onInfoTap,
   });
@@ -1549,6 +1559,11 @@ class _GameCardState extends State<_GameCard> {
                         const SizedBox(width: 8),
                         _buildScoreBadge(
                             'Today', widget.todayScore, Colors.white70),
+                        if (widget.playCount > 0) ...[
+                          const SizedBox(width: 8),
+                          _buildScoreBadge(
+                              '🎮', widget.playCount, Colors.white),
+                        ],
                       ],
                     ),
                   ],

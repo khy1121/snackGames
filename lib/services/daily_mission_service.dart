@@ -102,7 +102,51 @@ class DailyMissionService {
       maxTarget: 30,
       reward: 80,
     ),
-
+    // SlotBall 미션
+    MissionTemplate(
+      gameId: 'slotball',
+      descBuilder: (v) => '슬롯 볼에서 $v점 달성하기',
+      minTarget: 200,
+      maxTarget: 800,
+      reward: 60,
+    ),
+    MissionTemplate(
+      gameId: 'slotball',
+      descBuilder: (v) => '슬롯 볼에서 공 $v개 구역에 넣기',
+      minTarget: 5,
+      maxTarget: 10,
+      reward: 70,
+    ),
+    // BlockPuzzle 미션
+    MissionTemplate(
+      gameId: 'blockpuzzle',
+      descBuilder: (v) => '블록 블리츠에서 $v점 달성하기',
+      minTarget: 300,
+      maxTarget: 1000,
+      reward: 60,
+    ),
+    MissionTemplate(
+      gameId: 'blockpuzzle',
+      descBuilder: (v) => '블록 블리츠에서 줄 $v개 클리어하기',
+      minTarget: 3,
+      maxTarget: 10,
+      reward: 80,
+    ),
+    // MicroGame Rush 미션
+    MissionTemplate(
+      gameId: 'microgame_rush',
+      descBuilder: (v) => '미니게임 러시에서 스테이지 $v 돌파하기',
+      minTarget: 3,
+      maxTarget: 8,
+      reward: 70,
+    ),
+    MissionTemplate(
+      gameId: 'microgame_rush',
+      descBuilder: (v) => '미니게임 러시에서 $v점 달성하기',
+      minTarget: 500,
+      maxTarget: 2000,
+      reward: 80,
+    ),
   ];
 
   static Future<void> init(SharedPreferences prefs) async {

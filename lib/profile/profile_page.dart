@@ -59,6 +59,12 @@ class ProfilePage extends StatelessWidget {
             _buildHighScores(context),
             const SizedBox(height: 24),
 
+            // 게임별 플레이 통계 섹션
+            _buildSectionHeader(context, '📊 게임별 플레이 횟수'),
+            const SizedBox(height: 12),
+            _buildPerGameStats(context),
+            const SizedBox(height: 24),
+
             // 업적 섹션
             _buildSectionHeader(context, '🎖️ Achievements'),
             const SizedBox(height: 12),
@@ -247,9 +253,11 @@ class ProfilePage extends StatelessWidget {
 
   Widget _buildHighScores(BuildContext context) {
     final games = [
-      {'icon': '🔢', 'name': '2048', 'score': GameDataService.getBestScore('2048')},
-      {'icon': '🎲', 'name': 'Dice Merge', 'score': GameDataService.getBestScore('dice')},
-
+      {'icon': '🔢', 'name': '배수의 법칙', 'score': GameDataService.getBestScore('2048')},
+      {'icon': '🎲', 'name': '합쳐라! 주사위', 'score': GameDataService.getBestScore('dice')},
+      {'icon': '🎱', 'name': '슬롯 볼', 'score': GameDataService.getBestScore('slotball')},
+      {'icon': '🧩', 'name': '블록 블리츠', 'score': GameDataService.getBestScore('blockpuzzle')},
+      {'icon': '⚡', 'name': '미니게임 러시', 'score': GameDataService.getBestScore('microgame_rush')},
     ];
 
     return Container(
@@ -408,6 +416,71 @@ class ProfilePage extends StatelessWidget {
           else
             const Icon(Icons.lock_outline, color: Colors.grey, size: 18),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPerGameStats(BuildContext context) {
+    final gameStats = [
+      {'icon': '🎲', 'name': '주사위', 'id': 'dice'},
+      {'icon': '🔢', 'name': '배수의 법칙', 'id': '2048'},
+      {'icon': '🎱', 'name': '슬롯 볼', 'id': 'slotball'},
+      {'icon': '🧩', 'name': '블록 블리츠', 'id': 'blockpuzzle'},
+      {'icon': '⚡', 'name': '미니게임', 'id': 'microgame_rush'},
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).primaryColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: gameStats.map((game) {
+          final count = GameDataService.prefs.getInt('game_count_${game['id']}') ?? 0;
+          return SizedBox(
+            width: (MediaQuery.of(context).size.width - 80) / 2,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Text(game['icon'] as String, style: const TextStyle(fontSize: 18)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          game['name'] as String,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          '$count회',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }

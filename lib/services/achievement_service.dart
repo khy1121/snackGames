@@ -143,6 +143,54 @@ class AchievementService {
       description: 'Zero Sum에서 5콤보를 달성하세요',
       targetValue: 5,
     ),
+
+    // SlotBall 업적
+    Achievement(
+      id: 'slotball_500',
+      icon: '🎱',
+      title: '슬롯 루키',
+      description: '슬롯 볼에서 500점을 달성하세요',
+      targetValue: 500,
+    ),
+    Achievement(
+      id: 'slotball_2000',
+      icon: '🎯',
+      title: '슬롯 마스터',
+      description: '슬롯 볼에서 2000점을 달성하세요',
+      targetValue: 2000,
+    ),
+
+    // BlockPuzzle 업적
+    Achievement(
+      id: 'blockpuzzle_1000',
+      icon: '🧩',
+      title: '퍼즐 도전자',
+      description: '블록 블리츠에서 1000점을 달성하세요',
+      targetValue: 1000,
+    ),
+    Achievement(
+      id: 'blockpuzzle_5000',
+      icon: '🏗️',
+      title: '퍼즐 건축가',
+      description: '블록 블리츠에서 5000점을 달성하세요',
+      targetValue: 5000,
+    ),
+
+    // MicroGame Rush 업적
+    Achievement(
+      id: 'microgame_stage5',
+      icon: '⚡',
+      title: '번개 반사신경',
+      description: '미니게임 러시에서 스테이지 5를 돌파하세요',
+      targetValue: 5,
+    ),
+    Achievement(
+      id: 'microgame_stage10',
+      icon: '🌪️',
+      title: '미니게임 레전드',
+      description: '미니게임 러시에서 스테이지 10을 돌파하세요',
+      targetValue: 10,
+    ),
   ];
 
   static Future<void> init(SharedPreferences prefs) async {
@@ -217,11 +265,23 @@ class AchievementService {
   }
 
   /// 외부 데이터(GameDataService)와 동기화
-  static Future<void> syncFromGameData(int totalGames) async {
+  static Future<void> syncFromGameData(int totalGames, {int bestScoreSlotBall = 0, int bestScoreBlockPuzzle = 0, int bestScoreMicroGame = 0}) async {
     // 게임 횟수 업적 동기화
     await updateProgress('first_game', totalGames);
     await updateProgress('games_10', totalGames);
     await updateProgress('games_50', totalGames);
+
+    // SlotBall 점수 업적 동기화
+    await updateProgress('slotball_500', bestScoreSlotBall);
+    await updateProgress('slotball_2000', bestScoreSlotBall);
+
+    // BlockPuzzle 점수 업적 동기화
+    await updateProgress('blockpuzzle_1000', bestScoreBlockPuzzle);
+    await updateProgress('blockpuzzle_5000', bestScoreBlockPuzzle);
+
+    // MicroGame Rush 스테이지 업적 동기화
+    await updateProgress('microgame_stage5', bestScoreMicroGame);
+    await updateProgress('microgame_stage10', bestScoreMicroGame);
   }
 
   // ========== 랭크 시스템 ==========
