@@ -371,18 +371,13 @@
         });
 
         // Handle controller change (when skipWaiting is called)
+        // 새 SW가 활성화되면 강제로 페이지를 새로고침하여 최신 버전 적용
         let refreshing = false;
         navigator.serviceWorker.addEventListener('controllerchange', () => {
           if (refreshing) return;
           refreshing = true;
-          console.log('Service Worker controller changed - updating complete');
-
-          // 업데이트 완료 - 새 버전으로 갱신
-          if (navigator.serviceWorker.controller) {
-            navigator.serviceWorker.controller.postMessage({ type: 'GET_VERSION' });
-            // 새 버전을 활성 버전으로 설정 (메시지 응답에서 처리됨)
-          }
-          console.log('Controller changed, new SW activated');
+          console.log('Service Worker controller changed - forcing reload for update');
+          window.location.reload();
         });
       });
     }
