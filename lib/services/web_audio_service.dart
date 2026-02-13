@@ -13,7 +13,7 @@ class WebAudioService {
   double _volume = 0.3;
   bool _isPlaying = false;
   bool _loopMode = false;
-  String _currentTrackPath = 'audio/mainLogo.mp3';
+  String _currentTrackPath = 'audio/main_logo.mp3';
   
   // 트랙 종료 콜백
   void Function()? _onTrackEnded;

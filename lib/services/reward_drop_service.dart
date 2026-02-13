@@ -40,7 +40,7 @@ class RewardDropService {
   /// 최대 확률 50%
   static const double _maxDropRate = 0.50;
   /// 하루 최대 드롭 횟수
-  static const int _maxDailyDrops = 5;
+  static const int _maxDailyDrops = 3;
 
   static int _consecutiveMisses = 0;
 

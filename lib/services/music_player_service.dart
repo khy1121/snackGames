@@ -51,40 +51,52 @@ class MusicPlayerService extends ChangeNotifier {
   // 사용 가능한 모든 트랙
   static const List<MusicTrack> availableTracks = [
     MusicTrack(
-      id: 'mainLogo',
+      id: 'main_logo',
       title: 'Main Theme',
       artist: 'Snack Games',
-      fileName: 'mainLogo.mp3',
+      fileName: 'main_logo.mp3',
     ),
     MusicTrack(
-      id: 'breaktime_hush',
+      id: 'breaktime_hush_duo',
       title: 'Breaktime Hush Duo',
       artist: 'Snack Games',
-      fileName: 'BreaktimeHushDuo.mp3',
+      fileName: 'breaktime_hush_duo.mp3',
     ),
     MusicTrack(
-      id: 'pocket_groove',
+      id: 'breaktime_hush_duov2',
+      title: 'Breaktime Hush Duo v2',
+      artist: 'Snack Games',
+      fileName: 'breaktime_hush_duov2.mp3',
+    ),
+    MusicTrack(
+      id: 'pocket_groove_snack',
       title: 'Pocket Groove Snack',
       artist: 'Snack Games',
-      fileName: 'PocketGrooveSnack.mp3',
+      fileName: 'pocket_groove_snack.mp3',
     ),
     MusicTrack(
-      id: 'soft_breaktime',
+      id: 'soft_breaktime_glow',
       title: 'Soft Breaktime Glow',
       artist: 'Snack Games',
-      fileName: 'SoftBreaktimeGlow.mp3',
+      fileName: 'soft_breaktime_glow.mp3',
     ),
     MusicTrack(
-      id: 'subway_home',
-      title: 'Subway Home, One Breath',
+      id: 'subway_home_one_breath',
+      title: 'Subway Home One Breath',
       artist: 'Snack Games',
-      fileName: 'SubwayHomeOneBreath.mp3',
+      fileName: 'subway_home_one_breath.mp3',
     ),
     MusicTrack(
       id: 'one_more_round',
       title: 'One More Round',
       artist: 'Snack Games',
-      fileName: 'OneMoreRound.mp3',
+      fileName: 'one_more_round.mp3',
+    ),
+    MusicTrack(
+      id: 'one_more_round_2',
+      title: 'One More Round 2',
+      artist: 'Snack Games',
+      fileName: 'one_more_round_2.mp3',
     ),
   ];
 

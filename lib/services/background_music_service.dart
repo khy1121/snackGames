@@ -26,7 +26,7 @@ class BackgroundMusicService {
   bool _isMusicEnabled = true;
   double _volume = 0.3;
   bool _isPlaying = false;
-  String _currentTrack = 'audio/mainLogo.mp3';
+  String _currentTrack = 'audio/main_logo.mp3';
 
   /// 서비스 초기화 및 설정 로드
   Future<void> initialize() async {

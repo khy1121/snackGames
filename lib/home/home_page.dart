@@ -30,6 +30,7 @@ import '../settings/settings_page.dart';
 import '../widgets/glassmorphism_card.dart';
 import '../widgets/animated_counter.dart';
 import '../widgets/music_player_popup.dart';
+import '../leaderboard/leaderboard_page.dart';
 
 /// 게임 정보 데이터
 class GameInfo {
@@ -157,6 +158,7 @@ class _HomePageState extends State<HomePage> {
   int _level = 1;
   LevelData? _levelData;
   double _xpProgress = 0.0;
+  bool _justFinishedGame = false;
 
   @override
   void initState() {
@@ -286,13 +288,11 @@ class _HomePageState extends State<HomePage> {
     // Check for session combo rewards
     _checkComboReward();
 
-    // Check for random drop rewards (only if returning from game)
-    // _lastPlayed check ensures we don't drop on app launch
-    // simple check: if we just loaded data and have a last played game, try drop
-    // but better to call tryDrop explicitely when game ends.
-    // However, since games navigate back with pop(), we use RouteAware or check here.
-    // For now, let's check drop when data reloads (often after game).
-    _checkRewardDrop();
+    // Check for random drop rewards (only after returning from a game)
+    if (_justFinishedGame) {
+      _justFinishedGame = false;
+      _checkRewardDrop();
+    }
   }
 
   void _checkComboReward() {
@@ -556,6 +556,54 @@ class _HomePageState extends State<HomePage> {
 
         // 마스코트 & 콤보 카드
         _buildMascotCard(),
+        const SizedBox(height: 16),
+
+        // 랭킹 (명예의 전당)
+        GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const LeaderboardPage()),
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFD700).withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFFFD700).withValues(alpha: 0.5)),
+            ),
+            child: Row(
+              children: [
+                const Text('🏆', style: TextStyle(fontSize: 24)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '명예의 전당',
+                        style: TextStyle(
+                          color: Theme.of(context).primaryColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      Text(
+                        '최고의 플레이어들을 만나보세요!',
+                        style: TextStyle(
+                          color: Theme.of(context).primaryColor.withValues(alpha: 0.7),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+              ],
+            ),
+          ),
+        ),
         const SizedBox(height: 24),
 
         // 이어하기 버튼
@@ -1309,6 +1357,7 @@ class _HomePageState extends State<HomePage> {
     // 세션 콤보 및 마스코트 기록
     SessionComboService.recordGamePlayed(game.id);
     MascotService.recordGamePlayed();
+    _justFinishedGame = true;
     
     if (mounted) {
       Navigator.push(

@@ -1,4 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'leaderboard_service.dart';
 
 /// 게임 데이터 서비스 - 점수 및 플레이 기록 관리
 class GameDataService {
@@ -103,6 +104,8 @@ class GameDataService {
     final current = getBestScore(gameId);
     if (score > current) {
       prefs.setInt('$_keyBestScore$gameId', score);
+      // Submit to leaderboard
+      LeaderboardService.submitScore(gameId, score);
     }
   }
 
