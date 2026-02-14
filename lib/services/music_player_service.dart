@@ -458,7 +458,7 @@ class MusicPlayerService extends ChangeNotifier {
   String get currentTrackPath {
     if (currentTrack == null) return '';
     if (kIsWeb) {
-      return 'audio/${currentTrack!.fileName}';
+      return 'assets/assets/audio/${currentTrack!.fileName}';
     }
     return 'audio/${currentTrack!.fileName}';
   }

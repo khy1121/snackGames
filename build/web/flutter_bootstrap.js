@@ -36,8 +36,9 @@ if (!window._flutter) {
 }
 _flutter.buildConfig = {"engineRevision":"db373eb85a06eb3d706af362a45d42d0972f4b46","builds":[{"compileTarget":"dart2js","renderer":"canvaskit","mainJsPath":"main.dart.js"},{}]};
 
+
+// Flutter Service Worker를 비활성화하고 커스텀 sw.js 사용
+// serviceWorkerSettings를 제거하여 flutter_service_worker.js 등록을 방지
 _flutter.loader.load({
-  serviceWorkerSettings: {
-    serviceWorkerVersion: "3605314556"
-  }
+  // serviceWorkerSettings 생략 → Flutter SW 비활성화
 });

@@ -1,26 +1,49 @@
 {
-  "buildCommand": "echo 'Using pre-built files' && cp -r web/audio build/web/audio 2>/dev/null; cp -r web/sfx build/web/sfx 2>/dev/null; echo 'Audio/SFX copied'",
+  "buildCommand": "echo 'Using pre-built files'",
   "outputDirectory": "build/web",
   "installCommand": "echo 'No install needed'",
   "headers": [
     {
-      "source": "/audio/(.*)\\.mp3",
+      "source": "/canvaskit/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/main\\.dart\\.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=604800, stale-while-revalidate=86400" }
+      ]
+    },
+    {
+      "source": "/flutter_bootstrap\\.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache" }
+      ]
+    },
+    {
+      "source": "/assets/(.*)\\.mp3",
       "headers": [
         { "key": "Content-Type", "value": "audio/mpeg" },
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
     },
     {
-      "source": "/sfx/(.*)\\.mp3",
+      "source": "/assets/(.*)",
       "headers": [
-        { "key": "Content-Type", "value": "audio/mpeg" },
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/icons/(.*)",
+      "headers": [
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
     }
   ],
   "rewrites": [
     {
-      "source": "/((?!audio/)(?!sfx/)(?!assets/)(?!icons/)(?!canvaskit/)(?!flutter).*)",
+      "source": "/((?!assets/)(?!icons/)(?!canvaskit/)(?!flutter).*)",
       "destination": "/index.html"
     }
   ]

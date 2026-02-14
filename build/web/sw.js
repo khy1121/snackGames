@@ -1,28 +1,29 @@
 // Service Worker for PWA
 // 버전 업데이트 시 이 숫자를 변경하세요!
-const SW_VERSION = '2.7.1';
+const SW_VERSION = '2.8.0';
 const CACHE_NAME = `snack-games-v${SW_VERSION}`;
-const urlsToCache = [
+
+// 앱 셸: 첫 로딩에 필수적인 파일만 프리캐시
+const CORE_CACHE = [
     '/',
     '/index.html',
     '/manifest.json',
-    '/favicon.png',
+    '/flutter_bootstrap.js',
+    '/main.dart.js',
     '/icons/Icon-192.png',
     '/icons/Icon-512.png',
-    '/icons/Icon-maskable-192.png',
-    '/icons/Icon-maskable-512.png',
 ];
 
-// Install event - cache resources
+// Install event - 핵심 파일만 프리캐시 (빠른 설치)
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then((cache) => {
-                console.log('Opened cache');
-                return cache.addAll(urlsToCache);
+                console.log('[SW] Caching core shell');
+                return cache.addAll(CORE_CACHE);
             })
             .catch((error) => {
-                console.log('Cache installation failed:', error);
+                console.log('[SW] Core cache failed:', error);
             })
     );
     self.skipWaiting();
@@ -58,12 +59,12 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
-// Fetch event - Network First 전략 (항상 최신 버전 우선)
+// Fetch event - 리소스 유형별 최적 전략
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
 
-    // 오디오/SFX 파일은 Cache First (큰 파일, 변경 거의 없음)
-    if (url.pathname.startsWith('/audio/') || url.pathname.startsWith('/sfx/')) {
+    // 오디오/SFX 파일: Cache First (큰 파일, 변경 거의 없음)
+    if (url.pathname.includes('/audio/') || url.pathname.includes('/sfx/')) {
         event.respondWith(
             caches.match(event.request).then((cached) => {
                 if (cached) return cached;
@@ -73,6 +74,41 @@ self.addEventListener('fetch', (event) => {
                         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
                     }
                     return response;
+                });
+            })
+        );
+        return;
+    }
+
+    // CanvasKit WASM/JS: Cache First (대용량, 버전 고정)
+    if (url.pathname.includes('/canvaskit/')) {
+        event.respondWith(
+            caches.match(event.request).then((cached) => {
+                if (cached) return cached;
+                return fetch(event.request).then((response) => {
+                    if (response && response.status === 200) {
+                        const clone = response.clone();
+                        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+                    }
+                    return response;
+                });
+            })
+        );
+        return;
+    }
+
+    // main.dart.js: Stale-While-Revalidate (빠른 시작 + 백그라운드 업데이트)
+    if (url.pathname.endsWith('main.dart.js')) {
+        event.respondWith(
+            caches.open(CACHE_NAME).then((cache) => {
+                return cache.match(event.request).then((cached) => {
+                    const networkFetch = fetch(event.request).then((response) => {
+                        if (response && response.status === 200) {
+                            cache.put(event.request, response.clone());
+                        }
+                        return response;
+                    });
+                    return cached || networkFetch;
                 });
             })
         );

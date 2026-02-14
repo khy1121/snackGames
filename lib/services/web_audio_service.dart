@@ -13,7 +13,7 @@ class WebAudioService {
   double _volume = 0.3;
   bool _isPlaying = false;
   bool _loopMode = false;
-  String _currentTrackPath = 'audio/main_logo.mp3';
+  String _currentTrackPath = 'assets/assets/audio/main_logo.mp3';
   
   // 트랙 종료 콜백
   void Function()? _onTrackEnded;
@@ -89,7 +89,7 @@ class WebAudioService {
 
   /// 트랙 변경
   Future<void> changeTrack(String fileName) async {
-    final newPath = 'audio/$fileName';
+    final newPath = 'assets/assets/audio/$fileName';
     
     // 같은 트랙이면 무시
     if (_currentTrackPath == newPath && _audioElement != null) {
