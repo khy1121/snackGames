@@ -16,7 +16,7 @@ class _LuckyWheelPageState extends State<LuckyWheelPage>
   late AnimationController _controller;
   bool _isSpinning = false;
   int _userPoints = 0;
-  int _selectedSlot = 0;
+  final int _selectedSlot = 0;
 
   final List<WheelSlot> _slots = LuckyWheelService.getWheelSlots();
 
@@ -37,7 +37,7 @@ class _LuckyWheelPageState extends State<LuckyWheelPage>
   }
 
   Future<void> _loadData() async {
-    final points = await GameDataService.getPoints();
+    final points = GameDataService.getPoints();
     setState(() {
       _userPoints = points;
     });

@@ -500,7 +500,7 @@ class _MusicPlayerPopupState extends State<MusicPlayerPopup> {
                 _playerService.removeFromPlaylist(track);
               }
             },
-            activeColor: const Color(0xFF00B894),
+            activeThumbColor: const Color(0xFF00B894),
             thumbColor: WidgetStateProperty.resolveWith((states) {
               if (states.contains(WidgetState.selected)) {
                 return const Color(0xFF00B894);

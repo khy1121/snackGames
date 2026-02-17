@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'web_audio_service.dart' if (dart.library.io) 'web_audio_stub.dart';
+import 'background_music_service.dart';
 
 /// 음악 트랙 정보
 class MusicTrack {
@@ -166,7 +167,7 @@ class MusicPlayerService extends ChangeNotifier {
     
     _shuffle = prefs.getBool('shuffle') ?? false;
 
-    // 웹에서 WebAudioService 초기화 및 트랙 동기화
+    // 플랫폼별 오디오 서비스 초기화
     if (kIsWeb) {
       final webAudio = WebAudioService();
       await webAudio.initialize();
@@ -184,6 +185,10 @@ class MusicPlayerService extends ChangeNotifier {
       webAudio.setOnTimeUpdate((currentTime, duration) {
         // 필요시 notifyListeners() 호출
       });
+    } else {
+      // 모바일: BackgroundMusicService 초기화
+      final bgMusic = BackgroundMusicService();
+      await bgMusic.initialize();
     }
 
     _isInitialized = true;
@@ -192,7 +197,7 @@ class MusicPlayerService extends ChangeNotifier {
 
   /// 사용자 상호작용 시 호출 (자동재생 정책 대응)
   Future<void> onUserInteraction() async {
-    if (_userInteracted) return;
+    if (_userInteracted && _isPlaying) return;
     _userInteracted = true;
 
     if (_isMusicEnabled && !_isPlaying) {
@@ -263,15 +268,21 @@ class MusicPlayerService extends ChangeNotifier {
 
     print('Playing track: ${track.title} (${track.fileName})');
 
-    if (kIsWeb) {
-      final webAudio = WebAudioService();
-      await webAudio.changeTrack(track.fileName);
-      await webAudio.play();
-    } else {
-      // 모바일: BackgroundMusicService 사용 (추후 구현)
+    try {
+      if (kIsWeb) {
+        final webAudio = WebAudioService();
+        await webAudio.changeTrack(track.fileName);
+        final success = await webAudio.play();
+        _isPlaying = success;
+      } else {
+        // 모바일: BackgroundMusicService 사용
+        await BackgroundMusicService().playTrack(track.fileName);
+        _isPlaying = true;
+      }
+    } catch (e) {
+      print('Failed to play track: $e');
+      _isPlaying = false;
     }
-    
-    _isPlaying = true;
     notifyListeners();
   }
 
@@ -299,16 +310,28 @@ class MusicPlayerService extends ChangeNotifier {
       return;
     }
     
-    if (kIsWeb) {
-      final webAudio = WebAudioService();
-      if (currentTrack != null) {
-        print('Changing track to: ${currentTrack!.fileName}');
-        await webAudio.changeTrack(currentTrack!.fileName);
+    try {
+      if (kIsWeb) {
+        final webAudio = WebAudioService();
+        if (currentTrack != null) {
+          print('Changing track to: ${currentTrack!.fileName}');
+          await webAudio.changeTrack(currentTrack!.fileName);
+        }
+        final success = await webAudio.play();
+        _isPlaying = success;
+      } else {
+        // 모바일: BackgroundMusicService 사용
+        if (currentTrack != null) {
+          await BackgroundMusicService().playTrack(currentTrack!.fileName);
+        } else {
+          await BackgroundMusicService().play();
+        }
+        _isPlaying = true;
       }
-      await webAudio.play();
+    } catch (e) {
+      print('Failed to play: $e');
+      _isPlaying = false;
     }
-    
-    _isPlaying = true;
     notifyListeners();
   }
 
@@ -316,6 +339,8 @@ class MusicPlayerService extends ChangeNotifier {
   Future<void> pause() async {
     if (kIsWeb) {
       await WebAudioService().pause();
+    } else {
+      await BackgroundMusicService().pause();
     }
     
     _isPlaying = false;
@@ -326,6 +351,8 @@ class MusicPlayerService extends ChangeNotifier {
   Future<void> stop() async {
     if (kIsWeb) {
       await WebAudioService().stop();
+    } else {
+      await BackgroundMusicService().stop();
     }
     
     _isPlaying = false;
@@ -435,6 +462,8 @@ class MusicPlayerService extends ChangeNotifier {
     
     if (kIsWeb) {
       await WebAudioService().setVolume(_volume);
+    } else {
+      await BackgroundMusicService().setVolume(_volume);
     }
     
     final prefs = await SharedPreferences.getInstance();

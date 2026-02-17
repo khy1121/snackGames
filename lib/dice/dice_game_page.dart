@@ -687,7 +687,7 @@ class _DiceGamePageState extends State<DiceGamePage>
                                     const Icon(Icons.local_fire_department, color: Colors.white, size: 20),
                                     const SizedBox(width: 8),
                                     Text(
-                                      '연속 플레이 보너스: ${_consecutiveGamesPlayed}회 (×${_consecutiveBonusMultiplier.toStringAsFixed(1)})',
+                                      '연속 플레이 보너스: $_consecutiveGamesPlayed회 (×${_consecutiveBonusMultiplier.toStringAsFixed(1)})',
                                       style: const TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.bold,

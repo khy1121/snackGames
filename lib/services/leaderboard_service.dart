@@ -1,4 +1,3 @@
-import 'game_data_service.dart';
 
 class LeaderboardEntry {
   final String userId;

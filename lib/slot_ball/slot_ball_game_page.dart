@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'slot_ball_engine.dart';
 import '../services/game_data_service.dart';
 import '../services/vibration_service.dart';
-import '../services/settings_service.dart';
-import '../services/music_player_service.dart';
 import '../services/sfx_service_stub.dart'
     if (dart.library.html) '../services/sfx_service.dart';
 

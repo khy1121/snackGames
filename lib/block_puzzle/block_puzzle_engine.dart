@@ -333,10 +333,14 @@ class BlockPuzzleEngine {
       clearAnimProgress = 0;
 
       for (final r in clearedRows) {
-        for (int c = 0; c < gridSize; c++) grid[r][c] = -1;
+        for (int c = 0; c < gridSize; c++) {
+          grid[r][c] = -1;
+        }
       }
       for (final cc in clearedCols) {
-        for (int r = 0; r < gridSize; r++) grid[r][cc] = -1;
+        for (int r = 0; r < gridSize; r++) {
+          grid[r][cc] = -1;
+        }
       }
 
       // 화면 흔들림

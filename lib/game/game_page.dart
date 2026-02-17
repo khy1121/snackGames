@@ -18,13 +18,12 @@ class _ScorePopup {
   double relX, relY;
   final String text;
   final bool isCombo;
-  double life;
+  double life = 1.0;
   _ScorePopup({
     required this.relX,
     required this.relY,
     required this.text,
     this.isCombo = false,
-    this.life = 1.0,
   });
 }
 

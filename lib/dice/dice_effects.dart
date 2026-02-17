@@ -626,12 +626,16 @@ class _LightningEffect extends _ActiveEffect {
     // Path 1
     if (_points1 != null) {
       path.moveTo(_points1![0].dx, _points1![0].dy);
-      for (int i=1; i<_points1!.length; i++) path.lineTo(_points1![i].dx, _points1![i].dy);
+      for (int i=1; i<_points1!.length; i++) {
+        path.lineTo(_points1![i].dx, _points1![i].dy);
+      }
     }
     // Path 2
     if (_points2 != null) {
       path.moveTo(_points2![0].dx, _points2![0].dy);
-      for (int i=1; i<_points2!.length; i++) path.lineTo(_points2![i].dx, _points2![i].dy);
+      for (int i=1; i<_points2!.length; i++) {
+        path.lineTo(_points2![i].dx, _points2![i].dy);
+      }
     }
     
     canvas.drawPath(path, paint);

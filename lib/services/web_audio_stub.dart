@@ -6,7 +6,7 @@ class WebAudioService {
 
   Future<void> initialize() async {}
   Future<void> changeTrack(String fileName) async {}
-  Future<void> play() async {}
+  Future<bool> play() async => false;
   Future<void> pause() async {}
   Future<void> resume() async {}
   Future<void> stop() async {}

@@ -118,22 +118,29 @@ class WebAudioService {
     }
   }
 
-  /// 배경음악 재생
-  Future<void> play() async {
-    if (_audioElement == null) return;
-    if (_isPlaying) return;
+  /// 배경음악 재생 (성공 여부 반환)
+  Future<bool> play() async {
+    if (_audioElement == null) {
+      print('[WebAudio] play failed: audioElement is null');
+      return false;
+    }
+    if (_isPlaying) return true;
 
     try {
       // 오디오 로드 확인
       if (_audioElement!.readyState < 2) {
         _audioElement!.load();
-        await Future.delayed(const Duration(milliseconds: 200));
+        await Future.delayed(const Duration(milliseconds: 300));
       }
       
       await _audioElement!.play();
       _isPlaying = true;
+      print('[WebAudio] play success: $_currentTrackPath');
+      return true;
     } catch (e) {
+      print('[WebAudio] play failed: $e');
       _isPlaying = false;
+      return false;
     }
   }
 
