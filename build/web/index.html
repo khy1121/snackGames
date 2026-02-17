@@ -176,10 +176,29 @@
 
   <script>
     // Current SW Version
-    window.currentSWVersion = '2.8.1'; // Service Worker와 동일한 버전
+    window.currentSWVersion = '2.8.2'; // Service Worker와 동일한 버전
 
     // 현재 활성화된 SW의 실제 버전 (초기화 시 null)
     window.activeSWVersion = null;
+
+    // 강제 업데이트: 캐시 삭제 후 새로고침
+    window.forceUpdate = async function() {
+      console.log('Force update triggered!');
+      // 모든 캐시 삭제
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+        console.log('All caches cleared:', cacheNames);
+      }
+      // Service Worker 해제
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map(r => r.unregister()));
+        console.log('All service workers unregistered');
+      }
+      // 새로고침 (캐시 무시)
+      window.location.href = window.location.href.split('?')[0] + '?v=' + Date.now();
+    };
 
     // 토스트 자동 숨김 타이머
     let toastAutoHideTimer = null;
@@ -334,11 +353,13 @@
 
           if (event.data.type === 'SW_UPDATED') {
             console.log('SW Updated to version:', event.data.version);
-            // 버전 비교: 현재 버전과 다를 때만 토스트 표시
+            // 강제 업데이트: 버전이 다르면 자동으로 새로고침
             if (window.activeSWVersion && window.activeSWVersion !== event.data.version) {
-              console.log(`Version changed: ${window.activeSWVersion} -> ${event.data.version}`);
-              window.showUpdateToast(event.data.version);
+              console.log(`Version changed: ${window.activeSWVersion} -> ${event.data.version}, forcing reload!`);
               window.activeSWVersion = event.data.version;
+              // 즉시 새로고침
+              window.location.reload();
+              return;
             } else if (!window.activeSWVersion) {
               // 최초 로드 시에는 버전만 저장
               window.activeSWVersion = event.data.version;

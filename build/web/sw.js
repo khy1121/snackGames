@@ -1,6 +1,6 @@
 // Service Worker for PWA
 // 버전 업데이트 시 이 숫자를 변경하세요!
-const SW_VERSION = '2.8.1';
+const SW_VERSION = '2.8.2';
 const CACHE_NAME = `snack-games-v${SW_VERSION}`;
 
 // 앱 셸: 첫 로딩에 필수적인 파일만 프리캐시
@@ -97,20 +97,20 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // main.dart.js: Stale-While-Revalidate (빠른 시작 + 백그라운드 업데이트)
+    // main.dart.js: Network First (강제 업데이트 - 항상 최신 버전 가져옴)
     if (url.pathname.endsWith('main.dart.js')) {
         event.respondWith(
-            caches.open(CACHE_NAME).then((cache) => {
-                return cache.match(event.request).then((cached) => {
-                    const networkFetch = fetch(event.request).then((response) => {
-                        if (response && response.status === 200) {
-                            cache.put(event.request, response.clone());
-                        }
-                        return response;
-                    });
-                    return cached || networkFetch;
-                });
-            })
+            fetch(event.request)
+                .then((response) => {
+                    if (response && response.status === 200) {
+                        const clone = response.clone();
+                        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+                    }
+                    return response;
+                })
+                .catch(() => {
+                    return caches.match(event.request);
+                })
         );
         return;
     }
