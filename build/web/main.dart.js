@@ -9027,7 +9027,7 @@ _.a=null
 _.b=!1
 _.c=0.3
 _.e=_.d=!1
-_.f="assets/assets/audio/main_logo.mp3"
+_.f="audio/main_logo.mp3"
 _.w=_.r=null},
 afB:function afB(a){this.a=a},
 afC:function afC(a){this.a=a},
@@ -45790,7 +45790,7 @@ return A.L($async$d1,r)},
 ml(a){return this.adv(a)},
 adv(a){var s=0,r=A.M(t.H),q,p=this,o,n,m
 var $async$ml=A.N(function(b,c){if(b===1)return A.J(c,r)
-for(;;)switch(s){case 0:m="assets/assets/audio/"+a
+for(;;)switch(s){case 0:m="audio/"+a
 if(p.f===m&&p.a!=null){s=1
 break}p.f=m
 o=p.a

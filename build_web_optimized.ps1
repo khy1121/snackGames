@@ -33,13 +33,13 @@ if (Test-Path "build\web\canvaskit\chromium") {
 Get-ChildItem -Path "build\web\canvaskit" -Filter "skwasm*" -ErrorAction SilentlyContinue | Remove-Item -Force
 Write-Host "  -> skwasm 파일 제거 완료" -ForegroundColor Gray
 
-# 4. 중복 오디오 파일 제거 (web/audio, web/sfx가 build/web에 자동복사된 것)
-# Dart 코드는 assets/assets/audio/ 경로 사용하므로 root-level은 불필요
-Write-Host "[4/6] 중복 root-level audio/sfx 제거..." -ForegroundColor Yellow
-if (Test-Path "build\web\audio") {
-    $audioSize = (Get-ChildItem -Path "build\web\audio" -Recurse -File | Measure-Object -Property Length -Sum).Sum
-    Remove-Item -Path "build\web\audio" -Recurse -Force
-    Write-Host ("  -> audio/ 제거 완료 ({0:N2} MB 절약)" -f ($audioSize / 1MB)) -ForegroundColor Gray
+# 4. 중복 오디오 파일 제거 (assets/assets/audio는 web/audio와 중복)
+# web/audio는 유지 (WebAudioService에서 사용)
+Write-Host "[4/6] 중복 assets/assets/audio 및 sfx 제거..." -ForegroundColor Yellow
+if (Test-Path "build\web\assets\assets\audio") {
+    $audioSize = (Get-ChildItem -Path "build\web\assets\assets\audio" -Recurse -File | Measure-Object -Property Length -Sum).Sum
+    Remove-Item -Path "build\web\assets\assets\audio" -Recurse -Force
+    Write-Host ("  -> assets/assets/audio/ 제거 완료 ({0:N2} MB 절약)" -f ($audioSize / 1MB)) -ForegroundColor Gray
 }
 if (Test-Path "build\web\sfx") {
     $sfxSize = (Get-ChildItem -Path "build\web\sfx" -Recurse -File | Measure-Object -Property Length -Sum).Sum
@@ -82,11 +82,12 @@ Write-Host ("  assets: {0:N2} MB" -f ($assetsSize / 1MB))
 $canvaskitSize = (Get-ChildItem -Path "build\web\canvaskit" -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
 Write-Host ("  canvaskit: {0:N2} MB" -f ($canvaskitSize / 1MB))
 
-# root-level audio 확인
+# root-level audio 확인 (web/audio에서 복사된 파일 - WebAudioService에서 사용)
 if (Test-Path "build\web\audio") {
-    Write-Host "  [경고] root-level audio/ 폴더가 존재합니다!" -ForegroundColor Red
+    $webAudioSize = (Get-ChildItem -Path "build\web\audio" -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
+    Write-Host ("  audio/ (웹 재생용): {0:N2} MB" -f ($webAudioSize / 1MB))
 } else {
-    Write-Host "  root-level audio/ 없음 (중복 제거됨)" -ForegroundColor Green
+    Write-Host "  [경고] audio/ 폴더가 없습니다!" -ForegroundColor Red
 }
 
 if (Test-Path "build\web\sfx") {
