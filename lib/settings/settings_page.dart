@@ -52,7 +52,7 @@ class _SettingsPageState extends State<SettingsPage> {
             // Footer
             const Center(
               child: Text(
-                'Snack Games v2.7.1',
+                'Snack Games v2.7.2',
                 style: TextStyle(
                   color: Colors.grey,
                   fontSize: 12,
@@ -336,7 +336,7 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
       child: Column(
         children: [
-          _buildInfoRow('현재 버전', '2.7.1'),
+          _buildInfoRow('현재 버전', '2.7.2'),
           const SizedBox(height: 20),
           InkWell(
             onTap: _showResetConfirmDialog,
