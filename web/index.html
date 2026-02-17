@@ -176,7 +176,41 @@
 
   <script>
     // Current SW Version
-    window.currentSWVersion = '2.8.2'; // Service Worker와 동일한 버전
+    window.currentSWVersion = '2.8.3'; // Service Worker와 동일한 버전
+
+    // 페이지 로드 즉시 버전 체크 - 캐시 버스팅
+    (function() {
+      const STORED_VERSION_KEY = 'snack-games-version';
+      const storedVersion = localStorage.getItem(STORED_VERSION_KEY);
+      
+      // 버전이 다르거나 처음이면 강제 새로고침
+      if (storedVersion !== window.currentSWVersion) {
+        console.log(`Version mismatch: stored=${storedVersion}, current=${window.currentSWVersion}`);
+        localStorage.setItem(STORED_VERSION_KEY, window.currentSWVersion);
+        
+        // URL에 이미 버전 파라미터가 있으면 캐시 클리어만 (무한 루프 방지)
+        const url = new URL(window.location.href);
+        if (url.searchParams.get('_v') === window.currentSWVersion) {
+          console.log('Already refreshed for this version, skipping...');
+          return;
+        }
+        
+        // 캐시 삭제
+        if ('caches' in window) {
+          caches.keys().then(names => {
+            Promise.all(names.map(name => caches.delete(name))).then(() => {
+              console.log('Caches cleared, reloading...');
+              url.searchParams.set('_v', window.currentSWVersion);
+              window.location.replace(url.toString());
+            });
+          });
+        } else {
+          url.searchParams.set('_v', window.currentSWVersion);
+          window.location.replace(url.toString());
+        }
+        return;
+      }
+    })();
 
     // 현재 활성화된 SW의 실제 버전 (초기화 시 null)
     window.activeSWVersion = null;
@@ -184,6 +218,7 @@
     // 강제 업데이트: 캐시 삭제 후 새로고침
     window.forceUpdate = async function() {
       console.log('Force update triggered!');
+      localStorage.removeItem('snack-games-version');
       // 모든 캐시 삭제
       if ('caches' in window) {
         const cacheNames = await caches.keys();
