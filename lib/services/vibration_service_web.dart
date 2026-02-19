@@ -1,6 +1,6 @@
 // ignore: avoid_web_libraries_in_flutter
+// ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
-import 'dart:js_util' as js_util;
 
 /// Web용 진동 서비스 (Vibration API 사용)
 class VibrationService {
@@ -22,7 +22,8 @@ class VibrationService {
   static bool _checkVibrationSupport() {
     try {
       // navigator.vibrate가 존재하는지 확인
-      return js_util.hasProperty(html.window.navigator, 'vibrate');
+      final nav = html.window.navigator;
+      return (nav as dynamic).vibrate != null;
     } catch (e) {
       return false;
     }
@@ -43,7 +44,7 @@ class VibrationService {
     
     try {
       // navigator.vibrate() 호출
-      js_util.callMethod(html.window.navigator, 'vibrate', [duration]);
+      (html.window.navigator as dynamic).vibrate(duration);
     } catch (e) {
       // 무시
     }
@@ -55,9 +56,7 @@ class VibrationService {
     
     try {
       // navigator.vibrate() 호출 (패턴)
-      js_util.callMethod(html.window.navigator, 'vibrate', [
-        js_util.jsify(pattern)
-      ]);
+      (html.window.navigator as dynamic).vibrate(pattern);
     } catch (e) {
       // 무시
     }
@@ -102,7 +101,7 @@ class VibrationService {
   static Future<void> cancel() async {
     if (!_hasVibrator) return;
     try {
-      js_util.callMethod(html.window.navigator, 'vibrate', [0]);
+      (html.window.navigator as dynamic).vibrate(0);
     } catch (e) {
       // 무시
     }

@@ -1,8 +1,30 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'leaderboard_service.dart';
+import 'dart:convert';
+import 'dart:convert';
 
 /// 게임 데이터 서비스 - 점수 및 플레이 기록 관리
 class GameDataService {
+  // 2048 이어하기 상태 저장
+  static const String _key2048Resume = '2048_resume';
+
+  static void save2048Resume(Map<String, dynamic> boardJson) {
+    prefs.setString(_key2048Resume, jsonEncode(boardJson));
+  }
+
+  static Map<String, dynamic>? load2048Resume() {
+    final str = prefs.getString(_key2048Resume);
+    if (str == null) return null;
+    try {
+      return jsonDecode(str) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static void clear2048Resume() {
+    prefs.remove(_key2048Resume);
+  }
   static const String _keyBestScore = 'best_score_';
   static const String _keyTodayScore = 'today_score_';
   static const String _keyTodayDate = 'today_date';

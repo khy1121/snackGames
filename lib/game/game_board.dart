@@ -44,6 +44,34 @@ class GameBoard {
       canUndo: canUndo,
     );
   }
+
+  /// JSON 변환
+  Map<String, dynamic> toJson() {
+    return {
+      'tiles': tiles.map((row) => row).toList(),
+      'score': score,
+      'bestScore': bestScore,
+      'isGameOver': isGameOver,
+      'hasWon': hasWon,
+      'moveCount': moveCount,
+      'canUndo': canUndo,
+    };
+  }
+
+  /// JSON에서 복원
+  factory GameBoard.fromJson(Map<String, dynamic> json) {
+    return GameBoard(
+      tiles: (json['tiles'] as List)
+          .map((row) => List<int>.from(row as List))
+          .toList(),
+      score: json['score'] ?? 0,
+      bestScore: json['bestScore'] ?? 0,
+      isGameOver: json['isGameOver'] ?? false,
+      hasWon: json['hasWon'] ?? false,
+      moveCount: json['moveCount'] ?? 0,
+      canUndo: json['canUndo'] ?? false,
+    );
+  }
   
   /// 특정 셀의 값 가져오기
   int getTile(int row, int col) => tiles[row][col];
