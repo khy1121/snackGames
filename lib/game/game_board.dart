@@ -2,8 +2,8 @@ import 'dart:math';
 
 /// 2048 게임 보드 모델
 class GameBoard {
-  static const int size = 4;
-  
+  final int size;
+
   List<List<int>> tiles;
   int score;
   int bestScore;
@@ -15,6 +15,7 @@ class GameBoard {
   int _undoScore = 0;
   
   GameBoard({
+    required this.size,
     List<List<int>>? tiles,
     this.score = 0,
     this.bestScore = 0,
@@ -25,8 +26,8 @@ class GameBoard {
   }) : tiles = tiles ?? List.generate(size, (_) => List.filled(size, 0));
   
   /// 새 게임 시작
-  factory GameBoard.newGame({int bestScore = 0}) {
-    final board = GameBoard(bestScore: bestScore);
+  factory GameBoard.newGame({int size = 4, int bestScore = 0}) {
+    final board = GameBoard(size: size, bestScore: bestScore);
     board._addRandomTile();
     board._addRandomTile();
     return board;
@@ -35,6 +36,7 @@ class GameBoard {
   /// 보드 복사
   GameBoard copy() {
     return GameBoard(
+      size: size,
       tiles: tiles.map((row) => List<int>.from(row)).toList(),
       score: score,
       bestScore: bestScore,
@@ -48,6 +50,7 @@ class GameBoard {
   /// JSON 변환
   Map<String, dynamic> toJson() {
     return {
+      'size': size,
       'tiles': tiles.map((row) => row).toList(),
       'score': score,
       'bestScore': bestScore,
@@ -60,10 +63,13 @@ class GameBoard {
 
   /// JSON에서 복원
   factory GameBoard.fromJson(Map<String, dynamic> json) {
+    final tiles = (json['tiles'] as List)
+        .map((row) => List<int>.from(row as List))
+        .toList();
+    final size = json['size'] ?? tiles.length;
     return GameBoard(
-      tiles: (json['tiles'] as List)
-          .map((row) => List<int>.from(row as List))
-          .toList(),
+      size: size,
+      tiles: tiles,
       score: json['score'] ?? 0,
       bestScore: json['bestScore'] ?? 0,
       isGameOver: json['isGameOver'] ?? false,

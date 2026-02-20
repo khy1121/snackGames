@@ -111,7 +111,7 @@ class BoardWidget extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
-    const gridSize = 4;
+    final gridSize = tiles.length;
     const spacing = 10.0;
     final tileSize = (boardSize - spacing * (gridSize + 1)) / gridSize;
     
@@ -128,7 +128,7 @@ class BoardWidget extends StatelessWidget {
           // 빈 타일 배경
           GridView.builder(
             physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: gridSize,
               mainAxisSpacing: spacing,
               crossAxisSpacing: spacing,

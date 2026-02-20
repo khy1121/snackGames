@@ -38,6 +38,14 @@ class GamePage extends StatefulWidget {
 
 class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
     bool _resumeDialogShown = false;
+  // Versions (label + grid size)
+  final List<Map<String, dynamic>> _versions = [
+    {'label': 'Classic 4×4', 'size': 4},
+    {'label': 'Small 3×3', 'size': 3},
+    {'label': 'Big 5×5', 'size': 5},
+    {'label': 'Huge 6×6', 'size': 6},
+  ];
+  int _selectedVersionIndex = 0;
   late GameBoard _board;
   Set<(int, int)> _newTiles = {};
   Set<(int, int)> _mergedTiles = {};
@@ -75,7 +83,8 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
       });
       _resumeDialogShown = true;
     } else {
-      _board = GameBoard.newGame(bestScore: savedBest);
+      final size = _versions[_selectedVersionIndex]['size'] as int;
+      _board = GameBoard.newGame(size: size, bestScore: savedBest);
       _board.score += UpgradeService.getStartingBonus();
     }
     _animTicker = AnimationController(vsync: this, duration: const Duration(seconds: 1))
@@ -97,6 +106,9 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
               onPressed: () {
                 setState(() {
                   _board = GameBoard.fromJson(resumeJson);
+                  final s = resumeJson['size'] ?? _board.size;
+                  final idx = _versions.indexWhere((v) => v['size'] == s);
+                  if (idx >= 0) _selectedVersionIndex = idx;
                 });
                 Navigator.of(ctx).pop();
               },
@@ -105,7 +117,8 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
             TextButton(
               onPressed: () {
                 setState(() {
-                  _board = GameBoard.newGame(bestScore: bestScore);
+                  final s = resumeJson['size'] ?? (_versions[_selectedVersionIndex]['size'] as int);
+                  _board = GameBoard.newGame(size: s, bestScore: bestScore);
                   _board.score += UpgradeService.getStartingBonus();
                   GameDataService.clear2048Resume();
                 });
@@ -209,8 +222,9 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
       }
 
       // 새 타일 추적
-      for (int r = 0; r < 4; r++) {
-        for (int c = 0; c < 4; c++) {
+      final gridSize = _board.size;
+      for (int r = 0; r < gridSize; r++) {
+        for (int c = 0; c < gridSize; c++) {
           if (oldTiles[r][c] == 0 && _board.tiles[r][c] != 0) {
             _newTiles.add((r, c));
           }
@@ -222,8 +236,8 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
         _comboStreak++;
         for (final merge in result.merges) {
           _popups.add(_ScorePopup(
-            relX: (merge.$2 + 0.5) / 4.0,
-            relY: (merge.$1 + 0.5) / 4.0,
+              relX: (merge.$2 + 0.5) / gridSize.toDouble(),
+              relY: (merge.$1 + 0.5) / gridSize.toDouble(),
             text: '+${merge.$3}',
           ));
         }
@@ -819,6 +833,30 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
         ),
 
         const Spacer(),
+        // Version selector
+        Padding(
+          padding: const EdgeInsets.only(right: 12.0),
+          child: DropdownButton<int>(
+            value: _versions[_selectedVersionIndex]['size'] as int,
+            dropdownColor: GameColors.background,
+            style: const TextStyle(color: Colors.white),
+            underline: const SizedBox.shrink(),
+            items: _versions.map((v) {
+              return DropdownMenuItem<int>(
+                value: v['size'] as int,
+                child: Text(v['label'] as String),
+              );
+            }).toList(),
+            onChanged: (val) {
+              if (val == null) return;
+              final idx = _versions.indexWhere((v) => v['size'] == val);
+              setState(() {
+                _selectedVersionIndex = idx >= 0 ? idx : 0;
+                _board = GameBoard.newGame(size: val, bestScore: _board.bestScore);
+              });
+            },
+          ),
+        ),
 
         // 되돌리기 버튼
         Material(
