@@ -14,9 +14,7 @@ import '../services/game_data_service.dart';
 import '../services/daily_mission_service.dart';
 import '../services/achievement_service.dart';
 import '../services/challenge_service.dart';
-import '../services/upgrade_service.dart';
 import '../services/daily_attendance_service.dart';
-import '../services/lucky_wheel_service.dart';
 import '../services/mascot_service.dart';
 import '../services/session_combo_service.dart';
 import '../services/reward_drop_service.dart';
@@ -238,22 +236,8 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> _initServices() async {
-    await GameDataService.init();
-    await VibrationService.init(GameDataService.prefs);
-    await DailyMissionService.init(GameDataService.prefs);
-    await AchievementService.init(GameDataService.prefs);
-    await ChallengeService.init(GameDataService.prefs);
-    await UpgradeService.init(GameDataService.prefs);
-    await DailyAttendanceService.init();
-    await LuckyWheelService.init();
-    await MascotService.init(GameDataService.prefs);
-    await SessionComboService.init(GameDataService.prefs);
-    await RewardDropService.init(GameDataService.prefs);
-    
-    // 통합 음악 플레이어 초기화 (웹에서는 사용자 상호작용 후 재생)
-    await MusicPlayerService().initialize();
-    
+  void _initServices() {
+    // 서비스 초기화는 main()에서 선행됨
     if (mounted) {
       _loadCachedData();
       _checkDailyAttendance(); // 앱 시작 시 출석 체크

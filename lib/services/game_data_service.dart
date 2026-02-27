@@ -88,8 +88,8 @@ class GameDataService {
   }
   // ... methods continuing ...
 
-  static Future<void> init() async {
-    _prefs = await SharedPreferences.getInstance();
+  static Future<void> init([SharedPreferences? sharedPrefs]) async {
+    _prefs = sharedPrefs ?? await SharedPreferences.getInstance();
     _checkAndResetDailyScores();
   }
 
