@@ -9,6 +9,13 @@ import 'services/settings_service.dart';
 import 'services/background_music_service.dart';
 import 'services/vibration_service.dart';
 import 'services/leaderboard_service.dart';
+import 'services/upgrade_service.dart';
+import 'services/daily_attendance_service.dart';
+import 'services/lucky_wheel_service.dart';
+import 'services/mascot_service.dart';
+import 'services/session_combo_service.dart';
+import 'services/reward_drop_service.dart';
+import 'services/music_player_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,7 +25,7 @@ Future<void> main() async {
   
   // 독립적인 서비스들을 병렬 초기화 (순차 → 병렬로 ~3x 빠름)
   await Future.wait([
-    GameDataService.init(),
+    GameDataService.init(prefs),
     DailyMissionService.init(prefs),
     AchievementService.init(prefs),
     ChallengeService.init(prefs),
@@ -26,7 +33,20 @@ Future<void> main() async {
     VibrationService.init(prefs),
     LeaderboardService.init(),
   ]);
-  
+
+  // 게임 허브 서비스 초기화 (HomePage 중복 초기화 제거)
+  await Future.wait([
+    UpgradeService.init(prefs),
+    DailyAttendanceService.init(),
+    LuckyWheelService.init(),
+    MascotService.init(prefs),
+    SessionComboService.init(prefs),
+    RewardDropService.init(prefs),
+  ]);
+
+  // 통합 음악 플레이어 초기화 (웹에서는 사용자 상호작용 후 재생)
+  await MusicPlayerService().initialize();
+
   // 배경음악은 Settings 이후 초기화 (의존성)
   await BackgroundMusicService().initialize();
   
