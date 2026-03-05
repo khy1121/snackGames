@@ -123,17 +123,17 @@ final List<GameInfo> gameList = [
 
   GameInfo(
     id: 'microgame_rush',
-    title: '미니게임 러시',
-    subtitle: '초단위 미션! 반응속도 테스트',
-    icon: '⚡',
-    colors: const [Color(0xFFFF6B6B), Color(0xFFFFE66D)],
+    title: '벽돌 깨기',
+    subtitle: '스와이프로 벽돌을 부수자!',
+    icon: '🧱',
+    colors: const [Color(0xFFFF6B6B), Color(0xFFFFB8B8)],
     rules: '''📖 게임 규칙
-• 랜덤 미니게임 연속 플레이
-• 제한시간 내 미션 완수
-• 실패하면 체력 -1, 0되면 게임오버''',
+• 화면을 당겨서 조준하고 발사 
+• 튕기는 공을 이용해 벽돌을 부수세요
+• 벽돌이 바닥에 닿기 전에 제거하기!''',
     difficulty: '''📈 난이도
-• 점점 짧아지는 제한시간 (10초→3초)
-• 다양한 조작 방식 (터치/센서)''',
+• 벽돌이 계속해서 추가됨
+• 각도 계산이 스코어의 핵심!''',
     pageBuilder: (_) => const MicroGameEntryPage(),
   ),
 ];

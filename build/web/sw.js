@@ -1,6 +1,6 @@
 // Service Worker for PWA
 // 버전 업데이트 시 이 숫자를 변경하세요!
-const SW_VERSION = '2.8.3';
+const SW_VERSION = '2.7.4';
 const CACHE_NAME = `snack-games-v${SW_VERSION}`;
 
 // 앱 셸: 첫 로딩에 필수적인 파일만 프리캐시

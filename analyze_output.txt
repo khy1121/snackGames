@@ -1,0 +1,59 @@
+﻿Analyzing game2048...                                           
+
+   info - Don't invoke 'print' in production code - lib\dice\dice_game_page.dart:198:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\dice\dice_game_page.dart:280:11 - avoid_print
+warning - Unused import: 'dart:math' - lib\game\game_page.dart:1:8 - unused_import
+warning - Unused import: '../services/sfx_service_stub.dart' - lib\game\game_page.dart:13:8 - unused_import
+warning - The value of the field '_milestoneValues' isn't used - lib\game\game_page.dart:72:26 - unused_field
+warning - The value of the field '_milestoneEmoji' isn't used - lib\game\game_page.dart:73:33 - unused_field
+warning - The declaration '_showGameOverDialog' isn't referenced - lib\game\game_page.dart:310:8 - unused_element
+warning - The declaration '_showWinDialog' isn't referenced - lib\game\game_page.dart:603:8 - unused_element
+   info - Unnecessary braces in a string interpolation - lib\game\game_page.dart:623:12 - unnecessary_brace_in_string_interps
+warning - The declaration '_buildHeaderIconButton' isn't referenced - lib\home\home_page.dart:1627:10 - unused_element
+   info - Don't invoke 'print' in production code - lib\home\home_page.dart:1655:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\home\home_page.dart:1657:9 - avoid_print
+warning - The value of the field '_selectedSlot' isn't used - lib\lucky_wheel\lucky_wheel_page.dart:19:13 - unused_field
+warning - The value of the local variable 'random' isn't used - lib\lucky_wheel\lucky_wheel_page.dart:69:11 - unused_local_variable
+   info - 'background' is deprecated and shouldn't be used. Use surface instead. This feature was deprecated after v3.18.0-0.1.pre - lib\main.dart:60:17 - deprecated_member_use
+warning - Unused import: 'core/microgame_effects.dart' - lib\microgames\swipe_brick_breaker_page.dart:3:8 - unused_import
+   info - The private field _bricks could be 'final' - lib\microgames\swipe_brick_breaker_page.dart:62:15 - prefer_final_fields
+warning - The value of the local variable 'dt' isn't used - lib\microgames\swipe_brick_breaker_page.dart:226:11 - unused_local_variable
+  error - Expected an identifier - lib\microgames\swipe_brick_breaker_page.dart:464:13 - missing_identifier
+  error - Expected to find ']' - lib\microgames\swipe_brick_breaker_page.dart:464:13 - expected_token
+   info - Don't invoke 'print' in production code - lib\services\background_music_service.dart:59:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\background_music_service.dart:77:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\background_music_service.dart:79:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\background_music_service.dart:92:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\background_music_service.dart:94:7 - avoid_print
+warning - Duplicate import - lib\services\game_data_service.dart:4:8 - duplicate_import
+warning - The value of the field '_isMockMode' isn't used - lib\services\leaderboard_service.dart:41:21 - unused_field
+   info - Don't invoke 'print' in production code - lib\services\leaderboard_service.dart:44:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\leaderboard_service.dart:48:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\music_player_service.dart:259:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\music_player_service.dart:265:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\music_player_service.dart:269:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\music_player_service.dart:283:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\music_player_service.dart:291:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\music_player_service.dart:301:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\music_player_service.dart:304:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\music_player_service.dart:309:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\music_player_service.dart:317:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\music_player_service.dart:332:7 - avoid_print
+   info - 'dart:html' is deprecated and shouldn't be used. Use package:web and dart:js_interop instead - lib\services\pwa_install_service_web.dart:1:1 - deprecated_member_use
+   info - Don't use web-only libraries outside Flutter web plugins - lib\services\pwa_install_service_web.dart:1:1 - avoid_web_libraries_in_flutter
+   info - 'dart:js' is deprecated and shouldn't be used. Use dart:js_interop instead - lib\services\pwa_install_service_web.dart:2:1 - deprecated_member_use
+   info - Don't use web-only libraries outside Flutter web plugins - lib\services\pwa_install_service_web.dart:2:1 - avoid_web_libraries_in_flutter
+   info - 'dart:html' is deprecated and shouldn't be used. Use package:web and dart:js_interop instead - lib\services\sfx_service.dart:2:1 - deprecated_member_use
+warning - The value of the field '_volume' isn't used - lib\services\sfx_service_stub.dart:7:10 - unused_field
+warning - The value of the field '_enabled' isn't used - lib\services\sfx_service_stub.dart:8:8 - unused_field
+warning - Dead code - lib\services\vibration_service_mobile.dart:15:34 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\services\vibration_service_mobile.dart:15:37 - dead_null_aware_expression
+   info - 'dart:html' is deprecated and shouldn't be used. Use package:web and dart:js_interop instead - lib\services\vibration_service_web.dart:3:1 - deprecated_member_use
+warning - The value of the field '_isInitialized' isn't used - lib\services\web_audio_service_stub.dart:6:8 - unused_field
+warning - The value of the field '_loopMode' isn't used - lib\services\web_audio_service_stub.dart:9:8 - unused_field
+   info - 'dart:html' is deprecated and shouldn't be used. Use package:web and dart:js_interop instead - lib\services\web_audio_service_web.dart:2:1 - deprecated_member_use
+   info - Empty catch block - lib\services\web_audio_service_web.dart:124:17 - empty_catches
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\shop\shop_page.dart:103:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\shop\shop_page.dart:145:30 - use_build_context_synchronously
+warning - The value of the local variable 'launchY' isn't used - lib\slot_ball\slot_ball_game_page.dart:677:11 - unused_local_variable
+

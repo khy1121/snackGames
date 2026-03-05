@@ -46,6 +46,9 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
     {'label': 'Huge 6×6', 'size': 6},
   ];
   int _selectedVersionIndex = 0;
+  // Win target options (difficulty)
+  final List<int> _winOptions = [1024, 2048, 4096];
+  int _selectedWinValue = 2048;
   late GameBoard _board;
   Set<(int, int)> _newTiles = {};
   Set<(int, int)> _mergedTiles = {};
@@ -84,7 +87,7 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
       _resumeDialogShown = true;
     } else {
       final size = _versions[_selectedVersionIndex]['size'] as int;
-      _board = GameBoard.newGame(size: size, bestScore: savedBest);
+      _board = GameBoard.newGame(size: size, bestScore: savedBest, winValue: _selectedWinValue);
       _board.score += UpgradeService.getStartingBonus();
     }
     _animTicker = AnimationController(vsync: this, duration: const Duration(seconds: 1))
@@ -109,6 +112,7 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
                   final s = resumeJson['size'] ?? _board.size;
                   final idx = _versions.indexWhere((v) => v['size'] == s);
                   if (idx >= 0) _selectedVersionIndex = idx;
+                  _selectedWinValue = resumeJson['winValue'] ?? _board.winValue;
                 });
                 Navigator.of(ctx).pop();
               },
@@ -118,7 +122,7 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
               onPressed: () {
                 setState(() {
                   final s = resumeJson['size'] ?? (_versions[_selectedVersionIndex]['size'] as int);
-                  _board = GameBoard.newGame(size: s, bestScore: bestScore);
+                  _board = GameBoard.newGame(size: s, bestScore: bestScore, winValue: _selectedWinValue);
                   _board.score += UpgradeService.getStartingBonus();
                   GameDataService.clear2048Resume();
                 });
@@ -597,6 +601,9 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
   }
 
   void _showWinDialog() {
+    final currentTarget = _board.winValue;
+    final idx = _winOptions.indexOf(currentTarget);
+    final hasNext = idx >= 0 && idx < _winOptions.length - 1;
     showDialog(
       context: context,
       barrierDismissible: true,
@@ -612,9 +619,9 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
           ),
           textAlign: TextAlign.center,
         ),
-        content: const Text(
-          '2048을 달성했습니다!',
-          style: TextStyle(fontSize: 18, color: Colors.white),
+        content: Text(
+          '${currentTarget}을 달성했습니다!',
+          style: const TextStyle(fontSize: 18, color: Colors.white),
           textAlign: TextAlign.center,
         ),
         actions: [
@@ -627,6 +634,23 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
             ),
             child: const Text('계속하기'),
           ),
+          if (hasNext)
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                final next = _winOptions[idx + 1];
+                setState(() {
+                  _selectedWinValue = next;
+                  _board = GameBoard.newGame(size: _board.size, bestScore: _board.bestScore, winValue: _selectedWinValue);
+                });
+              },
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.white.withValues(alpha: 0.3),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              child: const Text('다음 난이도'),
+            ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
@@ -852,7 +876,32 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
               final idx = _versions.indexWhere((v) => v['size'] == val);
               setState(() {
                 _selectedVersionIndex = idx >= 0 ? idx : 0;
-                _board = GameBoard.newGame(size: val, bestScore: _board.bestScore);
+                _board = GameBoard.newGame(size: val, bestScore: _board.bestScore, winValue: _selectedWinValue);
+              });
+            },
+          ),
+        ),
+        // Win target selector
+        Padding(
+          padding: const EdgeInsets.only(right: 12.0),
+          child: DropdownButton<int>(
+            value: _selectedWinValue,
+            dropdownColor: GameColors.background,
+            style: const TextStyle(color: Colors.white),
+            underline: const SizedBox.shrink(),
+            items: _winOptions.map((w) {
+              return DropdownMenuItem<int>(
+                value: w,
+                child: Text('$w'),
+              );
+            }).toList(),
+            onChanged: (val) {
+              if (val == null) return;
+              setState(() {
+                _selectedWinValue = val;
+                // start fresh board with new target
+                final size = _versions[_selectedVersionIndex]['size'] as int;
+                _board = GameBoard.newGame(size: size, bestScore: _board.bestScore, winValue: _selectedWinValue);
               });
             },
           ),

@@ -3,6 +3,7 @@ import 'dart:math';
 /// 2048 게임 보드 모델
 class GameBoard {
   final int size;
+  final int winValue;
 
   List<List<int>> tiles;
   int score;
@@ -16,6 +17,7 @@ class GameBoard {
   
   GameBoard({
     required this.size,
+    this.winValue = 2048,
     List<List<int>>? tiles,
     this.score = 0,
     this.bestScore = 0,
@@ -26,8 +28,8 @@ class GameBoard {
   }) : tiles = tiles ?? List.generate(size, (_) => List.filled(size, 0));
   
   /// 새 게임 시작
-  factory GameBoard.newGame({int size = 4, int bestScore = 0}) {
-    final board = GameBoard(size: size, bestScore: bestScore);
+  factory GameBoard.newGame({int size = 4, int bestScore = 0, int winValue = 2048}) {
+    final board = GameBoard(size: size, winValue: winValue, bestScore: bestScore);
     board._addRandomTile();
     board._addRandomTile();
     return board;
@@ -37,6 +39,7 @@ class GameBoard {
   GameBoard copy() {
     return GameBoard(
       size: size,
+      winValue: winValue,
       tiles: tiles.map((row) => List<int>.from(row)).toList(),
       score: score,
       bestScore: bestScore,
@@ -51,6 +54,7 @@ class GameBoard {
   Map<String, dynamic> toJson() {
     return {
       'size': size,
+      'winValue': winValue,
       'tiles': tiles.map((row) => row).toList(),
       'score': score,
       'bestScore': bestScore,
@@ -67,8 +71,10 @@ class GameBoard {
         .map((row) => List<int>.from(row as List))
         .toList();
     final size = json['size'] ?? tiles.length;
+    final win = json['winValue'] ?? 2048;
     return GameBoard(
       size: size,
+      winValue: win,
       tiles: tiles,
       score: json['score'] ?? 0,
       bestScore: json['bestScore'] ?? 0,
@@ -242,10 +248,10 @@ class GameBoard {
       moveCount++;
       canUndo = true;
       
-      // 2048 도달 확인
+      // winValue 도달 확인
       for (int r = 0; r < size; r++) {
         for (int c = 0; c < size; c++) {
-          if (tiles[r][c] == 2048 && !hasWon) {
+          if (tiles[r][c] == winValue && !hasWon) {
             hasWon = true;
           }
         }
