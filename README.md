@@ -7,7 +7,7 @@
 **🌐 라이브 데모**: [https://snack-games.vercel.app](https://snack-games.vercel.app)
 
 ---
-
+# 게임 종류 및 소개
 ## 📱 게임 소개
 
 ### 🎲 합쳐라! 주사위 (Dice Merge)
